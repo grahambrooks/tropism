@@ -1,0 +1,45 @@
+crates/tropism-core/src/analysis.rs
+  s_33258c54c67694::t_419671cc780dde 197-202
+crates/tropism-core/src/pipeline.rs
+  s_33258c54c67694::t_3ab2de2ff82119 195-199,209-212,251-255,280-284
+  s_33258c54c67694::t_419671cc780dde 171-174,184-194,200-208,213-250,256-279,285-287
+crates/tropism-lang/tests/demos.rs
+  s_33258c54c67694::t_ef72af895ae16b 9
+  s_33258c54c67694::t_3ab2de2ff82119 225-226,230-239,285-290,321-325
+  s_33258c54c67694::t_e91823b06c8c25 274-284,291-320,326-329
+demo/dotnet/README.md
+  s_33258c54c67694::t_e91823b06c8c25 31,50,52-66
+design/04-analyzers.md
+  s_33258c54c67694::t_bc2e04e23b1e60 49-55
+CLAUDE.md
+  s_33258c54c67694::t_bc2e04e23b1e60 133-142
+design/05-interfaces.md
+  s_33258c54c67694::t_bc2e04e23b1e60 77-80,129-130
+design/10-js-evaluation.md
+  s_33258c54c67694::t_bc2e04e23b1e60 48-50
+design/12-known-limitations.md
+  s_33258c54c67694::t_bc2e04e23b1e60 90,92,94-106,183,185-189,243-246
+design/13-build-and-release.md
+  s_33258c54c67694::t_bc2e04e23b1e60 28-34,95,97-98
+design/14-incremental-checking.md
+  s_33258c54c67694::t_4b352b49f56b91 1-115,122-194
+  s_33258c54c67694::t_bc2e04e23b1e60 116-121
+design/09-product-review.md
+  s_33258c54c67694::t_bc2e04e23b1e60 32-37
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.19",
+  "base_commit_sha": "2e9f1ad91786f7d70ebc4cef3c5f56a6d83c2ff8",
+  "prompts": {},
+  "sessions": {
+    "s_33258c54c67694": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "7fc6e081-c8c1-4604-a221-b9597c043e2b",
+        "model": "claude-opus-5"
+      },
+      "human_author": "Graham Brooks <graham@grahambrooks.com>"
+    }
+  }
+}
