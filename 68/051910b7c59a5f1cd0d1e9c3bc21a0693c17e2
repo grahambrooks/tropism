@@ -1,0 +1,29 @@
+design/12-known-limitations.md
+  s_33258c54c67694::t_c69ccde898614f 1-48,56-178,192-217
+  s_33258c54c67694::t_fa22a9e3738d13 49-55,179-191
+README.md
+  s_33258c54c67694::t_b117ad87b62be7 16
+  s_33258c54c67694::t_a0fe99e72a5a21 14,23-25
+  s_33258c54c67694::t_5e90618e33d165 1-13,15,17-22,26-44,55-63,70-144,149,158-178
+  s_33258c54c67694::t_fa22a9e3738d13 45-54,64-69,145-148,150-157
+CLAUDE.md
+  s_33258c54c67694::t_fa22a9e3738d13 113-124
+design/README.md
+  s_33258c54c67694::t_fa22a9e3738d13 3-8
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.19",
+  "base_commit_sha": "68051910b7c59a5f1cd0d1e9c3bc21a0693c17e2",
+  "prompts": {},
+  "sessions": {
+    "s_33258c54c67694": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "7fc6e081-c8c1-4604-a221-b9597c043e2b",
+        "model": "claude-opus-5"
+      },
+      "human_author": "Graham Brooks <graham@grahambrooks.com>"
+    }
+  }
+}
