@@ -1,6 +1,10 @@
 # gdep design specification
 
-**Status:** two vertical slices are complete — Go, and JavaScript/TypeScript with a real resolved
+**Status:** three vertical slices are complete — Go, JavaScript/TypeScript, and Rust — plus the
+dependency ruleset. gdep is run against itself, and against a deliberately-broken demo project per
+language. The remaining seven languages and the MCP server are not built.
+
+Previously: two vertical slices are complete — Go, and JavaScript/TypeScript with a real resolved
 tree, so all six checks have now run. The remaining eight languages and the MCP server are not
 built, and everything about them here is still intent rather than a description of behaviour.
 
@@ -9,11 +13,10 @@ before planning further work.** Both slices contradicted parts of the plan below
 manifest hygiene measured a 63% false-positive rate on real JavaScript repositories and should not
 ship on by default, while cycle detection proved sound and is the strongest remaining claim.
 
-[11-dependency-rules.md](11-dependency-rules.md) specifies the feature that follows from those
-findings: a team-authored ruleset constraining what may depend on what. It detects the presence of a
-forbidden edge rather than the absence of a use, which places it in the same soundness class as
-cycle detection, and no native tool can enforce an architecture it was never told about. It is the
-recommended next build.
+[11-dependency-rules.md](11-dependency-rules.md) specifies the team-authored ruleset — now
+implemented, and enforced on this repository via [`gdep.toml`](../gdep.toml). It detects the presence
+of a forbidden edge rather than the absence of a use, which places it in the same soundness class as
+cycle detection, and no native tool can enforce an architecture it was never told about.
 
 These documents define what gdep should be before it is built. They exist so that implementation
 work can start anywhere without re-deriving the same decisions, and so that a decision that turns

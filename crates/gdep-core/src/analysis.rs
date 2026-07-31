@@ -668,13 +668,16 @@ mod tests {
         }
     }
 
+    /// The analyzers cover exactly the analysis checks. Rule checks are filled in
+    /// by the pipeline, since the ruleset is evaluated repo-wide.
     #[test]
-    fn run_all_reports_status_for_every_check() {
+    fn run_all_reports_status_for_every_analysis_check() {
         let ctx = context(vec![], vec![]);
         let (statuses, _) = run_all(&ctx);
+        let covered: Vec<CheckId> = statuses.keys().copied().collect();
         assert_eq!(
-            statuses.len(),
-            CheckId::ALL.len(),
+            covered,
+            CheckId::ANALYSIS.to_vec(),
             "no check may be silently absent"
         );
     }

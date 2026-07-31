@@ -1,0 +1,33 @@
+# Ruleset for the JavaScript demo. Specification: design/11-dependency-rules.md
+
+schema_version = 1
+
+[modules]
+entry = "src/index.js"
+utils = "src/utils/**"
+
+# SATISFIED. Helpers stay unaware of the entrypoint that composes them.
+[[module_rules]]
+id = "utilities-do-not-know-the-entrypoint"
+deny = { from = "utils", to = ["entry"] }
+severity = "error"
+reason = "A utility that imports the entrypoint cannot be reused or tested alone."
+
+# VIOLATED. left-pad is still declared in package.json.
+[[package_rules]]
+id = "no-left-pad"
+deny = ["left-pad"]
+replacement = "String.prototype.padStart"
+severity = "error"
+reason = "Superseded by a built-in since ES2017."
+
+# VIOLATED. lodash is imported from src/utils/helper.js.
+[[package_rules]]
+id = "lodash-stays-at-the-edge"
+packages = ["lodash"]
+allowed_in = ["entry"]
+severity = "warning"
+reason = """
+Utilities should be plain functions. Pulling lodash into them spreads a large
+dependency through code that is meant to be trivially portable.
+"""

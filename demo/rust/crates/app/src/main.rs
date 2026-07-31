@@ -1,4 +1,11 @@
+use regex::Regex;
+
 fn main() -> anyhow::Result<()> {
-    println!("{}", engine::run("41")?);
+    // Reaching into the sibling surface instead of going through `engine`.
+    let digits = Regex::new(r"\d+")?;
+    let input = "41";
+    if digits.is_match(input) {
+        println!("{}", service::handle(input)?);
+    }
     Ok(())
 }

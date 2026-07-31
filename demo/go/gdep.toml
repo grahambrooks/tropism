@@ -1,0 +1,43 @@
+# Ruleset for the Go demo. Specification: design/11-dependency-rules.md
+
+schema_version = 1
+
+[modules]
+cmd = "*.go"
+api = "api/**"
+store = "store/**"
+
+# VIOLATED. main.go reaches past the api layer straight into storage.
+[[module_rules]]
+id = "entrypoint-goes-through-the-api"
+allow_only = { from = "cmd", to = ["api"] }
+severity = "error"
+reason = """
+The entrypoint wires up the api and nothing else. Reaching into storage directly
+couples the command to a schema it should never see.
+"""
+
+# SATISFIED. Storage is the bottom layer and must stay unaware of what calls it.
+[[module_rules]]
+id = "storage-is-the-bottom-layer"
+deny = { from = "store", to = ["api", "cmd"] }
+severity = "error"
+reason = "Storage must not know about the layers above it."
+
+# VIOLATED. golang.org/x/sync is declared but is not on the approved list.
+[packages]
+unlisted = "deny"
+
+[[package_rules]]
+id = "approved-dependencies"
+allow = [
+  "github.com/spf13/cobra",
+  "github.com/google/uuid",
+  "github.com/lib/pq",
+  "github.com/stretchr/testify",
+]
+severity = "error"
+reason = """
+This service ships to a regulated environment, so its dependency list is a closed
+set. Anything not named here needs review before it can be added.
+"""

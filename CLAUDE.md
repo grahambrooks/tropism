@@ -87,15 +87,22 @@ all are simple enough to parse directly if not.
 
 ## Dependency rules
 
-Beyond finding problems generically, gdep accepts a **ruleset** — `gdep.toml` at the scan root —
-that constrains what may depend on what, in the manner of NDepend, JDepend, or ArchUnit:
+gdep accepts a **ruleset** — `gdep.toml` at the scan root — constraining what may depend on what,
+in the manner of NDepend, JDepend, or ArchUnit. **Implemented and enforced on this repository**: see
+[gdep.toml](gdep.toml), which `crates/gdep-lang/tests/demos.rs` asserts gdep satisfies.
 
 - **Module rules** — the intended architecture. "The CLI and MCP server must not depend on each
   other, but both may depend on the shared core."
 - **Package rules** — approved and discouraged dependencies, optionally scoped to named modules.
 
-Specified in [design/11-dependency-rules.md](design/11-dependency-rules.md), with a worked example
-for this repository in [gdep.toml.example](gdep.toml.example).
+Specified in [design/11-dependency-rules.md](design/11-dependency-rules.md). Implemented:
+`deny`, `independent`, `allow_only`, package denylists, `allowed_in` scoping, closed-world approved
+lists, and stale-rule detection. **Not** implemented — and rejected at parse time with a clear
+error rather than silently ignored, so a ruleset never appears to enforce more than it does:
+`layers`, `require`, `transitive`, and version constraints.
+
+Rule findings are the only ones besides `cycle` that earn `High` confidence, and they default to
+`error` severity because the team asserted them.
 
 This is the strongest part of the product and the recommended next build. A rule violation is the
 *presence* of a forbidden import or declaration, which is a fact about a line of source — unlike the
@@ -169,7 +176,7 @@ A JavaScript/TypeScript slice is also complete: `package.json`, `package-lock.js
 resolved graph, unlike `go.sum`), tree-sitter extraction for JS/TS/TSX, and all six checks running.
 `version-conflict` and `diamond-dep` execute for the first time here.
 
-Not built: the other seven languages, the ruleset, and the MCP server.
+Not built: the other seven languages, the unimplemented rule kinds above, and the MCP server.
 
 **Before extending the checks, read [design/10-js-evaluation.md](design/10-js-evaluation.md).**
 Manifest hygiene (`unused-dep` / `missing-dep`) measured a **63% false-positive rate** on real

@@ -21,16 +21,35 @@ pub enum CheckId {
     VersionConflict,
     DiamondDep,
     DependencyBloat,
+    /// Team-authored architecture rules — see `design/11-dependency-rules.md`.
+    ModuleRule,
+    PackageRule,
 }
 
 impl CheckId {
-    pub const ALL: [CheckId; 6] = [
+    /// Checks produced by the analyzers, from a project's own graph and manifests.
+    pub const ANALYSIS: [CheckId; 6] = [
         CheckId::Cycle,
         CheckId::UnusedDep,
         CheckId::MissingDep,
         CheckId::VersionConflict,
         CheckId::DiamondDep,
         CheckId::DependencyBloat,
+    ];
+
+    /// Checks produced by the ruleset, which is evaluated repo-wide after the
+    /// per-project pass and so cannot come from an analyzer.
+    pub const RULES: [CheckId; 2] = [CheckId::ModuleRule, CheckId::PackageRule];
+
+    pub const ALL: [CheckId; 8] = [
+        CheckId::Cycle,
+        CheckId::UnusedDep,
+        CheckId::MissingDep,
+        CheckId::VersionConflict,
+        CheckId::DiamondDep,
+        CheckId::DependencyBloat,
+        CheckId::ModuleRule,
+        CheckId::PackageRule,
     ];
 
     pub fn as_str(self) -> &'static str {
@@ -41,6 +60,8 @@ impl CheckId {
             Self::VersionConflict => "version-conflict",
             Self::DiamondDep => "diamond-dep",
             Self::DependencyBloat => "dependency-bloat",
+            Self::ModuleRule => "module-rule",
+            Self::PackageRule => "package-rule",
         }
     }
 }

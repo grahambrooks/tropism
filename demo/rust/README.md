@@ -1,14 +1,28 @@
 # Rust demo
 
-A two-crate Cargo workspace. `Cargo.lock` is a genuinely resolved graph, so
+A three-crate Cargo workspace: one shared `engine` and two surfaces, `app` and
+`service` — the same shape as gdep's own core/cli/mcp split. `Cargo.lock` is a genuinely resolved graph, so
 version-conflict and diamond-dep run — but only at the workspace root, because
 that is where the lockfile lives.
+
+## Dependency rules (`gdep.toml`)
+
+- **Violated** — `surfaces-are-independent`: `app` imports `service` instead of
+  going through `engine`. This is the motivating case for the whole feature, and
+  it is caught **twice**: once at the `Cargo.toml` declaration and once at the
+  `use` in `main.rs`. A rule broken only in a manifest is still broken.
+- **Satisfied** — `engine-is-a-leaf`: the shared crate depends on neither surface.
+- **Violated** — `regex-belongs-to-the-engine`: `regex` is scoped to `engine` but
+  imported by `app`.
+
+Each finding renders the team's `reason` verbatim, which is the part no inferred
+finding can ever supply.
 
 Planted problems:
 
 - A module cycle between `engine`'s `parser` and `evaluator`. Rust *permits*
   module cycles, unlike Go, so nothing in the toolchain catches this.
-- `regex` is declared by `app` but never used.
+- `once_cell` is declared by `app` but never used.
 - `serde_json` is imported by `engine` but never declared.
 - `libc` is resolved at two versions in `Cargo.lock`.
 

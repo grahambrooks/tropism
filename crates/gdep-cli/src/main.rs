@@ -52,6 +52,14 @@ struct AnalyzeArgs {
     /// Do not honour .gitignore.
     #[arg(long)]
     no_ignore: bool,
+
+    /// Ruleset to enforce. Defaults to gdep.toml at the scan root.
+    #[arg(long)]
+    rules: Option<Utf8PathBuf>,
+
+    /// Skip the ruleset entirely.
+    #[arg(long)]
+    no_rules: bool,
 }
 
 #[derive(Copy, Clone, PartialEq, Eq, ValueEnum)]
@@ -88,6 +96,8 @@ fn analyze(args: AnalyzeArgs) -> anyhow::Result<u8> {
     let providers = gdep_lang::registry();
     let options = pipeline::Options {
         respect_ignore: !args.no_ignore,
+        rules_path: args.rules.clone(),
+        use_rules: !args.no_rules,
     };
     let report = pipeline::analyze(&args.path, &providers, &options)?;
 

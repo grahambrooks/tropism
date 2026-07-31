@@ -55,8 +55,8 @@ demo_language() {
   local lang="$1" title="$2"
   step "$title"
 
-  note "What the sample plants, and what it deliberately traps:"
-  sed 's/^/  /' "$REPO/demo/$lang/README.md" | head -30
+  note "What the sample plants, what its ruleset enforces, and what it traps:"
+  sed 's/^/  /' "$REPO/demo/$lang/README.md" | head -40
 
   run "$BIN" analyze "$REPO/demo/$lang" --format text
 }
@@ -78,6 +78,12 @@ wants javascript && {
 }
 
 wants rust && demo_language rust "3. Rust — module cycles are legal, so nothing else catches them"
+wants rust && {
+  note ""
+  note "The two module-rule findings are the same violation seen twice: once in"
+  note "Cargo.toml and once at the import. Each renders the team's reason verbatim,"
+  note "which is the part no inferred finding can supply."
+}
 
 # ---------------------------------------------------------------------------
 if wants self; then
@@ -98,6 +104,10 @@ for p in d['projects']:
 print(f'  {rows} finding(s) on gdep itself')
 \""
 
+  note ""
+  note "gdep's own gdep.toml is enforced on that run: the CLI and MCP server must"
+  note "stay independent, core must be a leaf, and the tree-sitter grammars must not"
+  note "escape gdep-lang. All satisfied, and none stale."
   note ""
   note "Everything reported is a genuine duplicate in Cargo.lock. Getting to zero"
   note "false positives took four bug fixes that only dogfooding surfaced — Rust 2018"
@@ -136,11 +146,13 @@ if [[ -z "$ONLY" ]]; then
   Languages:   Go, JavaScript/TypeScript, Rust
   Checks:      cycle, unused-dep, missing-dep, version-conflict, diamond-dep
   Deferred:    dependency-bloat (no crisp definition — design/07-open-questions.md)
-  Not built:   the ruleset (design/11-dependency-rules.md) and the MCP server
+  Rules:       module-rule, package-rule — from gdep.toml, High confidence
+  Not built:   layers/require/transitive rule kinds, and the MCP server
 
   Reliability differs sharply by check, and the difference is measured:
     cycle            sound — reads only import syntax
     version/diamond  sound where a real resolved tree exists (npm, Cargo; not Go)
     unused-dep       63% false positives on real JS repos (design/10-js-evaluation.md)
+    module/package   sound — a violation is a line of source, not an inference
 EOF
 fi

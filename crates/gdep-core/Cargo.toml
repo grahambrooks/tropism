@@ -13,6 +13,8 @@ serde_json.workspace = true
 camino.workspace = true
 blake3.workspace = true
 ignore.workspace = true
+globset.workspace = true
+toml.workspace = true
 petgraph.workspace = true
 thiserror.workspace = true
 

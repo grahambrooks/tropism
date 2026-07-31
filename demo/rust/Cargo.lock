@@ -7,7 +7,7 @@ version = "1.0.104"
 [[package]]
 name = "app"
 version = "0.1.0"
-dependencies = ["anyhow", "engine", "regex"]
+dependencies = ["anyhow", "once_cell", "regex", "service"]
 
 [[package]]
 name = "engine"
@@ -23,9 +23,18 @@ name = "libc"
 version = "0.3.1"
 
 [[package]]
+name = "once_cell"
+version = "1.21.3"
+
+[[package]]
 name = "regex"
 version = "1.12.3"
 dependencies = ["libc 0.3.1"]
+
+[[package]]
+name = "service"
+version = "0.1.0"
+dependencies = ["anyhow", "engine"]
 
 [[package]]
 name = "thiserror"

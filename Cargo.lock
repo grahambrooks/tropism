@@ -674,11 +674,13 @@ dependencies = [
  "anyhow",
  "blake3",
  "camino",
+ "globset",
  "ignore",
  "petgraph",
  "serde",
  "serde_json",
  "thiserror 2.0.19",
+ "toml",
 ]
 
 [[package]]

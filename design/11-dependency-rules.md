@@ -213,9 +213,27 @@ answerable for npm and *not* for Go, where `go.sum` is not a resolved graph. Tha
 metadata, which lives in the registry or in an installed tree — neither of which gdep may read.
 Saying so is better than a half-implementation that silently misses most dependencies.
 
-A complete worked example for this repository ships as
-[`gdep.toml.example`](../gdep.toml.example) — the rules above are the ones gdep should be enforcing
-on itself.
+## Implementation status
+
+Implemented and enforced: `deny`, `independent`, `allow_only`, package denylists with
+`replacement`, `allowed_in` scoping, closed-world approved lists (`unlisted = "deny"`), and
+stale-rule detection.
+
+Not implemented: `layers`, `require`, `transitive`, and version constraints. These are **rejected at
+parse time with an error naming the field**, rather than ignored — a ruleset must never appear to
+enforce more than it does.
+
+This repository's own ruleset is [`gdep.toml`](../gdep.toml), and
+`crates/gdep-lang/tests/demos.rs` asserts gdep satisfies it. Each demo under `demo/` carries a
+ruleset with both a satisfied and a violated rule.
+
+Two behaviours settled by building it:
+
+- **Staleness keys on whether a rule's modules match any path**, not on whether the rule fired. The
+  first attempt marked a rule live whenever *any* cross-module edge existed anywhere, which would
+  never have caught the renamed-module case the check exists for.
+- **`allowed_in` applies to imports, not declarations.** A manifest entry has no module location, so
+  scoping it produced "used in an unassigned path" — a statement about nothing.
 
 ## Semantics that must be pinned down
 

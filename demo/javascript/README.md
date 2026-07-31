@@ -12,6 +12,15 @@ Planted problems:
 - `ms` is installed twice (2.0.0 and 2.1.3) because `express` and `vitest`
   disagree — reported by both version-conflict and diamond-dep.
 
+## Dependency rules (`gdep.toml`)
+
+- **Satisfied** — `utilities-do-not-know-the-entrypoint`: helpers stay unaware of
+  the module that composes them.
+- **Violated** — `no-left-pad`: a banned package, reported with its replacement.
+- **Violated** — `lodash-stays-at-the-edge`: `lodash` is restricted to `entry` but
+  is imported from `src/utils/helper.js`. Scoping a package to part of the
+  repository is the most useful rule shape in practice.
+
 Planted traps, which gdep must **not** report:
 
 - `node:fs` — a Node builtin needs no declaration.

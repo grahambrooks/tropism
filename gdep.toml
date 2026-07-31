@@ -1,6 +1,6 @@
-# gdep ruleset — worked example, describing this repository's own architecture.
+# gdep's own ruleset — enforced on every run of `gdep analyze .`.
 #
-# Rename to `gdep.toml` to activate. Specification: design/11-dependency-rules.md
+# Specification: design/11-dependency-rules.md
 #
 # Everything here is a *presence* check: a violation is an import or a declaration
 # that exists and should not. That is why rule findings are High confidence while
@@ -79,11 +79,17 @@ MCP server and any future surface are not forced to carry a terminal dependency.
 """
 
 [[package_rules]]
-id = "no-native-package-managers"
-deny = ["cargo_metadata"]
+id = "providers-own-the-grammars"
+packages = [
+  "tree-sitter",
+  "tree-sitter-go",
+  "tree-sitter-javascript",
+  "tree-sitter-typescript",
+  "tree-sitter-rust",
+]
+allowed_in = ["lang"]
 severity = "error"
 reason = """
-cargo_metadata shells out to cargo. gdep must never invoke a native package
-manager or execute the repository it analyzes (CLAUDE.md); use the cargo-lock
-crate, which parses Cargo.lock directly.
+Parsing is a language provider's job. If a grammar reaches core or a surface, the
+LanguageProvider boundary has stopped doing the one thing it exists for.
 """

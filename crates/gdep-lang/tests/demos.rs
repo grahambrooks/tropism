@@ -88,7 +88,11 @@ fn go_demo_reports_the_resolved_tree_as_structurally_unavailable() {
 fn go_demo_has_no_unexpected_findings() {
     assert_no_unexpected(
         &analyze("go"),
-        &["golang.org/x/sync", "github.com/rs/zerolog"],
+        &[
+            "golang.org/x/sync",
+            "github.com/rs/zerolog",
+            "entrypoint-goes-through-the-api",
+        ],
     );
 }
 
@@ -144,7 +148,7 @@ fn javascript_demo_does_not_trip_on_its_traps() {
 fn javascript_demo_has_no_unexpected_findings() {
     assert_no_unexpected(
         &analyze("javascript"),
-        &["cycle", "left-pad", "chalk", "ms"],
+        &["cycle", "left-pad", "chalk", "ms", "lodash"],
     );
 }
 
@@ -163,7 +167,7 @@ fn rust_demo_finds_the_module_cycle() {
 #[test]
 fn rust_demo_finds_the_hygiene_problems() {
     let report = analyze("rust");
-    assert!(mentions(&report, CheckId::UnusedDep, "regex"));
+    assert!(mentions(&report, CheckId::UnusedDep, "once_cell"));
     assert!(mentions(&report, CheckId::MissingDep, "serde_json"));
 }
 
@@ -193,7 +197,134 @@ fn rust_demo_does_not_trip_on_its_traps() {
 
 #[test]
 fn rust_demo_has_no_unexpected_findings() {
-    assert_no_unexpected(&analyze("rust"), &["cycle", "regex", "serde_json", "libc"]);
+    assert_no_unexpected(
+        &analyze("rust"),
+        &[
+            "cycle",
+            "regex",
+            "serde_json",
+            "libc",
+            "once_cell",
+            "independent",
+        ],
+    );
+}
+
+// --- rulesets ---------------------------------------------------------------
+
+fn rule_messages(report: &Report) -> Vec<String> {
+    report
+        .findings()
+        .filter(|f| matches!(f.check, CheckId::ModuleRule | CheckId::PackageRule))
+        .map(|f| f.message.clone())
+        .collect()
+}
+
+/// A layering rule: the entrypoint must go through the api rather than reaching
+/// into storage. Nothing gdep infers could state this.
+#[test]
+fn go_demo_enforces_its_layering_rule() {
+    let messages = rule_messages(&analyze("go"));
+    assert!(
+        messages
+            .iter()
+            .any(|m| m.contains("`cmd` may depend only on `api`")),
+        "got {messages:?}"
+    );
+}
+
+/// A closed-world approved list, the shape regulated teams actually want.
+#[test]
+fn go_demo_enforces_its_approved_package_list() {
+    let messages = rule_messages(&analyze("go"));
+    assert!(
+        messages
+            .iter()
+            .any(|m| m.contains("golang.org/x/sync") && m.contains("approved list")),
+        "got {messages:?}"
+    );
+}
+
+#[test]
+fn javascript_demo_enforces_its_package_policy() {
+    let messages = rule_messages(&analyze("javascript"));
+    assert!(
+        messages
+            .iter()
+            .any(|m| m.contains("`left-pad` is not allowed")),
+        "{messages:?}"
+    );
+    assert!(
+        messages
+            .iter()
+            .any(|m| m.contains("lodash") && m.contains("restricted to")),
+        "{messages:?}"
+    );
+}
+
+/// The motivating case for the whole feature: two surfaces that must not know
+/// about each other. Caught at both levels — the manifest declaration and the
+/// import — because a rule broken in a manifest is still broken.
+#[test]
+fn rust_demo_catches_the_independence_violation_at_both_levels() {
+    let report = analyze("rust");
+    let levels: Vec<&str> = report
+        .findings()
+        .filter(|f| f.check == CheckId::ModuleRule)
+        .filter_map(|f| f.details["level"].as_str())
+        .collect();
+    assert!(
+        levels.contains(&"declared"),
+        "Cargo.toml declaration: got {levels:?}"
+    );
+    assert!(
+        levels.contains(&"imported"),
+        "main.rs import: got {levels:?}"
+    );
+}
+
+/// The team's `reason` is the most valuable part of a rule finding: no inferred
+/// finding can ever explain why a constraint exists.
+#[test]
+fn a_rule_finding_carries_the_teams_reason() {
+    let report = analyze("rust");
+    let finding = report
+        .findings()
+        .find(|f| f.check == CheckId::ModuleRule)
+        .expect("expected an independence violation");
+    let notes: Vec<&str> = finding.evidence.iter().map(|e| e.note.as_str()).collect();
+    assert!(
+        notes.iter().any(|n| n.contains("independent surfaces")),
+        "got {notes:?}"
+    );
+}
+
+#[test]
+fn rule_violations_are_high_confidence_and_default_to_error() {
+    let report = analyze("rust");
+    let finding = report
+        .findings()
+        .find(|f| f.check == CheckId::ModuleRule)
+        .unwrap();
+    assert_eq!(finding.confidence, gdep_core::report::Confidence::High);
+    assert_eq!(finding.severity, gdep_core::report::Severity::Error);
+}
+
+/// Without a ruleset the checks report Unavailable, never a clean pass — the same
+/// discipline as a missing lockfile.
+#[test]
+fn a_project_without_a_ruleset_reports_the_checks_as_unavailable() {
+    let providers = gdep_lang::registry();
+    let fixtures = Utf8PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("tests/fixtures/go-service");
+    let report = pipeline::analyze(&fixtures, &providers, &Options::default()).unwrap();
+    for check in [CheckId::ModuleRule, CheckId::PackageRule] {
+        match &report.projects[0].checks[&check] {
+            CheckStatus::Unavailable { reason } => {
+                assert!(reason.contains("gdep.toml"), "{reason}")
+            }
+            other => panic!("{check}: expected unavailable, got {other:?}"),
+        }
+    }
 }
 
 // --- gdep itself ------------------------------------------------------------
