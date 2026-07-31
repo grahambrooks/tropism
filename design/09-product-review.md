@@ -28,7 +28,7 @@ Three of six checks run for Go. Three cannot.
 The most important measurement in this review. On the fixture with one unused and one undeclared
 dependency planted:
 
-|                                          | gdep | `go mod tidy` |
+|                                          | tropism | `go mod tidy` |
 | ---------------------------------------- | ---- | ------------- |
 | Found unused `golang.org/x/sync`         | ✅    | ✅             |
 | Found undeclared `github.com/rs/zerolog` | ✅    | ✅             |
@@ -36,14 +36,14 @@ dependency planted:
 | Fixed the manifest                       | ❌    | ✅             |
 | Pruned stale `// indirect` entries       | ❌    | ✅             |
 
-`go mod tidy` found everything gdep found, then fixed it. gdep found the same two problems, fixed
+`go mod tidy` found everything tropism found, then fixed it. tropism found the same two problems, fixed
 nothing, and cannot tell you which version to add because that needs a resolver.
 
 This is not a Go quirk. Every ecosystem has an incumbent: `cargo-machete` and `cargo-udeps`,
 `depcheck` and `knip`, `deptry`, `mvn dependency:analyze`. All are free, all are already in the
 user's toolchain, and most fix rather than merely report.
 
-**gdep cannot win on detection quality. It must win on some other axis or not compete.**
+**tropism cannot win on detection quality. It must win on some other axis or not compete.**
 
 ## Risk 2 — the flagship check is dead on arrival in Go
 
@@ -74,11 +74,11 @@ That is **three of ten target languages where half the advertised product cannot
 bug, but as the constraint working as designed.
 
 `CheckStatus` reports this honestly, which is the right engineering answer. It is still a product
-problem: a user who runs gdep on a Go repo sees three checks that will never work.
+problem: a user who runs tropism on a Go repo sees three checks that will never work.
 
 ## Risk 4 — the target repositories are already clean
 
-All five real repositories produced **zero findings**. Not because gdep is weak — it correctly found
+All five real repositories produced **zero findings**. Not because tropism is weak — it correctly found
 the planted problems in fixtures — but because well-maintained Go projects run `go mod tidy` in CI
 and pre-commit hooks.
 
@@ -133,27 +133,27 @@ go: example.com/shop imports
 	github.com/spf13/cobra: module lookup disabled by GOPROXY=off
 ```
 
-gdep analyzed the same directory in milliseconds. For an agent that has just cloned a repository
+tropism analyzed the same directory in milliseconds. For an agent that has just cloned a repository
 into a sandbox with no toolchain and no egress, that is the difference between an answer and an
 error. No incumbent has this property, because they all work by resolving.
 
 **2. It never executes the analyzed repository.**
 
-`go mod tidy`, `npm install`, and `mvn` all download and run code. gdep reads files. For analyzing
+`go mod tidy`, `npm install`, and `mvn` all download and run code. tropism reads files. For analyzing
 untrusted or unfamiliar code — precisely the agent case — this is a real security property, not a
 nice-to-have.
 
 **3. One contract across a polyglot repository.**
 
 A monorepo with Go, TypeScript, and Python services needs three tools with three output formats,
-three exit-code conventions, and three severity vocabularies. gdep offers one JSON schema, one
+three exit-code conventions, and three severity vocabularies. tropism offers one JSON schema, one
 severity model, one exit-code contract. Nothing else does, and the difficulty of assembling it by
 hand is what makes it worth buying.
 
 **4. `CheckStatus` is a genuine differentiator for agent consumption.**
 
 No native tool tells you *which checks did not run and why*. An agent reading `go mod tidy`'s silence
-cannot distinguish "clean" from "never ran". gdep says:
+cannot distinguish "clean" from "never ran". tropism says:
 
 > `version-conflict — go.sum records hashes for the whole module graph, not the versions MVS
 > selected, and carries no edges; a resolved tree needs the Go resolver`
@@ -169,14 +169,14 @@ almost nothing to build and it should be marketed, not buried.
 
 **Re-scope the thesis.** Stop selling "finds dependency problems" — the incumbents win that, for
 free, with autofix. Sell "a hermetic, uniform, agent-queryable dependency map of a polyglot repo".
-Everything gdep does well points that way, and it is the only framing under which the
+Everything tropism does well points that way, and it is the only framing under which the
 no-native-tooling constraint is a feature rather than a handicap.
 
 **Make the MCP server the product, not an afterthought.** The CLI competes with entrenched, better
 tools. The MCP server has no competitor. Under the re-scoped thesis it should move ahead of further
 languages in the build order.
 
-**But first check that the best MCP question is answerable.** `gdep_package_path` — "why is this
+**But first check that the best MCP question is answerable.** `tropism_package_path` — "why is this
 package in my tree?" — is the highest-value query in
 [05-interfaces.md](05-interfaces.md) and it needs a resolved tree. For Go, offline, that is
 impossible. Validate this against a lockfile-bearing ecosystem before committing to the MCP-first
@@ -205,7 +205,7 @@ The architecture held up under real load: the layering is right, the `LanguagePr
 absorbed every Go-specific rule without touching an analyzer, and `CheckStatus` proved its worth the
 moment a check genuinely could not run. That is a good foundation.
 
-The concern is not whether gdep can be built. It is whether "detects dependency problems" is a
+The concern is not whether tropism can be built. It is whether "detects dependency problems" is a
 problem anyone has, given that `go mod tidy` and its equivalents are free, already installed, and
 fix rather than report. The evidence from five real repositories — zero findings — suggests it is
 not. The hermetic, uniform, agent-facing framing survives that evidence. The original framing does

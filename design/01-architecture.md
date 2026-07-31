@@ -37,26 +37,26 @@ what makes them cheap to unit-test against hand-built graphs.
 ## Crate layout
 
 A Cargo workspace. The split exists to make the dependency direction structural rather than a matter
-of discipline — `gdep-core` cannot accidentally depend on `clap`, because it doesn't have it.
+of discipline — `tropism-core` cannot accidentally depend on `clap`, because it doesn't have it.
 
 ```
 crates/
-  gdep-core/     # data model, discovery, LanguageProvider trait, graphs, analyzers, report types
-  gdep-lang/     # the ten LanguageProvider implementations + registry
-  gdep-cli/      # clap front-end, human and JSON renderers          -> binary `gdep`
-  gdep-mcp/      # MCP server exposing the same analysis             -> binary `gdep-mcp`
+  tropism-core/     # data model, discovery, LanguageProvider trait, graphs, analyzers, report types
+  tropism-lang/     # the ten LanguageProvider implementations + registry
+  tropism/      # clap front-end, human and JSON renderers          -> binary `tropism`
+  tropism-mcp/      # MCP server exposing the same analysis             -> binary `tropism-mcp`
 ```
 
-`gdep-core` depends on nothing above it. `gdep-lang` depends on `gdep-core` for the shared types.
+`tropism-core` depends on nothing above it. `tropism-lang` depends on `tropism-core` for the shared types.
 Both binaries depend on both libraries and on each other for nothing.
 
-**The `LanguageProvider` trait lives in `gdep-core`, not `gdep-lang`.** An earlier draft put it with
+**The `LanguageProvider` trait lives in `tropism-core`, not `tropism-lang`.** An earlier draft put it with
 the implementations, which does not work: analyzers live in core and need the trait — the
 version-conflict analyzer calls `version_ops()` to compare versions per ecosystem, and discovery
-needs `manifest_names()`. Core defines the abstraction, `gdep-lang` supplies the implementations,
+needs `manifest_names()`. Core defines the abstraction, `tropism-lang` supplies the implementations,
 and the binaries wire the two together.
 
-Whether the ten language implementations stay in one crate or split into `gdep-lang-rust` and
+Whether the ten language implementations stay in one crate or split into `tropism-lang-rust` and
 friends is deferred until we see compile times; the trait boundary makes that split mechanical later.
 Start with one crate and feature-gate per language so a consumer can build a smaller binary.
 
@@ -88,7 +88,7 @@ possible. Do not build the cache until a real repository proves it is needed.
 
 Three distinct outcomes, and conflating them is the most likely early design mistake:
 
-- **Fatal** — gdep cannot run at all (path does not exist, no read permission). Abort with a
+- **Fatal** — tropism cannot run at all (path does not exist, no read permission). Abort with a
   diagnostic.
 - **Project-level failure** — one project root cannot be analyzed (unparseable manifest). Record it,
   report it in the output, continue with the others.

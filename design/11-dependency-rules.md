@@ -1,6 +1,6 @@
 # 11 — Dependency rules
 
-gdep accepts a ruleset that constrains what may depend on what, and enforces it alongside the
+tropism accepts a ruleset that constrains what may depend on what, and enforces it alongside the
 general checks. Two kinds of rule:
 
 - **Module rules** — the architecture the team intends. "The CLI and the MCP server must not depend
@@ -9,20 +9,20 @@ general checks. Two kinds of rule:
   repository may use them.
 
 Prior art: NDepend, JDepend, ArchUnit, dependency-cruiser, import-linter, `cargo-deny`. Every one is
-single-language. gdep's opening is a uniform ruleset across a polyglot repository, checked
+single-language. tropism's opening is a uniform ruleset across a polyglot repository, checked
 hermetically, and queryable by an agent.
 
-## Why this is the strongest thing gdep can do
+## Why this is the strongest thing tropism can do
 
 [10-js-evaluation.md](10-js-evaluation.md) measured a 63% false-positive rate for manifest hygiene
 and near-perfect accuracy for cycle detection. The reason for the split is worth stating precisely,
 because it predicts that rules will behave like cycles rather than like hygiene.
 
-**Hygiene asks gdep to prove a negative.** "`lodash` is never used" requires having seen *every*
+**Hygiene asks tropism to prove a negative.** "`lodash` is never used" requires having seen *every*
 possible use, and uses hide in HTML `<script>` tags, config files, framework strings, and spawn
 arguments. Absence is unprovable without an installed tree.
 
-**Rules ask gdep to prove a positive.** "The CLI imports the MCP server" is a fact about a line of
+**Rules ask tropism to prove a positive.** "The CLI imports the MCP server" is a fact about a line of
 source that either exists or does not. Same for "this file imports a banned package". There is no
 hidden channel through which a violation could occur invisibly — a violation *is* an import, and
 imports are unambiguous syntax.
@@ -38,10 +38,10 @@ This puts rule violations in the same soundness class as cycles:
 
 Three further properties matter:
 
-- **No heuristics.** The ruleset is written by the team. gdep is not inferring intent, so there is
+- **No heuristics.** The ruleset is written by the team. tropism is not inferring intent, so there is
   nothing to be wrong about. A violation cites the rule and the line; both are checkable.
-- **The general checks cannot express it.** No amount of cycle detection tells you that `gdep-lang`
-  must not reach into `gdep-cli`. That constraint exists only in the team's head until it is
+- **The general checks cannot express it.** No amount of cycle detection tells you that `tropism-lang`
+  must not reach into `tropism`. That constraint exists only in the team's head until it is
   written down.
 - **It fails closed.** A rule that cannot be evaluated reports `Unavailable`, exactly like every
   other check. Silence never means compliance.
@@ -51,30 +51,30 @@ inherits hygiene's weakness. It is specified below and marked accordingly.
 
 ## Rules span projects, which forces the repo-wide graph
 
-The motivating example is this repository: `gdep-cli` and `gdep-mcp` must not depend on each other,
-and both may depend on `gdep-core`. Each of those is a separate crate with its own `Cargo.toml`, so
-each is a separate **project** in gdep's model — and
+The motivating example is this repository: `tropism` and `tropism-mcp` must not depend on each other,
+and both may depend on `tropism-core`. Each of those is a separate crate with its own `Cargo.toml`, so
+each is a separate **project** in tropism's model — and
 [01-architecture.md](01-architecture.md) analyzes projects independently.
 
 **A rule engine cannot work per-project.** It needs one graph spanning the whole scan.
 
-This resolves open question 1 in [07-open-questions.md](07-open-questions.md) by forcing it: gdep
+This resolves open question 1 in [07-open-questions.md](07-open-questions.md) by forcing it: tropism
 must build a repository-wide module graph in which a project is itself a node. The per-project
 graphs remain for cycle detection within a project; the repo-wide graph is what rules are evaluated
 against.
 
 Dependencies between projects arrive at two levels, and **both are checked**:
 
-- **Declared** — `gdep-cli`'s `Cargo.toml` lists `gdep-core`. An edge exists even if no source file
+- **Declared** — `tropism`'s `Cargo.toml` lists `tropism-core`. An edge exists even if no source file
   has imported it yet.
-- **Imported** — a file in `crates/gdep-cli/` has `use gdep_core::…`.
+- **Imported** — a file in `crates/tropism/` has `use tropism_core::…`.
 
 A rule violated only at the declaration level is still a violation: the coupling is real and the
 import is a commit away. Findings say which level triggered.
 
 ## The ruleset file
 
-`gdep.toml` at the scan root, TOML to match the config format already chosen in
+`tropism.toml` at the scan root, TOML to match the config format already chosen in
 [05-interfaces.md](05-interfaces.md). Discovered automatically; `--rules <path>` overrides.
 
 ### Exclusions
@@ -89,7 +89,7 @@ exclude = [
 ```
 
 The motivating case is a repository containing deliberately-broken sample projects — this one does,
-and without exclusions `gdep analyze .` could never return zero, so the repository could not gate CI
+and without exclusions `tropism analyze .` could never return zero, so the repository could not gate CI
 on its own rules.
 
 **Exclusions are disclosed in every report**, with a count per pattern, and a pattern matching
@@ -97,32 +97,32 @@ nothing is flagged. This is the same discipline as `CheckStatus`: an exclusion i
 spot, and a repository that excluded half of itself must not look like one that was fully analyzed.
 
 ```
-58 path(s) excluded by gdep.toml
+58 path(s) excluded by tropism.toml
   **/tests/fixtures/** — 21 path(s)
   demo/** — 37 path(s)
 ```
 
-Note that `gdep.toml` is therefore read twice: once before discovery for the exclusions, and once at
+Note that `tropism.toml` is therefore read twice: once before discovery for the exclusions, and once at
 the end for the rules. Exclusions must be known before any file is walked; rules can only be
 evaluated after every edge is collected.
 
 ### Modules
 
-A module is a name bound to one or more path globs. Modules are gdep's unit of architecture and need
+A module is a name bound to one or more path globs. Modules are tropism's unit of architecture and need
 not correspond to projects — they may be coarser (a whole crate) or finer (one directory).
 
 ```toml
 schema_version = 1
 
 [modules]
-core = "crates/gdep-core/**"
-lang = "crates/gdep-lang/**"
-cli  = "crates/gdep-cli/**"
-mcp  = "crates/gdep-mcp/**"
+core = "crates/tropism-core/**"
+lang = "crates/tropism-lang/**"
+cli  = "crates/tropism/**"
+mcp  = "crates/tropism-mcp/**"
 
 # Several globs, and a package name for cross-project edges.
 [modules.render]
-paths = ["crates/gdep-cli/src/render/**"]
+paths = ["crates/tropism/src/render/**"]
 
 [modules.docs]
 paths = ["design/**", "*.md"]
@@ -158,7 +158,7 @@ reason = "A language provider must not know how findings are displayed."
 id = "core-is-a-leaf"
 allow_only = { from = "core", to = [] }
 severity = "error"
-reason = "gdep-core must stay free of rendering, CLI, and transport concerns."
+reason = "tropism-core must stay free of rendering, CLI, and transport concerns."
 
 # Ordered stack; each layer may depend only on those below it.
 [[module_rules]]
@@ -239,7 +239,7 @@ answerable for npm and *not* for Go, where `go.sum` is not a resolved graph. Tha
 `Unavailable` with the ecosystem reason, exactly as `version-conflict` already does.
 
 **License policy is out of scope.** `cargo-deny`'s licence checking needs each dependency's licence
-metadata, which lives in the registry or in an installed tree — neither of which gdep may read.
+metadata, which lives in the registry or in an installed tree — neither of which tropism may read.
 Saying so is better than a half-implementation that silently misses most dependencies.
 
 ## Implementation status
@@ -252,8 +252,8 @@ Not implemented: `layers`, `require`, `transitive`, and version constraints. The
 parse time with an error naming the field**, rather than ignored — a ruleset must never appear to
 enforce more than it does.
 
-This repository's own ruleset is [`gdep.toml`](../gdep.toml), and
-`crates/gdep-lang/tests/demos.rs` asserts gdep satisfies it. Each demo under `demo/` carries a
+This repository's own ruleset is [`tropism.toml`](../tropism.toml), and
+`crates/tropism-lang/tests/demos.rs` asserts tropism satisfies it. Each demo under `demo/` carries a
 ruleset with both a satisfied and a violated rule.
 
 Two behaviours settled by building it:
@@ -300,12 +300,12 @@ A violation cites both sides — the rule that was broken and the code that brok
 
 ```
 error[module-rule:.:a1b2c3]: `cli` must not depend on `mcp` (rule: surfaces-are-independent)
-  --> crates/gdep-cli/src/render/tui.rs:14:1
+  --> crates/tropism/src/render/tui.rs:14:1
    |
-14 | use gdep_mcp::protocol::Finding;
+14 | use tropism_mcp::protocol::Finding;
    | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ imports `mcp`
    |
-  ::: gdep.toml:12:1
+  ::: tropism.toml:12:1
    |
 12 | independent = ["cli", "mcp"]
    | --------------------------- rule defined here
@@ -323,14 +323,14 @@ act without parsing prose.
 
 ## Interfaces
 
-**CLI.** `gdep check` runs rules only — the fast, high-signal subset suitable for a pre-commit hook.
-`gdep analyze` runs everything. `--rules <path>` overrides discovery; `--no-rules` disables.
+**CLI.** `tropism check` runs rules only — the fast, high-signal subset suitable for a pre-commit hook.
+`tropism analyze` runs everything. `--rules <path>` overrides discovery; `--no-rules` disables.
 
 **Exit codes** are unchanged. Because rule violations default to `error`, `--fail-on error` gates
 them by default while the noisier general checks stay advisory — which is the correct division
 given [10-js-evaluation.md](10-js-evaluation.md).
 
-**MCP.** One new tool, `gdep_rules`, returning the active ruleset with each rule's status
+**MCP.** One new tool, `tropism_rules`, returning the active ruleset with each rule's status
 (`satisfied`, `violated`, `stale`). An agent about to add a dependency should be able to ask whether
 it is permitted *before* writing the import, which is a materially better interaction than being
 told afterwards. This is the first genuinely agent-shaped capability in the product.
@@ -340,7 +340,7 @@ told afterwards. This is the first genuinely agent-shaped capability in the prod
 1. **Do module rules apply to external packages too?** `deny = { from = "core", to = "cli" }` is
    internal. Restricting which modules may use `serde_json` is `allowed_in` on a package rule. The
    two syntaxes overlap and might be better unified.
-2. **Inheritance in a monorepo.** Does `packages/web/gdep.toml` extend the root ruleset or replace
+2. **Inheritance in a monorepo.** Does `packages/web/tropism.toml` extend the root ruleset or replace
    it? Extending is more useful and harder to reason about. Recommend extend, with an explicit
    `inherit = false` escape.
 3. **Ratcheting.** Teams adopt these tools on codebases that already violate the rules. A

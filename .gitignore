@@ -4,7 +4,7 @@
 debug/
 target/
 
-# Cargo.lock IS committed: this workspace ships the `gdep` and `gdep-mcp` binaries, and
+# Cargo.lock IS committed: this workspace ships the `tropism` and `tropism-mcp` binaries, and
 # reproducible builds of a tool that analyzes other people's lockfiles are the least we
 # can do. https://doc.rust-lang.org/cargo/guide/cargo-toml-vs-cargo-lock.html
 

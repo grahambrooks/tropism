@@ -1,11 +1,11 @@
 # Rust demo
 
 A three-crate Cargo workspace: one shared `engine` and two surfaces, `app` and
-`service` — the same shape as gdep's own core/cli/mcp split. `Cargo.lock` is a genuinely resolved graph, so
+`service` — the same shape as tropism's own core/cli/mcp split. `Cargo.lock` is a genuinely resolved graph, so
 version-conflict and diamond-dep run — but only at the workspace root, because
 that is where the lockfile lives.
 
-## Dependency rules (`gdep.toml`)
+## Dependency rules (`tropism.toml`)
 
 - **Violated** — `surfaces-are-independent`: `app` imports `service` instead of
   going through `engine`. This is the motivating case for the whole feature, and
@@ -26,7 +26,7 @@ Planted problems:
 - `serde_json` is imported by `engine` but never declared.
 - `libc` is resolved at two versions in `Cargo.lock`.
 
-Planted traps, which gdep must **not** report:
+Planted traps, which tropism must **not** report:
 
 - `anyhow::Result` is used with no `use` statement at all. Idiomatic Rust does
   this constantly; extracting only `use` would call `anyhow` unused.
@@ -37,7 +37,7 @@ Planted traps, which gdep must **not** report:
 
 `missing-dep` fires for `serde_json` only because `parser.rs` writes
 `use serde_json::from_str`. Had it written `serde_json::from_str(..)` inline with
-no `use`, gdep would have counted the crate as *used* but would **not** have
+no `use`, tropism would have counted the crate as *used* but would **not** have
 reported it missing.
 
 That asymmetry is deliberate. A bare path proves a crate is used, but it cannot

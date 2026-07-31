@@ -12,7 +12,7 @@ Planted problems:
 - `ms` is installed twice (2.0.0 and 2.1.3) because `express` and `vitest`
   disagree — reported by both version-conflict and diamond-dep.
 
-## Dependency rules (`gdep.toml`)
+## Dependency rules (`tropism.toml`)
 
 - **Satisfied** — `utilities-do-not-know-the-entrypoint`: helpers stay unaware of
   the module that composes them.
@@ -21,7 +21,7 @@ Planted problems:
   is imported from `src/utils/helper.js`. Scoping a package to part of the
   repository is the most useful rule shape in practice.
 
-Planted traps, which gdep must **not** report:
+Planted traps, which tropism must **not** report:
 
 - `node:fs` — a Node builtin needs no declaration.
 - `@types/*` and script-invoked tools are classified as tooling, since nothing

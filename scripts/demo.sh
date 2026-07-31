@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 #
-# A guided tour of gdep across every supported language, plus gdep analyzing
+# A guided tour of tropism across every supported language, plus tropism analyzing
 # itself.
 #
 #   ./scripts/demo.sh            # full walkthrough
@@ -14,7 +14,7 @@
 set -euo pipefail
 
 REPO="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-BIN="$REPO/target/debug/gdep"
+BIN="$REPO/target/debug/tropism"
 
 WITH_TUI=false
 ONLY=""
@@ -47,7 +47,7 @@ run_status() {
 wants() { [[ -z "$ONLY" || "$ONLY" == "$1" ]]; }
 
 step "0. Build"
-cargo build -q -p gdep-cli --manifest-path "$REPO/Cargo.toml"
+cargo build -q -p tropism --manifest-path "$REPO/Cargo.toml"
 note "built $BIN"
 
 # ---------------------------------------------------------------------------
@@ -66,7 +66,7 @@ wants go && {
   note ""
   note "Note the two unavailable checks. go.sum records hashes for the whole module"
   note "graph rather than the versions MVS selected, so there is no resolved tree to"
-  note "analyze offline. gdep says so instead of reporting a clean bill of health."
+  note "analyze offline. tropism says so instead of reporting a clean bill of health."
 }
 
 wants javascript && demo_language javascript "2. JavaScript — the only ecosystem where all six checks run"
@@ -95,7 +95,7 @@ wants dotnet && {
 
 # ---------------------------------------------------------------------------
 if wants self; then
-  step "5. gdep analyzing gdep"
+  step "5. tropism analyzing tropism"
 
   note "The real test. Every finding below is on this repository's own source."
   run bash -c "'$BIN' analyze '$REPO' --format json \
@@ -109,13 +109,13 @@ for p in d['projects']:
     for f in p['findings']:
         print(f\\\"  {p['root'] or '.':16} {f['check']:17} {f['message'][:58]}\\\")
         rows += 1
-print(f'  {rows} finding(s) on gdep itself')
+print(f'  {rows} finding(s) on tropism itself')
 \""
 
   note ""
-  note "gdep's own gdep.toml is enforced on that run: the CLI and MCP server must"
+  note "tropism's own tropism.toml is enforced on that run: the CLI and MCP server must"
   note "stay independent, core must be a leaf, and the tree-sitter grammars must not"
-  note "escape gdep-lang. All satisfied, and none stale."
+  note "escape tropism-lang. All satisfied, and none stale."
   note ""
   note "Everything reported is a genuine duplicate in Cargo.lock. Getting to zero"
   note "false positives took four bug fixes that only dogfooding surfaced — Rust 2018"
@@ -154,7 +154,7 @@ if [[ -z "$ONLY" ]]; then
   Languages:   Go, JavaScript/TypeScript, Rust, C#/.NET
   Checks:      cycle, unused-dep, missing-dep, version-conflict, diamond-dep
   Deferred:    dependency-bloat (no crisp definition — design/07-open-questions.md)
-  Rules:       module-rule, package-rule — from gdep.toml, High confidence
+  Rules:       module-rule, package-rule — from tropism.toml, High confidence
   Not built:   layers/require/transitive rule kinds, and the MCP server
 
   Reliability differs sharply by check, and the difference is measured:

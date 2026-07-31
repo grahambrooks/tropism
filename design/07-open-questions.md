@@ -11,7 +11,7 @@ module edge, an external dependency, or both?
 
 It matters because it changes the answer to every check. If cross-project imports are external, a
 monorepo with undeclared internal imports lights up with false "missing dependency" findings. If they
-are internal, cycles *between* packages become detectable — arguably the most valuable finding gdep
+are internal, cycles *between* packages become detectable — arguably the most valuable finding tropism
 could produce for a monorepo.
 
 **Recommendation:** treat sibling projects as internal for missing-dep purposes and build a
@@ -60,7 +60,7 @@ Plain diamonds are near-universal and mostly uninteresting. [04-analyzers.md](04
 proposes reporting only consequential ones and treating the rest as Info.
 
 **Recommendation:** consequential diamonds in the default finding set; plain diamond enumeration
-available only through `gdep_package_path` and `gdep graph`. Confirm this is the intended reading of
+available only through `tropism_package_path` and `tropism graph`. Confirm this is the intended reading of
 "diamond dependencies" as a headline feature.
 
 *Blocks:* the diamond analyzer's output shape.
@@ -71,7 +71,7 @@ Ten providers is a lot of surface for a first release, and [06-testing.md](06-te
 three trustworthy languages beat ten mediocre ones.
 
 **Recommendation:** Go first (simplest resolution, proves the trait shape), then Rust (workspace
-handling, and it is the language gdep is written in so dogfooding is free), then Python (hardest
+handling, and it is the language tropism is written in so dogfooding is free), then Python (hardest
 resolution — if the design survives it, the design is right). JS/TS fourth, since three lockfile
 formats make it the largest single chunk of work. Java, C#, C++, Swift, Ruby after.
 
@@ -83,12 +83,12 @@ Maven has no lockfile; Gradle and NuGet lockfiles are opt-in and usually absent
 ([CLAUDE.md](../CLAUDE.md)). For a large share of Java and C# repositories, three of six checks will
 permanently report `Unavailable`.
 
-Is that acceptable, or should gdep do something more for those ecosystems? The alternatives all have
+Is that acceptable, or should tropism do something more for those ecosystems? The alternatives all have
 costs: reading the local package cache (`~/.m2`) makes results machine-dependent; approximating
 resolution means reimplementing a resolver; fetching metadata breaks the offline property.
 
 **Recommendation:** accept it. Report clearly, do not compromise the no-execution or offline
-properties. But this should be a conscious decision, because it caps gdep's usefulness on Java.
+properties. But this should be a conscious decision, because it caps tropism's usefulness on Java.
 
 *Blocks:* whether Java is worth prioritizing at all.
 
@@ -97,7 +97,7 @@ properties. But this should be a conscious decision, because it caps gdep's usef
 [02-data-model.md](02-data-model.md) flags that SemVer, PEP 440, Maven ordering, and RubyGems differ.
 Opaque versions with per-provider comparison, or an enum of per-ecosystem types?
 
-**Recommendation:** opaque plus `VersionOps`, since it keeps `gdep-core` free of ecosystem knowledge.
+**Recommendation:** opaque plus `VersionOps`, since it keeps `tropism-core` free of ecosystem knowledge.
 The cost is that core cannot sort versions without a provider in hand.
 
 *Blocks:* the core data model — this is the earliest of these decisions to be needed and the most
@@ -151,7 +151,7 @@ the importing file; `ProjectContext` needs the project's own file list). The ord
 1. **The repo-wide module graph**, which rules require and open question 1 above deferred.
 2. **The ruleset** ([11-dependency-rules.md](11-dependency-rules.md)) — the first feature whose value
    does not depend on out-competing an incumbent.
-3. **The MCP server**, now with `gdep_rules` as its highest-value tool.
+3. **The MCP server**, now with `tropism_rules` as its highest-value tool.
 4. **More languages**, last. Two slices produced two different failure modes; a third would produce
    a third, and none of them changes the product question.
 

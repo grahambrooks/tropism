@@ -1,4 +1,4 @@
-# gdep design specification
+# tropism design specification
 
 **Every limitation found while building this is registered in
 [12-known-limitations.md](12-known-limitations.md)**, split into those that are structural — the
@@ -6,7 +6,7 @@ price of never invoking a package manager, reported rather than fixed — and th
 Read it before planning work, and add to it rather than discovering the same gap twice.
 
 **Status:** four vertical slices are complete — Go, JavaScript/TypeScript, and Rust — plus the
-dependency ruleset. gdep is run against itself, and against a deliberately-broken demo project per
+dependency ruleset. tropism is run against itself, and against a deliberately-broken demo project per
 language. The remaining seven languages and the MCP server are not built.
 
 Previously: two vertical slices are complete — Go, and JavaScript/TypeScript with a real resolved
@@ -19,11 +19,11 @@ manifest hygiene measured a 63% false-positive rate on real JavaScript repositor
 ship on by default, while cycle detection proved sound and is the strongest remaining claim.
 
 [11-dependency-rules.md](11-dependency-rules.md) specifies the team-authored ruleset — now
-implemented, and enforced on this repository via [`gdep.toml`](../gdep.toml). It detects the presence
+implemented, and enforced on this repository via [`tropism.toml`](../tropism.toml). It detects the presence
 of a forbidden edge rather than the absence of a use, which places it in the same soundness class as
 cycle detection, and no native tool can enforce an architecture it was never told about.
 
-These documents define what gdep should be before it is built. They exist so that implementation
+These documents define what tropism should be before it is built. They exist so that implementation
 work can start anywhere without re-deriving the same decisions, and so that a decision that turns
 out to be wrong can be found and changed in one place.
 
@@ -55,8 +55,8 @@ back to one of these.
 **1. Never execute the analyzed repository.**
 
 The rule in [CLAUDE.md](../CLAUDE.md) against invoking native package managers is not only about
-avoiding a toolchain dependency — it also means gdep never runs code it is analyzing. `build.gradle`,
-`Package.swift`, `conanfile.py`, and `setup.py` are programs. gdep reads them as text and accepts
+avoiding a toolchain dependency — it also means tropism never runs code it is analyzing. `build.gradle`,
+`Package.swift`, `conanfile.py`, and `setup.py` are programs. tropism reads them as text and accepts
 that it will sometimes read them incompletely. This is a safety property, and it is not traded away
 for coverage.
 
@@ -69,7 +69,7 @@ so. Analysis is per-check and per-project; one failure never aborts the run.
 **3. Confidence is part of the output, not a footnote.**
 
 Every finding carries a confidence level and the evidence behind it. A check that cannot run says
-*unavailable* and why. gdep never presents a guess as a fact — an agent consuming this over MCP
+*unavailable* and why. tropism never presents a guess as a fact — an agent consuming this over MCP
 cannot tell the difference unless we mark it.
 
 **4. One core, two surfaces.**
@@ -82,7 +82,7 @@ same result.
 
 Same input, same version, same bytes out. Findings are sorted by a stable key; no map iteration
 order, no timestamps in the payload, no absolute paths in the default output. This is what makes
-gdep usable in CI and in snapshot tests.
+tropism usable in CI and in snapshot tests.
 
 **6. Speed is a feature.**
 
@@ -91,6 +91,6 @@ and a check that is run rarely stops being trusted. Parse work is per-file and p
 
 ## Scope boundary
 
-gdep reports problems. It does not fix them: no manifest rewriting, no import rewriting, no
+tropism reports problems. It does not fix them: no manifest rewriting, no import rewriting, no
 `--fix`. Findings should carry enough structure for an agent to act on them, and acting is the
 agent's job. Revisit only after the detection side is proven.

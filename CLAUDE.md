@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Overview
 
-gdep is a Rust tool that analyzes a codebase for module and dependency problems. It ships as two
+tropism is a Rust tool that analyzes a codebase for module and dependency problems. It ships as two
 surfaces over the same analysis:
 
 - a **CLI**, for humans and scripts
@@ -29,17 +29,17 @@ surfaces over the same analysis:
 
 ## Core constraint: never invoke native package managers
 
-gdep must **not** shell out to `cargo`, `go`, `pip`, `npm`/`yarn`/`pnpm`, `mvn`/`gradle`, `dotnet`,
+tropism must **not** shell out to `cargo`, `go`, `pip`, `npm`/`yarn`/`pnpm`, `mvn`/`gradle`, `dotnet`,
 `conan`, `swift`, or `bundle`. All dependency data is obtained by reading files in the repository —
 using a Rust crate for the format where one fits, or a parser written here where none does.
 
 This is not negotiable, and it drives the design:
 
-- **No network, no toolchain, no build.** gdep works on a checkout with nothing installed, cannot be
+- **No network, no toolchain, no build.** tropism works on a checkout with nothing installed, cannot be
   slowed by a resolve step, and cannot execute code from the analyzed repo.
 - **Lockfiles are the source of truth for the external tree.** Diamond dependencies, version
   conflicts, and bloat all need a *resolved* graph. Without running a resolver, that graph can only
-  come from a lockfile. When a lockfile is absent, gdep reports those checks as unavailable rather
+  come from a lockfile. When a lockfile is absent, tropism reports those checks as unavailable rather
   than guessing — declared ranges in a manifest are not a resolved tree.
 - **Manifests give declared intent, lockfiles give resolved reality.** Manifest hygiene checks
   (unused/missing) compare declared deps against imports found in source; they do not need a lockfile.
@@ -87,9 +87,9 @@ all are simple enough to parse directly if not.
 
 ## Dependency rules
 
-gdep accepts a **ruleset** — `gdep.toml` at the scan root — constraining what may depend on what,
+tropism accepts a **ruleset** — `tropism.toml` at the scan root — constraining what may depend on what,
 in the manner of NDepend, JDepend, or ArchUnit. **Implemented and enforced on this repository**: see
-[gdep.toml](gdep.toml), which `crates/gdep-lang/tests/demos.rs` asserts gdep satisfies.
+[tropism.toml](tropism.toml), which `crates/tropism-lang/tests/demos.rs` asserts tropism satisfies.
 
 - **Module rules** — the intended architecture. "The CLI and MCP server must not depend on each
   other, but both may depend on the shared core."
@@ -101,8 +101,8 @@ lists, and stale-rule detection. **Not** implemented — and rejected at parse t
 error rather than silently ignored, so a ruleset never appears to enforce more than it does:
 `layers`, `require`, `transitive`, and version constraints.
 
-`gdep.toml` also carries `exclude` globs, applied before discovery, which is what lets
-`gdep analyze . --fail-on error` pass on this repository despite `demo/` and `tests/fixtures/`
+`tropism.toml` also carries `exclude` globs, applied before discovery, which is what lets
+`tropism analyze . --fail-on error` pass on this repository despite `demo/` and `tests/fixtures/`
 being deliberately broken. Exclusions are disclosed in every report with a match count — an
 exclusion is a blind spot, and a silent blind spot is the failure mode `CheckStatus` exists to
 prevent. **Never widen an exclusion to make the gate pass.**
@@ -124,10 +124,10 @@ crates.io publishing both take actions that cannot be undone.
 
 Two things to know before touching it:
 
-- **The crate name `gdep` is taken on crates.io** by an unrelated project. The plan is to publish
-  the binary crate as `gdep-cli` with the binary still named `gdep`, which means `cargo install
-  gdep` installs someone else's tool. That decision is still open.
-- **gdep is not a pure-Rust binary.** Every tree-sitter grammar compiles C, so cross-compilation
+- **The name is settled.** `tropism`, `tropism-core`, `tropism-lang`, and `tropism-mcp` were all
+  free on crates.io as of 2026-07-31, so the crate, the binary, and the command are all `tropism`.
+  Re-verify before the first publish — nothing reserves a name.
+- **tropism is not a pure-Rust binary.** Every tree-sitter grammar compiles C, so cross-compilation
   needs a cross C toolchain and each target should be built on a native runner.
 
 ## Known limitations
@@ -155,14 +155,14 @@ The build order is at the end of [design/07-open-questions.md](design/07-open-qu
 
 ```
 demo/               deliberately-broken sample projects, one per language; excluded from
-                    the cargo workspace, asserted by crates/gdep-lang/tests/demos.rs
-crates/gdep-core/   model, discovery, LanguageProvider trait, analyzers, report contract
-crates/gdep-lang/   provider implementations, one feature-gated module per language
-crates/gdep-cli/    binary `gdep`      — clap front-end, text and JSON renderers
-crates/gdep-mcp/    binary `gdep-mcp`  — placeholder until build-order step 6
+                    the cargo workspace, asserted by crates/tropism-lang/tests/demos.rs
+crates/tropism-core/   model, discovery, LanguageProvider trait, analyzers, report contract
+crates/tropism-lang/   provider implementations, one feature-gated module per language
+crates/tropism/    binary `tropism`      — clap front-end, text and JSON renderers
+crates/tropism-mcp/    binary `tropism-mcp`  — placeholder until build-order step 6
 ```
 
-`gdep-core` depends on nothing above it. Analysis logic lives there and nowhere else; both binaries
+`tropism-core` depends on nothing above it. Analysis logic lives there and nowhere else; both binaries
 are adapters.
 
 ## Commands
@@ -170,17 +170,17 @@ are adapters.
 ```sh
 cargo build --workspace
 cargo test --workspace
-cargo test -p gdep-core discovery::          # one module
+cargo test -p tropism-core discovery::          # one module
 cargo clippy --workspace --all-targets       # must stay clean
 cargo fmt --all
 cargo insta accept                           # after intentional renderer changes
-cargo build -p gdep-cli --no-default-features # must still build without ratatui
+cargo build -p tropism --no-default-features # must still build without ratatui
 
 ./scripts/demo.sh                            # guided tour across all three languages
 ./scripts/demo.sh rust                       # one language: go | javascript | rust
-./scripts/demo.sh self                       # gdep analyzing gdep
+./scripts/demo.sh self                       # tropism analyzing tropism
 ./scripts/demo.sh --tui                      # ...ending in the interactive browser
-./target/debug/gdep analyze .                # dogfood directly
+./target/debug/tropism analyze .                # dogfood directly
 ```
 
 Output formats: `--format auto` (default; diagnostics on a tty, JSON when piped), `text`, `json`,
@@ -207,8 +207,8 @@ extraction, and namespace-based module identity. Two trait changes were forced b
 `ProjectContext::known_modules`, because a `using` names a namespace and the only reliable way to
 recognise the solution's own code is to know which namespaces it declares.
 
-A Rust slice is complete and gdep is run against itself — `crates/gdep-lang/tests/demos.rs`
-asserts that gdep reports nothing in its own source beyond genuine `Cargo.lock` duplicates.
+A Rust slice is complete and tropism is run against itself — `crates/tropism-lang/tests/demos.rs`
+asserts that tropism reports nothing in its own source beyond genuine `Cargo.lock` duplicates.
 
 A JavaScript/TypeScript slice is also complete: `package.json`, `package-lock.json` (a genuinely
 resolved graph, unlike `go.sum`), tree-sitter extraction for JS/TS/TSX, and all six checks running.
@@ -219,7 +219,7 @@ Not built: the other six languages, the unimplemented rule kinds above, and the 
 **Before extending the checks, read [design/10-js-evaluation.md](design/10-js-evaluation.md).**
 Manifest hygiene (`unused-dep` / `missing-dep`) measured a **63% false-positive rate** on real
 JavaScript repositories after three rounds of mitigation, because packages are legitimately used via
-HTML `<script src>`, config files, framework strings, and CLI arguments that gdep cannot see without
+HTML `<script src>`, config files, framework strings, and CLI arguments that tropism cannot see without
 an installed `node_modules` — which the hermetic constraint forbids. Cycle detection, by contrast,
 was sound on every repository. Do not turn hygiene on by default or let it gate CI.
 
@@ -240,7 +240,7 @@ was sound on every repository. Do not turn hygiene on by default or let it gate 
 ### Rust semantics that cost real debugging
 
 Four false-positive classes that only dogfooding surfaced. Each has a regression test in
-`crates/gdep-lang/src/rust.rs` and a trap in `demo/rust`:
+`crates/tropism-lang/src/rust.rs` and a trap in `demo/rust`:
 
 - **`use` statements are not sufficient to determine crate usage.** Idiomatic Rust writes
   `anyhow::Result<T>` with no import anywhere. Extracting only `use` reported most of this
@@ -250,11 +250,11 @@ Four false-positive classes that only dogfooding surfaced. Each has a regression
   unrecognised path root resolves to `Unresolved`, never `External` — otherwise every file invents
   missing dependencies.
 - **Macro arguments and attribute bodies are flat token trees.** `#[derive(thiserror::Error)]` and
-  `eprintln!("{}", gdep_core::report::S)` are real uses that the structured walk cannot see; the
+  `eprintln!("{}", tropism_core::report::S)` are real uses that the structured walk cannot see; the
   extractor scans token trees for `identifier ::` pairs.
 - **Containment is not dependency.** Rust 2018 uniform paths let `pub use model::X` name a local
   module, and a submodule reaching back with `use super::*` is part of its parent. Modelling either
-  as a dependency reported a cycle in `gdep-core` — and would in essentially every Rust crate.
+  as a dependency reported a cycle in `tropism-core` — and would in essentially every Rust crate.
 
 ### Go semantics that cost real debugging
 

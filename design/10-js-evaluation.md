@@ -48,9 +48,9 @@ repositories — 35 in total — was checked against the source by hand.
 | Verdict                                                        | Count  |         |
 | -------------------------------------------------------------- | ------ | ------- |
 | True positive — package referenced nowhere                     | 13     | 37%     |
-| **False positive — package genuinely used, invisibly to gdep** | **22** | **63%** |
+| **False positive — package genuinely used, invisibly to tropism** | **22** | **63%** |
 
-The false positives are not sloppiness. Each is a real use through a channel gdep structurally
+The false positives are not sloppiness. Each is a real use through a channel tropism structurally
 cannot see:
 
 - **HTML `<script src>` tags** — lodash loads `qunitjs`, `platform`, `requirejs`, `dojo`, and
@@ -75,10 +75,10 @@ arbitrary shell strings. There is no general rule, only an unbounded tail of spe
 The deepest instance is structural. `gzip-size-cli` provides the `gzip-size` binary,
 `npm-run-all2` provides `run-p`, `typescript` provides `tsc`. Mapping a script command back to the
 package that provides it requires reading `bin` fields from `node_modules/*/package.json` — which
-means requiring an installed tree, which is exactly the hermetic property that is gdep's strongest
+means requiring an installed tree, which is exactly the hermetic property that is tropism's strongest
 differentiator.
 
-**The constraint that makes gdep valuable is the same constraint that makes `unused-dep`
+**The constraint that makes tropism valuable is the same constraint that makes `unused-dep`
 unreliable.** That is not a bug to be fixed. It is the shape of the problem.
 
 ## What did hold up
@@ -92,7 +92,7 @@ This check is everything manifest hygiene is not:
 - **Sound by construction.** It reads only import statements, which are unambiguous syntax. There is
   no equivalent of "used via an HTML script tag" — an import either exists in the source or it does
   not, so the false-positive class that sinks `unused-dep` cannot arise.
-- **Needs no installed tree.** Fully hermetic, so gdep's core constraint costs nothing here.
+- **Needs no installed tree.** Fully hermetic, so tropism's core constraint costs nothing here.
 - **Genuinely painful in JS/TS.** Import cycles cause temporal-dead-zone crashes and undefined
   imports at module-init time, and they are legal, so nothing in the toolchain stops them.
 - **File-level, which is where JS cycles actually live.** Go's directory-level graph would miss
@@ -117,7 +117,7 @@ uniform contract.
 **Demote manifest hygiene to opt-in, and label it.** At a 63% false-positive rate it must not be on
 by default and must never gate CI. If kept, cap it at `Confidence::Low` for JS/TS and say plainly in
 the message that config-file and HTML references are invisible. The honest alternative is to drop it
-for JS/TS entirely and cede that ground to `knip`, which reads the config files gdep will not.
+for JS/TS entirely and cede that ground to `knip`, which reads the config files tropism will not.
 
 **Merge `diamond-dep` into `version-conflict`.** One check: "this package is installed N times
 because these dependents disagreed." Two checks reporting the same packages is noise.
@@ -128,8 +128,8 @@ often invisible without an installed tree. A third language will produce a third
 question worth answering now is not "does this work for Python?" but "is the cycle-plus-hermetic-map
 product worth building?", and that is answered by building the MCP server over what already works.
 
-**Revised kill criterion, for the MCP step.** Ship `gdep_summary`, `gdep_findings`, and
-`gdep_package_path` over the Go and JS slices, and drive a real agent task with them. If the agent
+**Revised kill criterion, for the MCP step.** Ship `tropism_summary`, `tropism_findings`, and
+`tropism_package_path` over the Go and JS slices, and drive a real agent task with them. If the agent
 cannot do something it could not do with `grep` and `madge`, stop. The remaining value is
 concentrated in the uniform, hermetic, agent-facing interface, and that claim is now the only one
 still untested.

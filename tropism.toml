@@ -1,0 +1,111 @@
+# tropism's own ruleset — enforced on every run of `tropism analyze .`.
+#
+# Specification: design/11-dependency-rules.md
+#
+# Everything here is a *presence* check: a violation is an import or a declaration
+# that exists and should not. That is why rule findings are High confidence while
+# the unused-dependency check is not — see design/10-js-evaluation.md.
+
+schema_version = 1
+
+# --------------------------------------------------------------------------
+# Paths kept out of the analysis.
+#
+# These hold deliberately-broken sample projects: demo/ is the shop window and
+# tests/fixtures/ backs the test suite. Both are meant to produce findings, so
+# analyzing them would make `tropism analyze .` permanently non-zero and there would
+# be no way to gate CI on this repository's own rules.
+#
+# Exclusions are disclosed in every report, with a count per pattern, because an
+# exclusion is a deliberate blind spot and a repository that excluded half of
+# itself must not look like one that was fully analyzed.
+exclude = [
+  "demo/**",
+  "**/tests/fixtures/**",
+]
+
+# --------------------------------------------------------------------------
+# Modules: names bound to path globs. They need not match project boundaries.
+
+[modules]
+core = "crates/tropism-core/**"
+lang = "crates/tropism-lang/**"
+cli = "crates/tropism/**"
+mcp = "crates/tropism-mcp/**"
+
+# --------------------------------------------------------------------------
+# Module rules: the architecture, written down.
+
+# The case that motivated the feature.
+[[module_rules]]
+id = "surfaces-are-independent"
+independent = ["cli", "mcp"]
+severity = "error"
+reason = """
+The CLI and MCP server are independent adapters over one analysis core
+(design/README.md, principle 4). Both may depend on core; neither may depend on
+the other. Shared behaviour belongs in core, not in a dependency between the two
+surfaces — that is what keeps "any question answerable by the CLI is answerable
+over MCP" true by construction rather than by discipline.
+"""
+
+# The dependency direction that the crate split exists to enforce.
+[[module_rules]]
+id = "core-is-a-leaf"
+allow_only = { from = "core", to = [] }
+severity = "error"
+reason = """
+tropism-core must not depend on rendering, CLI, or transport concerns. The crate
+split makes this structural rather than a matter of discipline: core cannot
+accidentally depend on clap because it does not have it (design/01-architecture.md).
+"""
+
+[[module_rules]]
+id = "providers-do-not-render"
+deny = { from = "lang", to = ["cli", "mcp"] }
+severity = "error"
+reason = "A language provider must not know how findings are displayed."
+
+# --------------------------------------------------------------------------
+# Package rules: dependency policy.
+
+[packages]
+# "allow" — a denylist: anything unlisted is fine.
+# "deny"  — an approved list: every dependency must be named.
+unlisted = "allow"
+
+[[package_rules]]
+id = "no-archived-yaml"
+deny = ["serde_yaml"]
+replacement = "saphyr"
+severity = "error"
+reason = """
+serde_yaml is archived (0.9.34+deprecated, last released 2024-03). Its forks are
+also stale; saphyr is the only actively maintained option. See design/08-crates.md.
+"""
+
+[[package_rules]]
+id = "tui-stays-in-the-cli"
+packages = ["ratatui"]
+allowed_in = ["cli"]
+severity = "error"
+reason = """
+The interactive browser is a CLI concern. Core must stay renderer-agnostic so the
+MCP server and any future surface are not forced to carry a terminal dependency.
+"""
+
+[[package_rules]]
+id = "providers-own-the-grammars"
+packages = [
+  "tree-sitter",
+  "tree-sitter-go",
+  "tree-sitter-javascript",
+  "tree-sitter-typescript",
+  "tree-sitter-rust",
+]
+allowed_in = ["lang"]
+severity = "error"
+reason = """
+Parsing is a language provider's job. If a grammar reaches core or a surface, the
+LanguageProvider boundary has stopped doing the one thing it exists for.
+"""

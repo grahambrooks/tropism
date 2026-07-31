@@ -5,12 +5,12 @@ Planted problems:
 - `golang.org/x/sync` is declared in `go.mod` but never imported.
 - `github.com/rs/zerolog` is imported in `api/api.go` but never declared.
 
-Planted traps, which gdep must **not** report:
+Planted traps, which tropism must **not** report:
 
 - `_ "github.com/lib/pq"` — a blank import is a real use, for its side effects.
 - `github.com/stretchr/testify // indirect` — not expected to be imported.
 
-## Dependency rules (`gdep.toml`)
+## Dependency rules (`tropism.toml`)
 
 - **Violated** — `entrypoint-goes-through-the-api`: `main.go` reaches past the api
   layer straight into `store`. No general check can state this; it is true only

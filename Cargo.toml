@@ -1,7 +1,7 @@
 [workspace]
 members = ["crates/*"]
 # demo/ holds deliberately-broken sample projects for scripts/demo.sh. They are
-# analyzed by gdep, never built by cargo.
+# analyzed by tropism, never built by cargo.
 exclude = ["demo"]
 resolver = "3"
 
@@ -14,8 +14,8 @@ rust-version = "1.85"
 # Versions verified against crates.io on 2026-07-30. See design/08-crates.md for the
 # rationale behind each choice and the ones deliberately deferred.
 [workspace.dependencies]
-gdep-core = { path = "crates/gdep-core" }
-gdep-lang = { path = "crates/gdep-lang" }
+tropism-core = { path = "crates/tropism-core" }
+tropism-lang = { path = "crates/tropism-lang" }
 
 anyhow = "1.0.104"
 thiserror = "2.0.19"

@@ -1,12 +1,12 @@
 # 03 — Language providers
 
-A provider is everything gdep knows about one language and its package managers. Adding the eleventh
+A provider is everything tropism knows about one language and its package managers. Adding the eleventh
 language should mean writing one provider and registering it, touching no analyzer.
 
 ## The trait
 
-Defined in `gdep-core` (`provider.rs`); implemented in `gdep-lang`, one feature-gated module per
-language, collected by `gdep_lang::registry()`. See [01-architecture.md](01-architecture.md) for why
+Defined in `tropism-core` (`provider.rs`); implemented in `tropism-lang`, one feature-gated module per
+language, collected by `tropism_lang::registry()`. See [01-architecture.md](01-architecture.md) for why
 the trait sits in core rather than beside the implementations.
 
 ```rust
@@ -52,7 +52,7 @@ confidence when it is low.**
 
 ## The import→package mapping problem
 
-This is the central difficulty of the whole tool, and it is the thing most likely to make gdep wrong
+This is the central difficulty of the whole tool, and it is the thing most likely to make tropism wrong
 in practice. The name you import is frequently not the name you declare.
 
 | Language   | Import statement                    | Declared package       |
@@ -125,7 +125,7 @@ Beyond the manifest/lockfile table in [CLAUDE.md](../CLAUDE.md):
 - **JS/TS** — the three lockfile formats are unrelated; treat as three parsers. Workspaces/monorepos
   are the norm, not the exception.
 - **Java** — Maven has no lockfile and `pom.xml` parent inheritance means a manifest is often
-  incomplete on its own without fetching the parent, which gdep will not do. Expect low coverage here
+  incomplete on its own without fetching the parent, which tropism will not do. Expect low coverage here
   and say so.
 - **C++** — no dominant convention; `CMakeLists.txt` is a program. Lowest expected fidelity of the
   ten.

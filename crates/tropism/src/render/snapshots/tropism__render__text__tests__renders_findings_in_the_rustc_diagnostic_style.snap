@@ -1,0 +1,26 @@
+---
+source: crates/tropism/src/render/text.rs
+expression: "render_with(&sample_report(), false)"
+---
+cycle (go)
+  1 found     cycle
+  ok          unused-dep
+  unavailable version-conflict — no lockfile found; resolved tree unknown
+
+warning[cycle:cycle:465ee449]: import cycle between 2 packages
+ --> cycle/user.go:3:1
+  |
+3 | import "example.com/svc/api/order"
+  | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ imports api/order
+  |
+ ::: cycle/order.go:3:1
+  |
+3 | import "example.com/svc/api/user"
+  | --------------------------------- imports back to api/user
+  |
+note: confidence: high
+
+1 file(s) skipped
+  cycle/generated.go — parse error at line 12
+
+1 finding(s) across 1 project(s) (1 check(s) did not run)

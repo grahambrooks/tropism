@@ -68,16 +68,16 @@ maintained renderer and a second untested one.
 The non-interactive stack is two more crates:
 
 - **`annotate-snippets`** renders findings. It is maintained by rust-lang and is the crate the
-  diagnostic format comes from, so gdep's output looks like the compiler output developers already
+  diagnostic format comes from, so tropism's output looks like the compiler output developers already
   parse without effort. It takes a snippet plus annotations and returns a string — a pure renderer,
-  which keeps `gdep-core` free of any rendering concern.
+  which keeps `tropism-core` free of any rendering concern.
 - **`anstream`** handles colour. It strips ANSI automatically when stdout is not a terminal and
   honours `NO_COLOR`, so there is no second, uncoloured code path to keep in sync.
 
 Rejected, with reasons:
 
 - **`miette`** (7.6.0) is excellent, but it is an error-*reporting* framework: you derive
-  `Diagnostic` on your error types. gdep's findings are data, not errors, and adopting it would pull
+  `Diagnostic` on your error types. tropism's findings are data, not errors, and adopting it would pull
   a rendering concern into the core data model.
 - **`codespan-reporting`** (0.13.1) and **`ariadne`** (0.6.0) are both capable and maintained. They
   lose only on the specific goal of looking exactly like rustc.
@@ -102,7 +102,7 @@ pre-0.1 API. Re-check when JS/TS work starts; the decision does not need to be m
 
 **Python version parsing may need vendoring.** `pep440_rs` (0.7.3, 2024-12) and `pep508_rs` (0.9.2,
 2025-01) are the right crates but have not been released in over a year — development moved into
-uv's tree. Re-check at step 7; be prepared to vendor or reimplement the subset gdep needs.
+uv's tree. Re-check at step 7; be prepared to vendor or reimplement the subset tropism needs.
 
 **tree-sitter grammar ABI compatibility — resolved.** Verified at runtime: the 0.26 core loads
 `tree-sitter-go` and `tree-sitter-javascript` (ABI 15) and `tree-sitter-typescript` and

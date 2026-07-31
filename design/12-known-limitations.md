@@ -5,9 +5,9 @@ Each entry says what it costs and what it would take to fix.
 
 The register splits into two halves, and the split is the important part:
 
-- **Structural** — consequences of the core constraint that gdep never invokes a package manager and
+- **Structural** — consequences of the core constraint that tropism never invokes a package manager and
   never executes the repository. These do not get "fixed"; they get *reported honestly*. Anything
-  that would resolve them trades away the property that makes gdep worth having.
+  that would resolve them trades away the property that makes tropism worth having.
 - **Deferred** — things that are simply not built yet, with no obstacle beyond effort.
 
 Confusing the two is the main risk this document exists to prevent.
@@ -20,7 +20,7 @@ Confusing the two is the main risk this document exists to prevent.
 
 `unused-dep` measured a **63% false-positive rate** on ten real JavaScript repositories after three
 rounds of mitigation ([10-js-evaluation.md](10-js-evaluation.md)). Packages are genuinely used
-through channels gdep cannot see: HTML `<script src>` tags, `vitest.config.mts`, `tsconfig`
+through channels tropism cannot see: HTML `<script src>` tags, `vitest.config.mts`, `tsconfig`
 `extends`, GitHub Actions workflows, framework strings (`app.set('view engine', 'hbs')`), and spawn
 arguments (`--import=tsx/esm`).
 
@@ -61,10 +61,10 @@ mistaken for a clean result.
 
 ### S4. Manifests that are programs are read incompletely
 
-`build.gradle[.kts]`, `Package.swift`, `conanfile.py`, and `vitest.config.mts` are code. gdep parses
+`build.gradle[.kts]`, `Package.swift`, `conanfile.py`, and `vitest.config.mts` are code. tropism parses
 the declarative subset and cannot see anything dynamic.
 
-**Why it stays:** principle 1 — gdep never executes the repository it analyzes. This is a security
+**Why it stays:** principle 1 — tropism never executes the repository it analyzes. This is a security
 property for the agent use case, not a convenience.
 
 ### S5. Import name ≠ package name, and the gap has no complete answer
@@ -101,7 +101,7 @@ missed by the check named after them.
 ### D2. Lockfile discovery is same-directory only
 
 A Cargo workspace's `Cargo.lock` and an npm workspace's `package-lock.json` live at the root, but
-discovery only pairs a lockfile with a manifest in the *same* directory. So `crates/gdep-core`
+discovery only pairs a lockfile with a manifest in the *same* directory. So `crates/tropism-core`
 reports "no lockfile found" while the workspace root runs the resolved-tree checks for everything.
 
 **Cost:** confusing per-project output, and `Unavailable` reasons that are technically true but
@@ -132,21 +132,21 @@ is visibly wrong rather than silently misleading, but it is still wrong.
 
 ### D23. ~~No way to exclude sample code~~ — RESOLVED
 
-Resolved by `exclude` in `gdep.toml` ([11-dependency-rules.md](11-dependency-rules.md)). Patterns
+Resolved by `exclude` in `tropism.toml` ([11-dependency-rules.md](11-dependency-rules.md)). Patterns
 are applied before discovery, and every exclusion is disclosed in the report with a match count so a
-blind spot is never silent. `gdep analyze . --fail-on error` now exits 0 on this repository, which
+blind spot is never silent. `tropism analyze . --fail-on error` now exits 0 on this repository, which
 unblocks the dogfood gate in [13-build-and-release.md](13-build-and-release.md).
 
 Configured in the ruleset rather than as a CLI flag, because what a repository excludes is a
 property of the repository, not of the invocation. A CLI `--exclude` would still be useful for
-ad-hoc runs against a repository with no `gdep.toml`; it is not built.
+ad-hoc runs against a repository with no `tropism.toml`; it is not built.
 
-**Remaining:** the CLI still accepts only one path argument, so `gdep analyze crates/a crates/b`
+**Remaining:** the CLI still accepts only one path argument, so `tropism analyze crates/a crates/b`
 exits 2.
 
-### D24. `gdep check` and `--check <id>` are specified but not implemented
+### D24. `tropism check` and `--check <id>` are specified but not implemented
 
-[05-interfaces.md](05-interfaces.md) specifies a rules-only `gdep check` subcommand and a `--check`
+[05-interfaces.md](05-interfaces.md) specifies a rules-only `tropism check` subcommand and a `--check`
 filter. Neither exists; `--help` offers only `--format`, `--fail-on`, `--no-ignore`, `--rules`, and
 `--no-rules`.
 
@@ -180,7 +180,7 @@ any further rule kinds.
 
 ### D9. No sub-ruleset inheritance in a monorepo
 
-Whether `packages/web/gdep.toml` extends or replaces the root ruleset is undecided
+Whether `packages/web/tropism.toml` extends or replaces the root ruleset is undecided
 ([11-dependency-rules.md](11-dependency-rules.md), open question 2).
 
 ### D10. `version-conflict` and `diamond-dep` overlap

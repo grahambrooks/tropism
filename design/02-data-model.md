@@ -5,7 +5,7 @@ relationships between the pieces; field names will move.
 
 ## Two graphs, deliberately separate
 
-The most important structural decision in gdep: the internal module graph and the external package
+The most important structural decision in tropism: the internal module graph and the external package
 graph are different graphs, built from different sources, answering different questions. Merging
 them into one "dependency graph" would produce a structure where no algorithm is correct for all
 nodes.

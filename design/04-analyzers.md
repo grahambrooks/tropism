@@ -59,7 +59,7 @@ Details to get right:
 - Severity should scale with SCC size and with whether the cycle crosses a package boundary.
 - Rank findings by SCC size so the worst tangle is first.
 
-Cycles are the highest-confidence check gdep has: derived from explicit imports, no name resolution
+Cycles are the highest-confidence check tropism has: derived from explicit imports, no name resolution
 against a manifest required, no lockfile needed. **Build this first** — it proves the module graph
 end to end and is useful on its own.
 
@@ -149,7 +149,7 @@ Start with signals that are individually defensible and cite the evidence for ea
 - **Duplicated capability**: multiple packages from a known-equivalent set (three date libraries,
   two HTTP clients) — requires a curated data table, same shape as the exception table in
   [03-language-providers.md](03-language-providers.md).
-- **Unmaintained or superseded** packages — requires external data gdep does not have offline. Out
+- **Unmaintained or superseded** packages — requires external data tropism does not have offline. Out
   of scope for now; note it as a boundary rather than half-implementing it.
 
 Every bloat finding is Low confidence and Info severity by default. It is advice, and it should read

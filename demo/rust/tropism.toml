@@ -1,0 +1,36 @@
+# Ruleset for the Rust demo. Specification: design/11-dependency-rules.md
+#
+# This mirrors tropism's own architecture: one shared core, two independent surfaces.
+
+schema_version = 1
+
+[modules]
+engine = "crates/engine/**"
+service = "crates/service/**"
+app = "crates/app/**"
+
+# VIOLATED. `app` imports `service` directly in main.rs.
+[[module_rules]]
+id = "surfaces-are-independent"
+independent = ["app", "service"]
+severity = "error"
+reason = """
+`app` and `service` are independent surfaces over the shared `engine`. Neither may
+depend on the other; shared behaviour belongs in engine. Nothing tropism infers can
+express this — it is true only because the team decided it.
+"""
+
+# SATISFIED. engine depends on neither surface, which is what makes it shared.
+[[module_rules]]
+id = "engine-is-a-leaf"
+allow_only = { from = "engine", to = [] }
+severity = "error"
+reason = "The engine must not depend on anything that consumes it."
+
+# VIOLATED. `regex` is declared by `app`, which is not `engine`.
+[[package_rules]]
+id = "regex-belongs-to-the-engine"
+packages = ["regex"]
+allowed_in = ["engine"]
+severity = "warning"
+reason = "Pattern matching is an engine concern; surfaces should not parse."

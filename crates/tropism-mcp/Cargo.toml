@@ -1,0 +1,20 @@
+[package]
+name = "tropism-mcp"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+description = "MCP server exposing tropism analysis to coding agents"
+
+[[bin]]
+name = "tropism-mcp"
+path = "src/main.rs"
+
+# rmcp (the official Rust MCP SDK) and tokio are added at build-order step 6, over an
+# analysis core already proven through the CLI. Declaring them now would mean an
+# unused dependency in the dependency analyzer.
+[dependencies]
+tropism-core.workspace = true
+
+[lints]
+workspace = true

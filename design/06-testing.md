@@ -1,6 +1,6 @@
 # 06 — Testing
 
-The hard part is that gdep has **no oracle**. For most repositories nobody knows the true set of
+The hard part is that tropism has **no oracle**. For most repositories nobody knows the true set of
 unused dependencies, so "run it on a big repo and see" validates nothing. The strategy is to test
 each layer where its correct answer *is* knowable.
 
@@ -55,7 +55,7 @@ tests that are painful to diagnose after the fact. Add this test before adding p
 
 ## Correctness on real repositories
 
-Fixtures prove gdep does what we intended. They cannot prove the intent matches reality. So,
+Fixtures prove tropism does what we intended. They cannot prove the intent matches reality. So,
 separately from CI:
 
 - Run against a set of well-known open-source repositories per language and **review the findings by

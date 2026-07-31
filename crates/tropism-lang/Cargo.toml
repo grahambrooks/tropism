@@ -1,0 +1,31 @@
+[package]
+name = "tropism-lang"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+description = "Language provider implementations for tropism"
+
+[dependencies]
+tropism-core.workspace = true
+anyhow.workspace = true
+camino.workspace = true
+serde_json.workspace = true
+tree-sitter.workspace = true
+tree-sitter-go.workspace = true
+tree-sitter-javascript.workspace = true
+tree-sitter-typescript.workspace = true
+tree-sitter-rust.workspace = true
+tree-sitter-c-sharp.workspace = true
+quick-xml.workspace = true
+toml.workspace = true
+
+[features]
+default = ["go", "javascript", "rust", "csharp"]
+go = []
+javascript = []
+rust = []
+csharp = []
+
+[lints]
+workspace = true

@@ -10,7 +10,7 @@ Two things here differ from every other demo:
   `xunit` package, `using Shop.Domain.Orders;` is the solution's own code, and
   telling them apart needs the set of namespaces the projects declare.
 
-## Dependency rules (`gdep.toml`)
+## Dependency rules (`tropism.toml`)
 
 - **Violated** — `api-goes-through-the-domain`: `Shop.Api` reaches straight into
   `Shop.Data`. Caught **twice**: at the `<ProjectReference>` in the `.csproj` and
@@ -31,7 +31,7 @@ Two things here differ from every other demo:
 - `AutoMapper` is declared by `Shop.Data` but never imported.
 - `Serilog` is imported by `Shop.Api` but never declared.
 
-## Planted traps, which gdep must **not** report
+## Planted traps, which tropism must **not** report
 
 - `StyleCop.Analyzers` carries `PrivateAssets="all"` — a Roslyn analyzer that
   participates in the build and is never referenced from code.
