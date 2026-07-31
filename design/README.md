@@ -1,8 +1,13 @@
 # gdep design specification
 
-**Status:** the skeleton (build-order step 1) is built. Discovery, the report contract, and both
-renderers exist and are tested; no analyzer runs yet, so every check reports `Unavailable`.
-Everything beyond that is still intent, not a description of behaviour.
+**Status:** the Go vertical slice is complete — discovery, `go.mod` parsing, import extraction, the
+module graph, and three of six analyzers, verified against five real repositories. The other nine
+languages and the MCP server are not built, and everything about them here is still intent rather
+than a description of behaviour.
+
+**Read [09-product-review.md](09-product-review.md) before planning further work.** Building the
+slice contradicted parts of the plan below, most importantly the choice of Go as the first language
+and the assumption that the six checks are where the value lies.
 
 These documents define what gdep should be before it is built. They exist so that implementation
 work can start anywhere without re-deriving the same decisions, and so that a decision that turns
