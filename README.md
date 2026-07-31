@@ -32,6 +32,10 @@ cargo build --release
 ./target/release/gdep analyze /path/to/repo
 ```
 
+There are no published binaries or crates yet; the release process is specified in
+[design/13-build-and-release.md](design/13-build-and-release.md) but not built. Note that
+`cargo install gdep` would install an **unrelated** crate of the same name — see that document.
+
 Or take the guided tour, which runs against deliberately-broken sample projects in `demo/`:
 
 ```sh

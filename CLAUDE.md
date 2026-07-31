@@ -110,6 +110,20 @@ unused-dependency check, which must prove a negative and measured 63% false posi
 JavaScript. It is also the one thing no native tool can do: `go mod tidy` cannot know an
 architecture it was never told about.
 
+## Build and release
+
+Specified in [design/13-build-and-release.md](design/13-build-and-release.md) and **not
+implemented** — no `.github/workflows/` exist yet, deliberately, because continuous release and
+crates.io publishing both take actions that cannot be undone.
+
+Two things to know before touching it:
+
+- **The crate name `gdep` is taken on crates.io** by an unrelated project. The plan is to publish
+  the binary crate as `gdep-cli` with the binary still named `gdep`, which means `cargo install
+  gdep` installs someone else's tool. That decision is still open.
+- **gdep is not a pure-Rust binary.** Every tree-sitter grammar compiles C, so cross-compilation
+  needs a cross C toolchain and each target should be built on a native runner.
+
 ## Known limitations
 
 **[design/12-known-limitations.md](design/12-known-limitations.md) is the register.** Before

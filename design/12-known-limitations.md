@@ -130,6 +130,37 @@ is visibly wrong rather than silently misleading, but it is still wrong.
 
 **Fix:** a span-preserving parser (`toml_edit` already does this for TOML).
 
+### D23. No `--exclude`, so gdep cannot gate its own CI
+
+The CLI takes one path and honours `.gitignore`. It has no way to exclude a tracked directory, so a
+repository containing deliberately-broken sample projects — this one — cannot run
+`gdep analyze . --fail-on error` as a merge gate.
+
+```
+gdep analyze .                  exit=1   demo/ and test fixtures are deliberately broken
+gdep analyze crates             exit=1   fixtures live under crates/gdep-lang/tests/
+gdep analyze crates/a crates/b  exit=2   only one path argument is accepted
+```
+
+Narrowing the scan is not a workaround: rules evaluate repo-wide, so scanning a single crate removes
+the cross-crate edges the rules exist to check.
+
+**Cost:** the dogfood job in [13-build-and-release.md](13-build-and-release.md) is blocked, and the
+project's most convincing demonstration cannot be automated. The equivalent assertion exists in the
+test suite, which filters in Rust.
+**Fix:** `--exclude <GLOB>` (repeatable), and optionally accept multiple path arguments. Small.
+**Priority: high** — it is cheap and it unblocks the CI story.
+
+### D24. `gdep check` and `--check <id>` are specified but not implemented
+
+[05-interfaces.md](05-interfaces.md) specifies a rules-only `gdep check` subcommand and a `--check`
+filter. Neither exists; `--help` offers only `--format`, `--fail-on`, `--no-ignore`, `--rules`, and
+`--no-rules`.
+
+**Cost:** no fast, high-signal subset for a pre-commit hook, and no way to gate on rules alone while
+leaving the noisier checks advisory — which is the division
+[10-js-evaluation.md](10-js-evaluation.md) argues for.
+
 ---
 
 ## Deferred — rules
@@ -206,12 +237,14 @@ the product question.
 
 ## Suggested order
 
-1. **D1** — the repo-wide module graph. Fixes the gap most likely to be read as a clean result, and
+1. **D23** — `--exclude`. Smallest item here, and it unblocks gdep gating its own CI, which is the
+   project's most convincing demonstration.
+2. **D1** — the repo-wide module graph. Fixes the gap most likely to be read as a clean result, and
    the rule engine already builds half of it.
-2. **D8** — baseline/ratcheting, without which no team can adopt the rules on an existing codebase.
-3. **D2** — lockfile discovery upward, which turns several misleading `Unavailable` reasons into
+3. **D8** — baseline/ratcheting, without which no team can adopt the rules on an existing codebase.
+4. **D2** — lockfile discovery upward, which turns several misleading `Unavailable` reasons into
    real answers.
-4. **D10** — merge the two overlapping resolved-tree checks.
-5. **The MCP server**, which is where the remaining untested product claim lives.
+5. **D10** — merge the two overlapping resolved-tree checks.
+6. **The MCP server**, which is where the remaining untested product claim lives.
 
 S1 and S3 are not on this list and never will be. They are reported, not fixed.
