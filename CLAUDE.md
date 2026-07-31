@@ -130,10 +130,31 @@ terminal; both renderers share one fixture report (`render/testdata.rs`) so they
 
 ## Current state
 
-Build-order step 1 is done: workspace, report contract, discovery, and all three renderers, with
-tests and a runnable demo script.
-No analyzer is implemented, so `gdep analyze` reports every check as `Unavailable` — that path is
-wired from the first commit precisely so nobody later mistakes silence for success. The Go provider
-declares its manifest and lockfile names (discovery works); its parsing methods return errors.
+The Go vertical slice is complete: discovery, `go.mod` parsing, tree-sitter import extraction,
+import resolution, the module graph, and the cycle / unused-dep / missing-dep analyzers. Verified
+against Cobra, Zerolog, Prometheus, color, and httprouter with zero false positives.
 
-Next: Go import extraction, then the cycle analyzer.
+`version-conflict` and `diamond-dep` report `Unavailable` for Go and always will: `go.sum` records
+hashes for the whole module graph rather than the versions MVS selected, and carries no edges, so
+there is no resolved tree to analyze without running the Go resolver. `dependency-bloat` is
+deferred by design.
+
+Not built: the other nine languages, and the MCP server.
+
+### Go semantics that cost real debugging
+
+Three test-file rules, each forced by a false positive on a real repository. Do not simplify them
+without re-running `scripts/demo.sh` and the real-repo check:
+
+- A package's `_test.go` files are **not** compiled in when that package is built as a dependency
+  of another package's tests. Attributing their imports to the package invented a 15-module cycle
+  in Prometheus.
+- `foo/x_test.go` declaring `package foo` (internal test) *can* create a cycle — Go rejects it as
+  "import cycle not allowed in test" — so it is checked by reachability from `foo [test]` back to
+  `foo`, which is not an SCC of the graph.
+- `foo/x_test.go` declaring `package foo_test` (external test) is a separate package that exists
+  precisely so it can import `foo`. Never cycle-checked. Cobra, Zerolog, and Prometheus all rely
+  on this.
+
+Go's compiler already rejects ordinary import cycles, so `cycle` can only ever fire on Go code that
+does not build. See `design/09-product-review.md`.

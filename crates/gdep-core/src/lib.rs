@@ -4,13 +4,16 @@
 //! files, builds graphs, and produces a [`Report`](report::Report). Both the CLI and
 //! the MCP server are adapters over it — see `design/README.md`, principle 4.
 
+pub mod analysis;
 pub mod discovery;
+pub mod graph;
 pub mod model;
+pub mod pipeline;
 pub mod provider;
 pub mod report;
 
-pub use model::{DeclaredDep, DepKind, Language, Project, Provenance, ResolvedDep};
-pub use provider::{Import, ImportTarget, LanguageProvider, VersionOps};
+pub use model::{DeclaredDep, DepKind, Language, Manifest, Project, Provenance, ResolvedDep};
+pub use provider::{Import, ImportTarget, LanguageProvider, ProjectContext, VersionOps};
 pub use report::{
     CheckId, CheckStatus, Confidence, Evidence, Finding, ProjectReport, Report, SCHEMA_VERSION,
     Severity, SkippedFile,

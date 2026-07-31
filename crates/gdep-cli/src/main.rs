@@ -5,14 +5,13 @@
 
 mod render;
 
-use std::collections::BTreeMap;
 use std::io::IsTerminal;
 use std::process::ExitCode;
 
 use camino::Utf8PathBuf;
 use clap::{Args, Parser, Subcommand, ValueEnum};
-use gdep_core::discovery::discover;
-use gdep_core::report::{CheckId, CheckStatus, ProjectReport, Report, Severity};
+use gdep_core::pipeline;
+use gdep_core::report::Severity;
 
 /// Exit codes are the CI contract: a broken invocation must never look like a
 /// passing build. See `design/05-interfaces.md`.
@@ -87,15 +86,10 @@ fn main() -> ExitCode {
 
 fn analyze(args: AnalyzeArgs) -> anyhow::Result<u8> {
     let providers = gdep_lang::registry();
-    let projects = discover(&args.path, &providers, !args.no_ignore)?;
-
-    let mut report = Report::new(args.path.clone());
-    for project in projects {
-        let mut project_report = ProjectReport::new(project);
-        project_report.checks = pending_checks();
-        report.projects.push(project_report);
-    }
-    report.finalize();
+    let options = pipeline::Options {
+        respect_ignore: !args.no_ignore,
+    };
+    let report = pipeline::analyze(&args.path, &providers, &options)?;
 
     // `auto` never resolves to the TUI: it has to stay safe under a pipe, in CI, and
     // under a redirect. The interactive browser is always an explicit request.
@@ -115,21 +109,4 @@ fn analyze(args: AnalyzeArgs) -> anyhow::Result<u8> {
 
     let triggered = report.max_severity().is_some_and(|max| max >= args.fail_on);
     Ok(if triggered { EXIT_FINDINGS } else { EXIT_CLEAN })
-}
-
-/// Until the analyzers land, every check is honestly reported as unavailable.
-///
-/// This is the same mechanism a missing lockfile uses at runtime, so the "check did
-/// not run" path is exercised from the very first commit rather than bolted on once
-/// something already depends on silence meaning success.
-fn pending_checks() -> BTreeMap<CheckId, CheckStatus> {
-    CheckId::ALL
-        .into_iter()
-        .map(|check| {
-            (
-                check,
-                CheckStatus::unavailable("analyzer not implemented yet"),
-            )
-        })
-        .collect()
 }

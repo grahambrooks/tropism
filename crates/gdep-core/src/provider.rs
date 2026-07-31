@@ -8,7 +8,17 @@
 
 use camino::Utf8Path;
 
-use crate::model::{DeclaredDep, Language, ResolvedDep};
+use crate::graph::ModuleId;
+use crate::model::{DeclaredDep, Language, Manifest, Project, ResolvedDep};
+
+/// What a provider needs to know about the project to resolve an import.
+pub struct ProjectContext<'a> {
+    pub project: &'a Project,
+    /// The package's own identity from its manifest — Go's module path, npm's
+    /// `name`. Required to distinguish internal imports from external ones.
+    pub package_name: Option<&'a str>,
+    pub declared: &'a [DeclaredDep],
+}
 
 /// An import site found in source.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -54,7 +64,7 @@ pub trait LanguageProvider: Send + Sync {
     /// Extensions this provider extracts imports from, without the dot.
     fn source_extensions(&self) -> &'static [&'static str];
 
-    fn parse_manifest(&self, path: &Utf8Path, text: &str) -> anyhow::Result<Vec<DeclaredDep>>;
+    fn parse_manifest(&self, path: &Utf8Path, text: &str) -> anyhow::Result<Manifest>;
 
     /// `Ok(None)` when the ecosystem has no lockfile concept or none was found.
     fn parse_lockfile(
@@ -63,9 +73,38 @@ pub trait LanguageProvider: Send + Sync {
         text: &str,
     ) -> anyhow::Result<Option<Vec<ResolvedDep>>>;
 
+    /// Why this ecosystem cannot supply a resolved tree, when that is structural
+    /// rather than a missing file.
+    ///
+    /// Go is the motivating case: `go.sum` exists and looks like a lockfile, but it
+    /// records hashes for the whole module graph rather than the resolved selection,
+    /// so it cannot answer version-conflict or diamond questions. Saying so beats
+    /// the generic "no lockfile found", which would be simply untrue.
+    fn resolved_tree_note(&self) -> Option<&'static str> {
+        None
+    }
+
     /// Pure: same text in, same imports out. This is what makes caching and
     /// parallelism safe.
     fn extract_imports(&self, path: &Utf8Path, text: &str) -> anyhow::Result<Vec<Import>>;
+
+    /// Which module a source file belongs to, given the directory-derived default.
+    ///
+    /// Most languages map a file to its directory, which is the default. Go needs an
+    /// override and it is not cosmetic: a file in `promql/` declaring
+    /// `package promql_test` is a *different* package from `package promql`, and Go
+    /// deliberately allows it to import packages that import `promql`. Collapsing
+    /// the two onto one node invents import cycles that do not exist.
+    ///
+    /// Java will need this too — its package comes from the `package` declaration
+    /// rather than the directory.
+    fn module_id_for_file(&self, _path: &Utf8Path, _text: &str, default_id: &str) -> ModuleId {
+        ModuleId::module(default_id)
+    }
+
+    /// Classifies one import. See `design/03-language-providers.md` — resolution
+    /// failure must surface as [`ImportTarget::Unresolved`], never a silent drop.
+    fn resolve_import(&self, import: &Import, ctx: &ProjectContext<'_>) -> ImportTarget;
 
     /// Modules needing no declaration.
     fn is_stdlib(&self, module: &str) -> bool;

@@ -49,25 +49,89 @@ note "built $BIN"
 # ---------------------------------------------------------------------------
 step "1. A fixture repository"
 
-mkdir -p "$WORK/api" "$WORK/worker" "$WORK/vendor/thirdparty" "$WORK/node_modules/junk"
+mkdir -p "$WORK/api" "$WORK/store" "$WORK/worker" "$WORK/vendor/thirdparty" "$WORK/node_modules/junk"
 
 cat > "$WORK/.gitignore" <<'EOF'
 vendor/
 node_modules/
 EOF
 
-# Two real Go projects. `api` has a lockfile, `worker` does not — that difference
-# is the point of step 4.
-printf 'module example.com/api\n\ngo 1.24\n'    > "$WORK/api/go.mod"
-printf 'github.com/spf13/cobra v1.8.0 h1:fake\n' > "$WORK/api/go.sum"
+# A Go module with three deliberate problems and three deliberate traps.
+cat > "$WORK/go.mod" <<'EOF'
+module example.com/shop
+
+go 1.24
+
+require (
+	github.com/spf13/cobra v1.8.0
+	github.com/google/uuid v1.6.0
+	golang.org/x/sync v0.7.0
+	github.com/lib/pq v1.10.9
+	github.com/stretchr/testify v1.9.0 // indirect
+)
+EOF
+printf 'github.com/spf13/cobra v1.8.0 h1:fake\n' > "$WORK/go.sum"
+
+cat > "$WORK/main.go" <<'EOF'
+package main
+
+import (
+	"fmt"
+
+	"github.com/spf13/cobra"
+
+	"example.com/shop/api"
+)
+
+func main() {
+	cmd := &cobra.Command{Use: "shop"}
+	fmt.Println(api.Name, cmd.Use)
+}
+EOF
+
+cat > "$WORK/api/api.go" <<'EOF'
+package api
+
+import (
+	"github.com/google/uuid"
+	"github.com/rs/zerolog"
+
+	"example.com/shop/store"
+)
+
+var Name = "api"
+
+func New() string {
+	zerolog.Nop().Info().Msg("new")
+	return uuid.New().String() + store.Driver
+}
+EOF
+
+cat > "$WORK/store/store.go" <<'EOF'
+package store
+
+import (
+	_ "github.com/lib/pq"
+)
+
+var Driver = "postgres"
+EOF
+
+# A second module without a lockfile, to contrast check availability.
 printf 'module example.com/worker\n\ngo 1.24\n' > "$WORK/worker/go.mod"
+printf 'package worker\n\nimport "fmt"\n\nfunc Run() { fmt.Println("work") }\n' > "$WORK/worker/worker.go"
 
 # Neither of these should ever be analyzed: both are ignored.
 printf 'module example.com/vendored\n' > "$WORK/vendor/thirdparty/go.mod"
-printf 'module example.com/junk\n'     > "$WORK/node_modules/junk/go.mod"
+printf 'module example.com/junk\n' > "$WORK/node_modules/junk/go.mod"
 
 note "created:"
-(cd "$WORK" && find . -name 'go.*' -o -name '.gitignore' | sort | sed 's/^/  /')
+(cd "$WORK" && find . \( -name 'go.*' -o -name '*.go' \) | sort | sed 's/^/  /')
+note ""
+note "Planted problems:  golang.org/x/sync declared but never imported"
+note "                   github.com/rs/zerolog imported but never declared"
+note "Planted traps:     _ \"github.com/lib/pq\"  (blank import — is a real use)"
+note "                   testify // indirect     (not expected to be imported)"
 
 # ---------------------------------------------------------------------------
 step "2. Discovery, and what --format auto does"
@@ -92,11 +156,17 @@ note "  ...(truncated)"
 # ---------------------------------------------------------------------------
 step "4. 'Zero findings' is not the same as 'checked and clean'"
 
-note "Every check currently reports 'unavailable' because no analyzer is built yet."
-note "That is deliberate: a consumer must never read silence as success. The same"
-note "mechanism reports a missing lockfile once the analyzers land — 'worker' has"
-note "no go.sum, so its resolved-tree checks would be unavailable for that reason."
-run bash -c "'$BIN' analyze '$WORK' --format json | grep -c unavailable | sed 's/^/unavailable check count: /'"
+note "Three checks report 'unavailable' rather than passing silently. Two need a"
+note "resolved dependency tree, and go.sum is not one: it records hashes for the"
+note "whole module graph, not the versions MVS selected, and carries no edges."
+note "Saying so beats reporting a clean bill of health gdep cannot actually give."
+run bash -c "'$BIN' analyze '$WORK' --format json | python3 -c \"
+import sys, json
+for p in json.load(sys.stdin)['projects']:
+    for check, s in p['checks'].items():
+        if s['status'] == 'unavailable':
+            print(f\\\"  {p['root'] or '.':8} {check:18} {s['reason'][:60]}\\\")
+\""
 
 # ---------------------------------------------------------------------------
 step "5. Exit codes are the CI contract"
@@ -105,8 +175,16 @@ note "0 = ran, nothing at or above --fail-on"
 note "1 = ran, findings at or above --fail-on"
 note "2 = could not run at all"
 note ""
-note "No findings exist yet, so even the strictest threshold passes:"
-run_status bash -c "'$BIN' analyze '$WORK' --fail-on info --format json > /dev/null"
+note "The planted missing dependency is an error, so the default threshold fails:"
+run_status bash -c "'$BIN' analyze '$WORK' --format json > /dev/null"
+
+note ""
+note "Raising the threshold above every finding passes again:"
+run_status bash -c "'$BIN' analyze '$WORK' --fail-on error --format json | python3 -c \"
+import sys, json
+d = json.load(sys.stdin)
+print('  findings:', sum(len(p['findings']) for p in d['projects']))
+\""
 
 note ""
 note "A bad path is exit 2, never exit 1 — a broken invocation must not look"
@@ -142,7 +220,9 @@ cat <<EOF
   --format tui    interactive browser (terminal only)
   --format auto   text on a tty, json when piped  [default]
 
-  Working today: discovery, the report contract, all three renderers.
-  Not built yet: every analyzer, which is why each check reports 'unavailable'.
-  Next per design/07-open-questions.md: Go import extraction, then cycle detection.
+  Working today: the full Go slice — discovery, go.mod parsing, tree-sitter
+                 import extraction, module graph, and three of six checks.
+  Unavailable:   version-conflict and diamond (need a resolved tree Go cannot
+                 give offline), and dependency-bloat (deferred by design).
+  Not built yet: the other nine languages, and the MCP server.
 EOF

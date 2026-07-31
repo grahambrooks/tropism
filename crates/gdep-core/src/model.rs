@@ -65,6 +65,30 @@ pub enum DepKind {
     Build,
     Optional,
     Peer,
+    /// Declared but not directly imported — pulled in by another dependency and
+    /// recorded for reproducibility. Go's `// indirect` markers are the clearest
+    /// case. Reporting these as unused would be a false-positive storm, so the
+    /// unused-dependency analyzer skips them.
+    Indirect,
+}
+
+impl DepKind {
+    /// Whether an absent import makes this dependency suspicious. False for
+    /// `Indirect`, which is *expected* to have no import.
+    pub fn expects_direct_import(self) -> bool {
+        !matches!(self, Self::Indirect)
+    }
+}
+
+/// A parsed manifest: its declared dependencies plus the package's own identity.
+///
+/// The identity matters more than it looks. Go needs the `module` line to tell an
+/// internal import from an external one, and there is no way to recover it from the
+/// dependency list alone.
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
+pub struct Manifest {
+    pub deps: Vec<DeclaredDep>,
+    pub package_name: Option<String>,
 }
 
 /// A dependency as the manifest declares it: a name and a version *requirement*.

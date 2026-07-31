@@ -10,6 +10,8 @@ description = "Language provider implementations for gdep"
 gdep-core.workspace = true
 anyhow.workspace = true
 camino.workspace = true
+tree-sitter.workspace = true
+tree-sitter-go.workspace = true
 
 [features]
 default = ["go"]

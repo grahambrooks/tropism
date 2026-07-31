@@ -177,6 +177,9 @@ impl Finding {
 }
 
 /// `check:project:hash` — stable across runs, machines, and orderings.
+///
+/// A project at the scan root has an empty path; it displays as `.` so IDs never
+/// contain an empty component.
 pub fn finding_id(check: CheckId, project: &Utf8PathBuf, key_parts: &[&str]) -> String {
     let mut hasher = blake3::Hasher::new();
     hasher.update(check.as_str().as_bytes());
@@ -187,7 +190,12 @@ pub fn finding_id(check: CheckId, project: &Utf8PathBuf, key_parts: &[&str]) -> 
         hasher.update(part.as_bytes());
     }
     let hex = hasher.finalize().to_hex();
-    format!("{check}:{project}:{}", &hex[..8])
+    let label = if project.as_str().is_empty() {
+        "."
+    } else {
+        project.as_str()
+    };
+    format!("{check}:{label}:{}", &hex[..8])
 }
 
 /// Whether a check produced an answer — and if not, why not.

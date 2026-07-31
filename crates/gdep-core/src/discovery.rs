@@ -129,8 +129,8 @@ fn relativize(scan_root: &Utf8Path, path: &Utf8Path) -> Utf8PathBuf {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::model::{DeclaredDep, ResolvedDep};
-    use crate::provider::{Import, VersionOps};
+    use crate::model::{Manifest, ResolvedDep};
+    use crate::provider::{Import, ImportTarget, ProjectContext, VersionOps};
 
     struct StubOps;
     impl VersionOps for StubOps {
@@ -157,8 +157,8 @@ mod tests {
         fn source_extensions(&self) -> &'static [&'static str] {
             &[]
         }
-        fn parse_manifest(&self, _: &Utf8Path, _: &str) -> anyhow::Result<Vec<DeclaredDep>> {
-            Ok(vec![])
+        fn parse_manifest(&self, _: &Utf8Path, _: &str) -> anyhow::Result<Manifest> {
+            Ok(Manifest::default())
         }
         fn parse_lockfile(
             &self,
@@ -170,6 +170,12 @@ mod tests {
         fn extract_imports(&self, _: &Utf8Path, _: &str) -> anyhow::Result<Vec<Import>> {
             Ok(vec![])
         }
+        fn resolve_import(&self, _: &Import, _: &ProjectContext<'_>) -> ImportTarget {
+            ImportTarget::Unresolved {
+                reason: "stub".to_owned(),
+            }
+        }
+
         fn is_stdlib(&self, _: &str) -> bool {
             false
         }
