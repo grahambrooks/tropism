@@ -74,8 +74,10 @@ Options:
 ```
 
 `tropism check` exists because rule violations default to `error` while the general checks are
-advisory. It is the subset a pre-commit hook or a merge gate should run — see
-[11-dependency-rules.md](11-dependency-rules.md).
+advisory. It is the subset a pre-commit hook or a merge gate should run, and it accepts a list of
+files so it can check only what changed — specified in
+[14-incremental-checking.md](14-incremental-checking.md), which argues it is the product's strongest
+differentiator.
 
 **Exit codes** are the CI contract and must be distinguishable:
 
@@ -124,8 +126,8 @@ context it was supposed to inform. Tools are therefore narrow, filtered, and pag
 
 Proposed tools:
 
-| Tool                | Purpose                                                        |
-| ------------------- | -------------------------------------------------------------- |
+| Tool                   | Purpose                                                        |
+| ---------------------- | -------------------------------------------------------------- |
 | `tropism_summary`      | Counts per check per project. Cheap. The intended entry point. |
 | `tropism_findings`     | Findings, filtered by check/severity/path, paginated.          |
 | `tropism_explain`      | Full evidence and detail for one finding ID.                   |

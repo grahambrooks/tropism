@@ -28,6 +28,7 @@ Two things here differ from every other demo:
 
 - A namespace cycle between `Shop.Domain.Orders` and `Shop.Domain.Billing`.
   C# permits namespace cycles, so nothing in the toolchain catches this.
+- A project cycle between `Shop.Domain` and `Shop.Data`, inverting the layering.
 - `AutoMapper` is declared by `Shop.Data` but never imported.
 - `Serilog` is imported by `Shop.Api` but never declared.
 
@@ -46,10 +47,20 @@ absent here, as it is in most real solutions. So `version-conflict` and
 `diamond-dep` report **unavailable** rather than clean — the same position Java
 will land in, and the price of never invoking a package manager.
 
-## A limitation this demo makes visible
+## Two cycles, at two scopes
 
-The `Shop.Domain` ↔ `Shop.Data` reference is caught by a **rule**, not by
-`cycle`. Cycle detection runs per project, so a cycle spanning two projects is
-invisible to it. That is the repo-wide graph gap recorded as open question 1 in
-`design/07-open-questions.md`; rules already evaluate repo-wide, which is why
-they catch what the cycle check cannot.
+This demo is the reason cycle detection runs at two scopes:
+
+- **module** — `Shop.Domain.Orders` ↔ `Shop.Domain.Billing`, two namespaces inside
+  one project.
+- **project** — `Shop.Domain` ↔ `Shop.Data`, two projects that reference each
+  other. Caught with evidence from both arms: the `<ProjectReference>` in the
+  `.csproj` and the `using` in `OrderStore.cs`.
+
+The project-scoped cycle used to be invisible. Cycle detection ran per project, so
+the check reported `ok` while the two packages were mutually dependent — the exact
+silent-clean failure the rest of this tool is built to avoid. The `scope` field on
+every cycle finding says which kind you are looking at.
+
+Note that the C# compiler is happy with all of this: it forbids cycles between
+*assemblies*, and this reference graph is acyclic at the assembly level.

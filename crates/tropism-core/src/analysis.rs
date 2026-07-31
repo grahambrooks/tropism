@@ -194,7 +194,12 @@ impl Analyzer for CycleAnalyzer {
                     message,
                 )
                 .with_evidence(evidence)
-                .with_details(serde_json::json!({ "members": labels, "kind": kind }))
+                .with_details(serde_json::json!({
+                    "members": labels,
+                    "kind": kind,
+                    // Cycles are found at two scopes; see `pipeline::project_cycles`.
+                    "scope": "module",
+                }))
             })
             .collect();
 

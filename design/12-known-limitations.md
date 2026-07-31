@@ -87,16 +87,23 @@ than half-implemented.
 
 ## Deferred — architecture
 
-### D1. Cycle detection runs per project, so cross-project cycles are invisible
+### D1. ~~Cross-project cycles are invisible~~ — RESOLVED
 
-`demo/dotnet` has `Shop.Domain` referencing `Shop.Data` and back. The `cycle` check does not see it;
-a **rule** catches it, because rules already evaluate repo-wide.
+Cycle detection now runs at two scopes, and every finding carries `details.scope`:
 
-**Cost:** the most architecturally significant cycles — those spanning packages in a monorepo — are
-missed by the check named after them.
-**Fix:** the repo-wide module graph of open question 1 in
-[07-open-questions.md](07-open-questions.md), which the rule engine already half-builds.
-**Priority: highest in this document.** It is the gap most likely to be mistaken for a clean result.
+- **`module`** — within one project, from that project's module graph.
+- **`project`** — between projects, from the repo-wide edges the rule engine already collects.
+
+`demo/dotnet` reports both: `Shop.Domain.Orders` ↔ `Shop.Domain.Billing` at module scope, and
+`Shop.Domain` ↔ `Shop.Data` at project scope, the latter with evidence from both arms — the
+`<ProjectReference>` and the `using`.
+
+Before this, the check reported `ok` while two packages were mutually dependent, which is the
+silent-clean failure the rest of the tool is built to avoid.
+
+**Remaining:** the project-scoped graph has projects as nodes, so it says *which packages* form the
+cycle but not which modules inside them. Sufficient for the finding; a fully qualified
+`project::module` graph would be more precise and is not built.
 
 ### D2. Lockfile discovery is same-directory only
 
@@ -173,10 +180,13 @@ for equality only, which is why nothing has needed it yet.
 ### D8. No baseline or ratcheting
 
 Teams adopt these tools on codebases that already violate the rules. Without a baseline of accepted
-violations, the first run is a wall of errors and the ruleset gets deleted.
+violations, a full-repository run is a wall of errors and the ruleset gets deleted.
 
-**Priority: high.** This is what makes adoption possible at all, and it should probably ship before
-any further rule kinds.
+**Downgraded.** Incremental checking ([14-incremental-checking.md](14-incremental-checking.md))
+gives ratcheting for free: a run scoped to changed files passes on a repository with two hundred
+existing violations as long as the commit does not add a two-hundred-and-first. No state file, no
+drift, nothing to regenerate after a refactor. A baseline is still wanted for the whole-repository CI
+job, but it is no longer a prerequisite for adoption.
 
 ### D9. No sub-ruleset inheritance in a monorepo
 
@@ -230,9 +240,10 @@ the product question.
 
 ## Suggested order
 
-1. **D1** — the repo-wide module graph. Fixes the gap most likely to be read as a clean result, and
-   the rule engine already builds half of it.
-2. **D8** — baseline/ratcheting, without which no team can adopt the rules on an existing codebase.
+1. **Incremental checking and the pre-commit hook**
+   ([14-incremental-checking.md](14-incremental-checking.md)) — the strongest differentiator, and it
+   resolves D8 as a side effect. Ships with the release pipeline, since a hook needs a binary.
+2. **D24** — `tropism check` and `--check <id>`, which the hook is built on.
 3. **D2** — lockfile discovery upward, which turns several misleading `Unavailable` reasons into
    real answers.
 4. **D10** — merge the two overlapping resolved-tree checks.

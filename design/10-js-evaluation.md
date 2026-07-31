@@ -45,9 +45,9 @@ not: 245 remain on that one repository.
 Volume proves nothing. Every `unused-dep` and `missing-dep` finding across the five smallest
 repositories — 35 in total — was checked against the source by hand.
 
-| Verdict                                                        | Count  |         |
-| -------------------------------------------------------------- | ------ | ------- |
-| True positive — package referenced nowhere                     | 13     | 37%     |
+| Verdict                                                           | Count  |         |
+| ----------------------------------------------------------------- | ------ | ------- |
+| True positive — package referenced nowhere                        | 13     | 37%     |
 | **False positive — package genuinely used, invisibly to tropism** | **22** | **63%** |
 
 The false positives are not sloppiness. Each is a real use through a channel tropism structurally

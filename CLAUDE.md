@@ -130,6 +130,16 @@ Two things to know before touching it:
 - **tropism is not a pure-Rust binary.** Every tree-sitter grammar compiles C, so cross-compilation
   needs a cross C toolchain and each target should be built on a native runner.
 
+## Cycle scopes
+
+Cycle findings carry `details.scope`:
+
+- **`module`** — within one project, from that project's module graph.
+- **`project`** — between projects, from the repo-wide edges the rule engine collects.
+
+Both are needed. A cycle spanning two packages used to report `ok`, which is the silent-clean
+failure the rest of the tool is built to avoid. `demo/dotnet` carries one of each.
+
 ## Known limitations
 
 **[design/12-known-limitations.md](design/12-known-limitations.md) is the register.** Before

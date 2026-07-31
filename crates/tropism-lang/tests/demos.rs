@@ -6,7 +6,7 @@
 
 use camino::Utf8PathBuf;
 use tropism_core::pipeline::{self, Options};
-use tropism_core::report::{CheckId, CheckStatus, Report};
+use tropism_core::report::{CheckId, CheckStatus, Finding, Report};
 
 fn demo(name: &str) -> Utf8PathBuf {
     Utf8PathBuf::from(env!("CARGO_MANIFEST_DIR"))
@@ -222,11 +222,21 @@ fn dotnet_demo_discovers_every_project_by_csproj_extension() {
     );
 }
 
-/// C# permits namespace cycles, so nothing in the toolchain catches this.
+/// C# permits namespace cycles, so nothing in the toolchain catches this. Scoped
+/// to `module`, since this demo also carries a project-scoped cycle.
 #[test]
 fn dotnet_demo_finds_the_namespace_cycle() {
     let report = analyze("dotnet");
-    assert_eq!(messages(&report, CheckId::Cycle).len(), 1);
+    let module_cycles: Vec<&Finding> = report
+        .findings()
+        .filter(|f| f.check == CheckId::Cycle && f.details["scope"] == "module")
+        .collect();
+    assert_eq!(
+        module_cycles.len(),
+        1,
+        "got {:?}",
+        messages(&report, CheckId::Cycle)
+    );
 }
 
 #[test]
@@ -258,6 +268,62 @@ fn dotnet_demo_reports_resolved_tree_checks_as_unavailable() {
             project.checks[&CheckId::VersionConflict],
             CheckStatus::Unavailable { .. }
         ));
+    }
+}
+
+/// The gap that made the per-project graph misleading: `Shop.Domain` and
+/// `Shop.Data` reference each other, and until cycle detection ran repo-wide the
+/// check reported `ok` while the two packages were mutually dependent.
+#[test]
+fn dotnet_demo_finds_the_cross_project_cycle() {
+    let report = analyze("dotnet");
+    let project_cycles: Vec<&Finding> = report
+        .findings()
+        .filter(|f| f.check == CheckId::Cycle && f.details["scope"] == "project")
+        .collect();
+
+    assert_eq!(
+        project_cycles.len(),
+        1,
+        "got {:?}",
+        messages(&report, CheckId::Cycle)
+    );
+    let members = project_cycles[0].details["members"].as_array().unwrap();
+    assert_eq!(members.len(), 2);
+    assert!(project_cycles[0].message.contains("Shop.Data"));
+    assert!(project_cycles[0].message.contains("Shop.Domain"));
+
+    // Both arms are cited, so each half of the cycle is checkable.
+    assert_eq!(project_cycles[0].evidence.len(), 2);
+}
+
+/// The two scopes are distinct findings about distinct problems: the namespace
+/// cycle lives inside one project, the project cycle spans two.
+#[test]
+fn dotnet_demo_reports_both_cycle_scopes() {
+    let report = analyze("dotnet");
+    let scopes: Vec<&str> = report
+        .findings()
+        .filter(|f| f.check == CheckId::Cycle)
+        .filter_map(|f| f.details["scope"].as_str())
+        .collect();
+    assert!(scopes.contains(&"module"), "got {scopes:?}");
+    assert!(scopes.contains(&"project"), "got {scopes:?}");
+}
+
+/// A single-project repository cannot have a project cycle, and must not gain a
+/// spurious one from the new pass.
+#[test]
+fn single_project_demos_report_only_module_cycles() {
+    for demo in ["javascript", "rust"] {
+        let report = analyze(demo);
+        for finding in report.findings().filter(|f| f.check == CheckId::Cycle) {
+            assert_eq!(
+                finding.details["scope"], "module",
+                "{demo}: {}",
+                finding.message
+            );
+        }
     }
 }
 

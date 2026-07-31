@@ -25,13 +25,13 @@ permanent footgun — `cargo install gdep` installing a stranger's tool.
 Renaming removed the problem entirely rather than documenting around it. Availability verified on
 2026-07-31:
 
-| Name             | crates.io | npm       |
-| ---------------- | --------- | --------- |
-| `tropism`        | available | available |
-| `tropism-core`   | available | —         |
-| `tropism-lang`   | available | —         |
-| `tropism`    | available | —         |
-| `tropism-mcp`    | available | —         |
+| Name           | crates.io | npm       |
+| -------------- | --------- | --------- |
+| `tropism`      | available | available |
+| `tropism-core` | available | —         |
+| `tropism-lang` | available | —         |
+| `tropism`      | available | —         |
+| `tropism-mcp`  | available | —         |
 
 So the crate, the binary, and the command are all simply `tropism`. No `-cli` suffix, no install
 footgun, nothing to warn users about.
@@ -92,10 +92,10 @@ version and injects it before building and publishing; it is **not** committed b
 
 | Artifact                        | Where           | Cadence            |
 | ------------------------------- | --------------- | ------------------ |
-| `tropism` binaries, six targets    | GitHub Releases | every green `main` |
+| `tropism` binaries, six targets | GitHub Releases | every green `main` |
 | `SHA256SUMS` + build provenance | GitHub Releases | every green `main` |
-| `tropism` crate                | crates.io       | guarded — see §6   |
-| `tropism-core`, `tropism-lang`        | nowhere         | `publish = false`  |
+| `tropism` crate                 | crates.io       | guarded — see §6   |
+| `tropism-core`, `tropism-lang`  | nowhere         | `publish = false`  |
 
 ---
 

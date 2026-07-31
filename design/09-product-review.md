@@ -29,12 +29,12 @@ The most important measurement in this review. On the fixture with one unused an
 dependency planted:
 
 |                                          | tropism | `go mod tidy` |
-| ---------------------------------------- | ---- | ------------- |
-| Found unused `golang.org/x/sync`         | ✅    | ✅             |
-| Found undeclared `github.com/rs/zerolog` | ✅    | ✅             |
-| Resolved the correct version to add      | ❌    | ✅ `v1.35.1`   |
-| Fixed the manifest                       | ❌    | ✅             |
-| Pruned stale `// indirect` entries       | ❌    | ✅             |
+| ---------------------------------------- | ------- | ------------- |
+| Found unused `golang.org/x/sync`         | ✅       | ✅             |
+| Found undeclared `github.com/rs/zerolog` | ✅       | ✅             |
+| Resolved the correct version to add      | ❌       | ✅ `v1.35.1`   |
+| Fixed the manifest                       | ❌       | ✅             |
+| Pruned stale `// indirect` entries       | ❌       | ✅             |
 
 `go mod tidy` found everything tropism found, then fixed it. tropism found the same two problems, fixed
 nothing, and cannot tell you which version to add because that needs a resolver.

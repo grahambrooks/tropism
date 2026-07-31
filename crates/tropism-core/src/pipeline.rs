@@ -168,6 +168,10 @@ pub fn analyze(
         }
     }
 
+    // Cycles that span projects are invisible to the per-project graphs above, and
+    // in a monorepo they are the ones that matter most.
+    add_project_cycles(&mut report, &rule_input);
+
     apply_rules(scan_root, &mut report, &rule_input, options);
     report.finalize();
     Ok(report)
@@ -177,6 +181,110 @@ pub fn analyze(
 ///
 /// Rule findings land on the project containing the offending file, so the report
 /// shape is unchanged; the *evaluation* is repo-wide.
+/// Detects cycles between whole projects.
+///
+/// `analyze_project` builds one module graph per project, so a cycle whose arms
+/// live in different projects is invisible to it — the check reports `ok` while the
+/// packages are mutually dependent. That is the silent-clean failure this tool is
+/// otherwise organized against.
+///
+/// The edges are the ones the rule engine already collects, so nothing new is
+/// walked or parsed: any dependency whose two ends fall in different projects is an
+/// edge in a project-level graph, and Tarjan does the rest.
+fn add_project_cycles(report: &mut Report, input: &RuleInput) {
+    let roots: Vec<Utf8PathBuf> = report
+        .projects
+        .iter()
+        .map(|p| p.project.root.clone())
+        .collect();
+    if roots.len() < 2 {
+        return;
+    }
+
+    let mut graph = ModuleGraph::new();
+    // One representative edge per project pair, for evidence.
+    let mut witness: BTreeMap<(String, String), &DependencyEdge> = BTreeMap::new();
+
+    for edge in &input.edges {
+        let (Some(from), Some(to)) = (
+            containing_root(&edge.from, &roots),
+            containing_root(&edge.to, &roots),
+        ) else {
+            continue;
+        };
+        if from == to {
+            continue;
+        }
+        graph.add_edge(ModuleId::module(from.clone()), ModuleId::module(to.clone()));
+        witness.entry((from, to)).or_insert(edge);
+    }
+
+    for members in graph.cycles() {
+        let labels: Vec<String> = members.iter().map(ModuleId::to_string).collect();
+        let refs: Vec<&str> = labels.iter().map(String::as_str).collect();
+
+        // One piece of evidence per hop, so every arm of the cycle is checkable.
+        let evidence: Vec<Evidence> = members
+            .iter()
+            .filter_map(|member| {
+                witness
+                    .iter()
+                    .find(|((from, to), _)| {
+                        from == &member.name && members.iter().any(|m| &m.name == to)
+                    })
+                    .map(|((_, to), edge)| {
+                        Evidence::new(
+                            edge.from.clone(),
+                            edge.line,
+                            format!("{} {} — reaches `{to}`", edge.level.as_str(), edge.label),
+                        )
+                    })
+            })
+            .collect();
+
+        let finding = Finding::new(
+            CheckId::Cycle,
+            &Utf8PathBuf::new(),
+            &refs,
+            Severity::Warning,
+            Confidence::High,
+            format!(
+                "dependency cycle between {} projects: {}",
+                members.len(),
+                labels.join(" → ")
+            ),
+        )
+        .with_evidence(evidence)
+        .with_details(serde_json::json!({ "members": labels, "scope": "project" }));
+
+        let owner = owning_root(&finding, report);
+        if let Some(project) = report.projects.iter_mut().find(|p| p.project.root == owner) {
+            // Keep the per-check count honest now that a second pass adds findings.
+            if let Some(CheckStatus::Ran { finding_count }) =
+                project.checks.get_mut(&CheckId::Cycle)
+            {
+                *finding_count += 1;
+            }
+            project.findings.push(finding);
+        }
+    }
+}
+
+/// The innermost project root containing a path.
+fn containing_root(path: &Utf8Path, roots: &[Utf8PathBuf]) -> Option<String> {
+    roots
+        .iter()
+        .filter(|root| root.as_str().is_empty() || path.starts_with(root))
+        .max_by_key(|root| root.as_str().len())
+        .map(|root| {
+            if root.as_str().is_empty() {
+                ".".to_owned()
+            } else {
+                root.as_str().to_owned()
+            }
+        })
+}
+
 fn apply_rules(scan_root: &Utf8Path, report: &mut Report, input: &RuleInput, options: &Options) {
     let rule_checks = [CheckId::ModuleRule, CheckId::PackageRule];
 

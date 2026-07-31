@@ -46,6 +46,13 @@ they detect the *presence* of a forbidden edge rather than the *absence* of a us
 **Input:** module graph. **Algorithm:** Tarjan's strongly connected components. Any SCC with more
 than one node is a cycle; self-loops are reported separately or ignored.
 
+Cycles are detected at **two scopes**, and every finding carries `details.scope`:
+
+- **`module`** — within a single project, over that project's module graph.
+- **`project`** — between projects, over the repo-wide edges the rule engine collects. Without this
+  a cycle spanning two packages reports `ok`, which is the silent-clean failure `CheckStatus` exists
+  to prevent. See [12-known-limitations.md](12-known-limitations.md), D1.
+
 Report **one finding per SCC, not one per cycle.** A tangle of 12 mutually-importing modules
 contains an enormous number of distinct cycles and exactly one problem. Emit the SCC membership plus
 one representative shortest cycle as an illustration.
