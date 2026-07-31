@@ -1,0 +1,135 @@
+CLAUDE.md
+  s_33258c54c67694::t_a61b5a4eed8fe7 161,177
+  s_33258c54c67694::t_8a56f49ec6dff1 127-129
+  s_33258c54c67694::t_537769055c8d51 7,32,38,42,90,92,104-105,130,158-160,162,165,173,181,183,210-211,222,243,253,257
+design/01-architecture.md
+  s_33258c54c67694::t_a61b5a4eed8fe7 46
+  s_33258c54c67694::t_537769055c8d51 40,44-45,47,50,53,56,59,91
+design/08-crates.md
+  s_33258c54c67694::t_537769055c8d51 71,73,80,105
+design/11-dependency-rules.md
+  s_33258c54c67694::t_a61b5a4eed8fe7 44,54,68,70,120,125,303
+  s_33258c54c67694::t_537769055c8d51 3,12,15,21,25,41,43,55-56,61,77,92,100,105,111,118-119,121,161,242,255-256,305,308,326-327,333,343
+crates/tropism-core/src/pipeline.rs
+  s_33258c54c67694::t_537769055c8d51 1-586
+crates/tropism-mcp/src/main.rs
+  s_33258c54c67694::t_537769055c8d51 1-19
+crates/tropism-lang/src/javascript.rs
+  s_33258c54c67694::t_537769055c8d51 1-918
+crates/tropism-lang/src/go.rs
+  s_33258c54c67694::t_537769055c8d51 1-685
+crates/tropism-lang/tests/demos.rs
+  s_33258c54c67694::t_537769055c8d51 1-450
+Cargo.toml
+  s_33258c54c67694::t_537769055c8d51 4,17-18
+design/05-interfaces.md
+  s_33258c54c67694::t_537769055c8d51 11,18,59-62,71,76,129-135,139,147,152,156,168
+demo/go/README.md
+  s_33258c54c67694::t_537769055c8d51 8,13
+crates/tropism-lang/src/rust.rs
+  s_33258c54c67694::t_537769055c8d51 1-1050
+crates/tropism-core/src/lib.rs
+  s_33258c54c67694::t_537769055c8d51 1-23
+demo/rust/tropism.toml
+  s_33258c54c67694::t_537769055c8d51 1-36
+.gitignore
+  s_33258c54c67694::t_537769055c8d51 7
+demo/javascript/README.md
+  s_33258c54c67694::t_537769055c8d51 15,24
+demo/dotnet/README.md
+  s_33258c54c67694::t_537769055c8d51 13,34
+demo/rust/README.md
+  s_33258c54c67694::t_537769055c8d51 4,8,29,40
+crates/tropism-core/src/rules.rs
+  s_33258c54c67694::t_537769055c8d51 1-1032
+design/02-data-model.md
+  s_33258c54c67694::t_537769055c8d51 8
+design/README.md
+  s_33258c54c67694::t_537769055c8d51 1,9,22,26,58-59,72,85,94
+crates/tropism-lang/tests/go_pipeline.rs
+  s_33258c54c67694::t_537769055c8d51 1-224
+scripts/demo.sh
+  s_33258c54c67694::t_537769055c8d51 3,17,69,98,112,116,118,157
+  s_33258c54c67694::t_a61b5a4eed8fe7 50
+crates/tropism-core/Cargo.toml
+  s_33258c54c67694::t_537769055c8d51 1-22
+crates/tropism-lang/Cargo.toml
+  s_33258c54c67694::t_537769055c8d51 1-31
+crates/tropism-lang/src/csharp.rs
+  s_33258c54c67694::t_537769055c8d51 1-838
+crates/tropism-core/src/discovery.rs
+  s_33258c54c67694::t_537769055c8d51 1-369
+design/06-testing.md
+  s_33258c54c67694::t_537769055c8d51 3,58
+design/09-product-review.md
+  s_33258c54c67694::t_537769055c8d51 31,39,46,77,81,136,142,149,156,172,179,208
+design/07-open-questions.md
+  s_33258c54c67694::t_537769055c8d51 14,63,74,86,91,100,154
+README.md
+  s_33258c54c67694::t_537769055c8d51 1,7,10,14,23,47,59,96,101,103,124,130-133,181,195
+  s_33258c54c67694::t_b1144c4d7c4fce 50-54
+  s_33258c54c67694::t_a61b5a4eed8fe7 102,192
+  s_33258c54c67694::t_7cfab3af1e60d5 28-42
+design/12-known-limitations.md
+  s_33258c54c67694::t_537769055c8d51 8,10,23,64,67,104,135,137,142,144,147,149,183
+crates/tropism/Cargo.toml
+  s_33258c54c67694::t_a61b5a4eed8fe7 1-35
+crates/tropism/src/render/tui.rs
+  s_33258c54c67694::t_3f01b3ead7ab0a 1-502
+crates/tropism-lang/src/lib.rs
+  s_33258c54c67694::t_537769055c8d51 1-66
+design/03-language-providers.md
+  s_33258c54c67694::t_537769055c8d51 3,8-9,55,128
+design/04-analyzers.md
+  s_33258c54c67694::t_537769055c8d51 62,152
+crates/tropism-lang/tests/js_pipeline.rs
+  s_33258c54c67694::t_537769055c8d51 1-148
+crates/tropism-mcp/Cargo.toml
+  s_33258c54c67694::t_537769055c8d51 1-20
+crates/tropism-core/src/report.rs
+  s_33258c54c67694::t_537769055c8d51 1-427
+design/13-build-and-release.md
+  s_33258c54c67694::t_a61b5a4eed8fe7 33,57,64,97,120,129,201,229,232,278
+  s_33258c54c67694::t_8a56f49ec6dff1 295,297,299,301
+  s_33258c54c67694::t_9f6e5e0efcae70 15,17-18,20-23,25-26,28-32,34,36-37,39-44
+  s_33258c54c67694::t_537769055c8d51 69,76,95,98,130-131,138-139,143,145,152-153,170,174,192
+crates/tropism-core/src/analysis.rs
+  s_33258c54c67694::t_537769055c8d51 1-684
+crates/tropism-core/src/provider.rs
+  s_33258c54c67694::t_537769055c8d51 1-196
+design/10-js-evaluation.md
+  s_33258c54c67694::t_537769055c8d51 51,53,78,81,95,120,131-132
+tropism.toml
+  s_33258c54c67694::t_a61b5a4eed8fe7 33
+  s_33258c54c67694::t_537769055c8d51 1-32,34-111
+Cargo.lock
+  s_33258c54c67694::t_370714c69dd2d9 249,251,259,261,1923-1980
+crates/tropism/src/main.rs
+  s_33258c54c67694::t_af64181bf69f67 1,3,13-14,24,56,88,96
+crates/tropism/src/render/mod.rs
+  s_33258c54c67694::t_9fc964e134037c 5
+crates/tropism/src/render/snapshots/tropism__render__text__tests__renders_findings_in_the_rustc_diagnostic_style.snap
+  s_33258c54c67694::t_5a52222b289445 2
+crates/tropism/src/render/snapshots/tropism__render__tui__tests__renders_a_finding_detail.snap
+  s_33258c54c67694::t_7357a2d553717e 2,5
+crates/tropism/src/render/testdata.rs
+  s_33258c54c67694::t_5335c5876a2237 9-10
+crates/tropism/src/render/text.rs
+  s_33258c54c67694::t_69181167614fac 14,96,132
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.19",
+  "base_commit_sha": "80b356bc4c5bf27b8edcff37374ce9e102971c86",
+  "prompts": {},
+  "sessions": {
+    "s_33258c54c67694": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "7fc6e081-c8c1-4604-a221-b9597c043e2b",
+        "model": "claude-opus-5"
+      },
+      "human_author": "Graham Brooks <graham@grahambrooks.com>"
+    }
+  }
+}
