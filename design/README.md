@@ -24,6 +24,7 @@ annotated — see the `LanguageProvider` trait's location in
 | [06-testing.md](06-testing.md)                       | How correctness is established for a tool with no oracle |
 | [07-open-questions.md](07-open-questions.md)         | Decisions deferred, and what they block                  |
 | [08-crates.md](08-crates.md)                         | Verified dependency choices, and the gaps with no answer |
+| [09-product-review.md](09-product-review.md)         | Is this worth building? Evidence from the Go slice       |
 
 ## Design principles
 
