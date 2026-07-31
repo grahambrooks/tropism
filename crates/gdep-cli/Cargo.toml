@@ -1,0 +1,35 @@
+[package]
+name = "gdep-cli"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+description = "Command-line interface for gdep"
+
+[[bin]]
+name = "gdep"
+path = "src/main.rs"
+
+[features]
+default = ["tui"]
+# The interactive browser. Feature-gated because it is the heaviest dependency in
+# the workspace and the non-interactive formats must stay buildable without it.
+tui = ["dep:ratatui"]
+
+[dependencies]
+gdep-core.workspace = true
+gdep-lang.workspace = true
+anyhow.workspace = true
+camino.workspace = true
+clap.workspace = true
+annotate-snippets.workspace = true
+anstream.workspace = true
+anstyle.workspace = true
+ratatui = { workspace = true, optional = true }
+
+[dev-dependencies]
+insta.workspace = true
+serde_json.workspace = true
+
+[lints]
+workspace = true

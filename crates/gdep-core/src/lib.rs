@@ -1,0 +1,17 @@
+//! Core data model, discovery, and analysis for gdep.
+//!
+//! This crate knows nothing about rendering or about any specific language. It reads
+//! files, builds graphs, and produces a [`Report`](report::Report). Both the CLI and
+//! the MCP server are adapters over it — see `design/README.md`, principle 4.
+
+pub mod discovery;
+pub mod model;
+pub mod provider;
+pub mod report;
+
+pub use model::{DeclaredDep, DepKind, Language, Project, Provenance, ResolvedDep};
+pub use provider::{Import, ImportTarget, LanguageProvider, VersionOps};
+pub use report::{
+    CheckId, CheckStatus, Confidence, Evidence, Finding, ProjectReport, Report, SCHEMA_VERSION,
+    Severity, SkippedFile,
+};

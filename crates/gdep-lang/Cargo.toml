@@ -1,0 +1,19 @@
+[package]
+name = "gdep-lang"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+description = "Language provider implementations for gdep"
+
+[dependencies]
+gdep-core.workspace = true
+anyhow.workspace = true
+camino.workspace = true
+
+[features]
+default = ["go"]
+go = []
+
+[lints]
+workspace = true

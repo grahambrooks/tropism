@@ -1,0 +1,35 @@
+[workspace]
+members = ["crates/*"]
+resolver = "3"
+
+[workspace.package]
+version = "0.1.0"
+edition = "2024"
+license = "MIT OR Apache-2.0"
+rust-version = "1.85"
+
+# Versions verified against crates.io on 2026-07-30. See design/08-crates.md for the
+# rationale behind each choice and the ones deliberately deferred.
+[workspace.dependencies]
+gdep-core = { path = "crates/gdep-core" }
+gdep-lang = { path = "crates/gdep-lang" }
+
+anyhow = "1.0.104"
+thiserror = "2.0.19"
+serde = { version = "1.0.229", features = ["derive"] }
+serde_json = "1.0.151"
+clap = { version = "4.6.4", features = ["derive"] }
+ignore = "0.4.31"
+camino = { version = "1.2.5", features = ["serde1"] }
+blake3 = "1.8.5"
+annotate-snippets = "0.12.16"
+anstream = "1.0.0"
+anstyle = "1.0.14"
+ratatui = "0.30.2"
+insta = "1.48.0"
+
+[workspace.lints.rust]
+unsafe_code = "forbid"
+
+[workspace.lints.clippy]
+all = { level = "warn", priority = -1 }
