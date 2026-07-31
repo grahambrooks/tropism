@@ -1,6 +1,11 @@
 # gdep design specification
 
-**Status:** three vertical slices are complete — Go, JavaScript/TypeScript, and Rust — plus the
+**Every limitation found while building this is registered in
+[12-known-limitations.md](12-known-limitations.md)**, split into those that are structural — the
+price of never invoking a package manager, reported rather than fixed — and those merely deferred.
+Read it before planning work, and add to it rather than discovering the same gap twice.
+
+**Status:** four vertical slices are complete — Go, JavaScript/TypeScript, and Rust — plus the
 dependency ruleset. gdep is run against itself, and against a deliberately-broken demo project per
 language. The remaining seven languages and the MCP server are not built.
 

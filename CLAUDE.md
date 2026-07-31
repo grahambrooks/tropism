@@ -110,6 +110,18 @@ unused-dependency check, which must prove a negative and measured 63% false posi
 JavaScript. It is also the one thing no native tool can do: `go mod tidy` cannot know an
 architecture it was never told about.
 
+## Known limitations
+
+**[design/12-known-limitations.md](design/12-known-limitations.md) is the register.** Before
+"fixing" something that looks broken, check whether it is structural — a consequence of never
+invoking a package manager, which gets reported rather than resolved — or genuinely deferred. The
+document separates the two, because conflating them is how the core constraint gets traded away by
+accident.
+
+Add to it rather than rediscovering the same gap. The highest-priority deferred item is the
+repo-wide module graph: cycle detection currently runs per project, so a cycle spanning two packages
+is invisible to the check named after it.
+
 ## Design specification
 
 `design/` holds the spec — architecture, data model, the language-provider trait, per-check
