@@ -37,10 +37,14 @@ fn every_check_runs_when_a_real_lockfile_is_present() {
         .map(|(check, _)| *check)
         .collect();
 
-    // Only dependency-bloat, which is deferred by design rather than blocked.
+    // dependency-bloat is deferred by design; the rule checks need a ruleset.
     assert_eq!(
         unavailable,
-        vec![CheckId::DependencyBloat],
+        vec![
+            CheckId::DependencyBloat,
+            CheckId::ModuleRule,
+            CheckId::PackageRule
+        ],
         "got {unavailable:?}"
     );
 }

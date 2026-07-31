@@ -18,7 +18,7 @@ use crate::report::{
     CheckId, CheckStatus, Confidence, Evidence, Finding, ProjectReport, Report, Severity,
     SkippedFile,
 };
-use crate::rules::{DependencyEdge, EdgeLevel, PackageUse, Ruleset};
+use crate::rules::{DependencyEdge, EdgeLevel, ExcludeSet, PackageUse, Ruleset};
 
 pub struct Options {
     pub respect_ignore: bool,
@@ -37,6 +37,20 @@ impl Default for Options {
     }
 }
 
+/// The shared inputs every project's analysis needs, gathered once.
+struct Pass<'a> {
+    scan_root: &'a Utf8Path,
+    /// Project roots, longest first, so a file in a nested project is attributed to
+    /// the innermost one.
+    roots: &'a [&'a Project],
+    /// Names the workspace makes importable without a local declaration.
+    provided: &'a [String],
+    /// Package name -> the project publishing it, for cross-project edges.
+    published_roots: &'a BTreeMap<String, Utf8PathBuf>,
+    exclude: &'a ExcludeSet,
+    options: &'a Options,
+}
+
 /// Everything the rule engine needs, gathered across every project.
 ///
 /// Rules span projects — "the CLI must not depend on the MCP server" names two
@@ -52,8 +66,20 @@ pub fn analyze(
     providers: &[&dyn LanguageProvider],
     options: &Options,
 ) -> Result<Report, DiscoveryError> {
-    let projects = discovery::discover(scan_root, providers, options.respect_ignore)?;
+    // Exclusions have to be known before anything is walked, so the ruleset is read
+    // once here for its `exclude` list and again at the end for its rules.
+    let exclude = if options.use_rules {
+        Ruleset::discover_excludes(scan_root).unwrap_or_default()
+    } else {
+        ExcludeSet::default()
+    };
+
+    let projects = discovery::discover(scan_root, providers, options.respect_ignore, &exclude)?;
     let mut report = Report::new(scan_root);
+    report.excluded = discovery::count_exclusions(scan_root, options.respect_ignore, &exclude)
+        .into_iter()
+        .map(|(pattern, matched)| crate::report::Exclusion { pattern, matched })
+        .collect();
 
     // First pass: parse every manifest, so the second pass can tell what the
     // workspace makes available from what is genuinely undeclared.
@@ -110,15 +136,16 @@ pub fn analyze(
             .chain(parsed.iter().filter_map(|(_, m)| m.package_name.clone()))
             .collect();
 
-        match analyze_project(
+        let pass = Pass {
             scan_root,
-            project,
-            *provider,
-            &roots,
-            &provided,
-            &published_roots,
+            roots: &roots,
+            provided: &provided,
+            published_roots: &published_roots,
+            exclude: &exclude,
             options,
-        ) {
+        };
+
+        match analyze_project(project, *provider, &pass) {
             Ok((project_report, mut skipped, mut input)) => {
                 report.projects.push(project_report);
                 report.skipped.append(&mut skipped);
@@ -270,14 +297,16 @@ fn owning_root(finding: &Finding, report: &Report) -> Utf8PathBuf {
 }
 
 fn analyze_project(
-    scan_root: &Utf8Path,
     project: &Project,
     provider: &dyn LanguageProvider,
-    roots: &[&Project],
-    provided: &[String],
-    published_roots: &BTreeMap<String, Utf8PathBuf>,
-    options: &Options,
+    pass: &Pass<'_>,
 ) -> anyhow::Result<(ProjectReport, Vec<SkippedFile>, RuleInput)> {
+    let Pass {
+        scan_root,
+        provided,
+        published_roots,
+        ..
+    } = *pass;
     let manifest_path = project
         .manifests
         .first()
@@ -293,7 +322,7 @@ fn analyze_project(
         None => None,
     };
 
-    let files = source_files(scan_root, project, provider, roots, options);
+    let files = source_files(project, provider, pass);
 
     let mut imports = Vec::new();
     let mut skipped = Vec::new();
@@ -452,12 +481,17 @@ fn analyze_project(
 
 /// Source files belonging to this project, excluding those owned by a nested one.
 fn source_files(
-    scan_root: &Utf8Path,
     project: &Project,
     provider: &dyn LanguageProvider,
-    roots: &[&Project],
-    options: &Options,
+    pass: &Pass<'_>,
 ) -> Vec<Utf8PathBuf> {
+    let Pass {
+        scan_root,
+        roots,
+        exclude,
+        options,
+        ..
+    } = *pass;
     let extensions = provider.source_extensions();
     let project_dir = scan_root.join(&project.root);
 
@@ -473,6 +507,7 @@ fn source_files(
                 .is_some_and(|ext| extensions.contains(&ext))
         })
         .map(|path| path.strip_prefix(scan_root).unwrap_or(&path).to_owned())
+        .filter(|path| exclude.excluded_by(path).is_none())
         .filter(|path| owning_project(path, roots).is_some_and(|owner| owner == project.root))
         .collect();
 

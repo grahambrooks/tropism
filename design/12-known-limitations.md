@@ -130,26 +130,19 @@ is visibly wrong rather than silently misleading, but it is still wrong.
 
 **Fix:** a span-preserving parser (`toml_edit` already does this for TOML).
 
-### D23. No `--exclude`, so gdep cannot gate its own CI
+### D23. ~~No way to exclude sample code~~ — RESOLVED
 
-The CLI takes one path and honours `.gitignore`. It has no way to exclude a tracked directory, so a
-repository containing deliberately-broken sample projects — this one — cannot run
-`gdep analyze . --fail-on error` as a merge gate.
+Resolved by `exclude` in `gdep.toml` ([11-dependency-rules.md](11-dependency-rules.md)). Patterns
+are applied before discovery, and every exclusion is disclosed in the report with a match count so a
+blind spot is never silent. `gdep analyze . --fail-on error` now exits 0 on this repository, which
+unblocks the dogfood gate in [13-build-and-release.md](13-build-and-release.md).
 
-```
-gdep analyze .                  exit=1   demo/ and test fixtures are deliberately broken
-gdep analyze crates             exit=1   fixtures live under crates/gdep-lang/tests/
-gdep analyze crates/a crates/b  exit=2   only one path argument is accepted
-```
+Configured in the ruleset rather than as a CLI flag, because what a repository excludes is a
+property of the repository, not of the invocation. A CLI `--exclude` would still be useful for
+ad-hoc runs against a repository with no `gdep.toml`; it is not built.
 
-Narrowing the scan is not a workaround: rules evaluate repo-wide, so scanning a single crate removes
-the cross-crate edges the rules exist to check.
-
-**Cost:** the dogfood job in [13-build-and-release.md](13-build-and-release.md) is blocked, and the
-project's most convincing demonstration cannot be automated. The equivalent assertion exists in the
-test suite, which filters in Rust.
-**Fix:** `--exclude <GLOB>` (repeatable), and optionally accept multiple path arguments. Small.
-**Priority: high** — it is cheap and it unblocks the CI story.
+**Remaining:** the CLI still accepts only one path argument, so `gdep analyze crates/a crates/b`
+exits 2.
 
 ### D24. `gdep check` and `--check <id>` are specified but not implemented
 
@@ -237,14 +230,12 @@ the product question.
 
 ## Suggested order
 
-1. **D23** — `--exclude`. Smallest item here, and it unblocks gdep gating its own CI, which is the
-   project's most convincing demonstration.
-2. **D1** — the repo-wide module graph. Fixes the gap most likely to be read as a clean result, and
+1. **D1** — the repo-wide module graph. Fixes the gap most likely to be read as a clean result, and
    the rule engine already builds half of it.
-3. **D8** — baseline/ratcheting, without which no team can adopt the rules on an existing codebase.
-4. **D2** — lockfile discovery upward, which turns several misleading `Unavailable` reasons into
+2. **D8** — baseline/ratcheting, without which no team can adopt the rules on an existing codebase.
+3. **D2** — lockfile discovery upward, which turns several misleading `Unavailable` reasons into
    real answers.
-5. **D10** — merge the two overlapping resolved-tree checks.
-6. **The MCP server**, which is where the remaining untested product claim lives.
+4. **D10** — merge the two overlapping resolved-tree checks.
+5. **The MCP server**, which is where the remaining untested product claim lives.
 
 S1 and S3 are not on this list and never will be. They are reported, not fixed.

@@ -77,6 +77,35 @@ import is a commit away. Findings say which level triggered.
 `gdep.toml` at the scan root, TOML to match the config format already chosen in
 [05-interfaces.md](05-interfaces.md). Discovered automatically; `--rules <path>` overrides.
 
+### Exclusions
+
+Paths kept out of the analysis entirely, before anything is discovered or walked.
+
+```toml
+exclude = [
+  "demo/**",
+  "**/tests/fixtures/**",
+]
+```
+
+The motivating case is a repository containing deliberately-broken sample projects — this one does,
+and without exclusions `gdep analyze .` could never return zero, so the repository could not gate CI
+on its own rules.
+
+**Exclusions are disclosed in every report**, with a count per pattern, and a pattern matching
+nothing is flagged. This is the same discipline as `CheckStatus`: an exclusion is a deliberate blind
+spot, and a repository that excluded half of itself must not look like one that was fully analyzed.
+
+```
+58 path(s) excluded by gdep.toml
+  **/tests/fixtures/** — 21 path(s)
+  demo/** — 37 path(s)
+```
+
+Note that `gdep.toml` is therefore read twice: once before discovery for the exclusions, and once at
+the end for the rules. Exclusions must be known before any file is walked; rules can only be
+evaluated after every edge is collected.
+
 ### Modules
 
 A module is a name bound to one or more path globs. Modules are gdep's unit of architecture and need
@@ -215,7 +244,7 @@ Saying so is better than a half-implementation that silently misses most depende
 
 ## Implementation status
 
-Implemented and enforced: `deny`, `independent`, `allow_only`, package denylists with
+Implemented and enforced: `exclude`, `deny`, `independent`, `allow_only`, package denylists with
 `replacement`, `allowed_in` scoping, closed-world approved lists (`unlisted = "deny"`), and
 stale-rule detection.
 

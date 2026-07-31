@@ -9,6 +9,22 @@
 schema_version = 1
 
 # --------------------------------------------------------------------------
+# Paths kept out of the analysis.
+#
+# These hold deliberately-broken sample projects: demo/ is the shop window and
+# tests/fixtures/ backs the test suite. Both are meant to produce findings, so
+# analyzing them would make `gdep analyze .` permanently non-zero and there would
+# be no way to gate CI on this repository's own rules.
+#
+# Exclusions are disclosed in every report, with a count per pattern, because an
+# exclusion is a deliberate blind spot and a repository that excluded half of
+# itself must not look like one that was fully analyzed.
+exclude = [
+  "demo/**",
+  "**/tests/fixtures/**",
+]
+
+# --------------------------------------------------------------------------
 # Modules: names bound to path globs. They need not match project boundaries.
 
 [modules]

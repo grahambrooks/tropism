@@ -430,10 +430,11 @@ fn gdep_reports_nothing_against_its_own_source() {
     let providers = gdep_lang::registry();
     let report = pipeline::analyze(&root, &providers, &Options::default()).unwrap();
 
+    // gdep.toml already excludes the fixtures and demos; the filters below are
+    // belt-and-braces in case an exclusion is removed.
     let unexpected: Vec<String> = report
         .projects
         .iter()
-        // The test fixtures and demos are deliberately broken.
         .filter(|p| !p.project.root.as_str().contains("fixtures"))
         .filter(|p| !p.project.root.as_str().starts_with("demo"))
         .flat_map(|p| p.findings.iter().map(move |f| (p.project.root.clone(), f)))

@@ -67,6 +67,8 @@ struct RawRuleset {
     #[serde(default)]
     schema_version: Option<u32>,
     #[serde(default)]
+    exclude: Vec<String>,
+    #[serde(default)]
     modules: BTreeMap<String, RawModule>,
     #[serde(default)]
     module_rules: Vec<RawModuleRule>,
@@ -200,7 +202,36 @@ struct PackageRule {
     allowed: Vec<String>,
 }
 
+/// Paths kept out of the analysis entirely.
+///
+/// Deliberate blind spots, so they are counted and reported: a repository that
+/// excludes half of itself must not look like one that was fully analyzed. Same
+/// reasoning as `CheckStatus` — silence never means clean.
+#[derive(Default)]
+pub struct ExcludeSet {
+    patterns: Vec<(String, globset::GlobMatcher)>,
+}
+
+impl ExcludeSet {
+    /// The pattern that excludes this path, if any.
+    pub fn excluded_by(&self, path: &Utf8Path) -> Option<&str> {
+        self.patterns
+            .iter()
+            .find(|(_, matcher)| matcher.is_match(path.as_std_path()))
+            .map(|(pattern, _)| pattern.as_str())
+    }
+
+    pub fn is_empty(&self) -> bool {
+        self.patterns.is_empty()
+    }
+
+    pub fn patterns(&self) -> impl Iterator<Item = &str> {
+        self.patterns.iter().map(|(pattern, _)| pattern.as_str())
+    }
+}
+
 pub struct Ruleset {
+    exclude: ExcludeSet,
     modules: Vec<ModuleGlob>,
     module_rules: Vec<ModuleRule>,
     package_rules: Vec<PackageRule>,
@@ -238,6 +269,14 @@ impl Ruleset {
             && version != 1
         {
             anyhow::bail!("{source}: schema_version {version} is not supported (expected 1)");
+        }
+
+        let mut exclude = ExcludeSet::default();
+        for pattern in raw.exclude {
+            let glob = globset::Glob::new(&pattern).map_err(|error| {
+                anyhow::anyhow!("{source}: exclude pattern `{pattern}` is invalid: {error}")
+            })?;
+            exclude.patterns.push((pattern, glob.compile_matcher()));
         }
 
         let mut modules = Vec::new();
@@ -351,12 +390,28 @@ impl Ruleset {
         };
 
         Ok(Self {
+            exclude,
             modules,
             module_rules,
             package_rules,
             closed_world,
             source,
         })
+    }
+
+    pub fn exclude(&self) -> &ExcludeSet {
+        &self.exclude
+    }
+
+    /// Loads only the exclusions, for the pass that runs before discovery.
+    ///
+    /// Exclusions have to be known before any file is walked, while the rules
+    /// themselves are evaluated at the end — so the same file is read for two
+    /// different purposes at two different times.
+    pub fn discover_excludes(scan_root: &Utf8Path) -> anyhow::Result<ExcludeSet> {
+        Ok(Self::discover(scan_root)?
+            .map(|ruleset| ruleset.exclude)
+            .unwrap_or_default())
     }
 
     /// The module a path belongs to. Longest glob wins, so a more specific pattern
@@ -865,6 +920,54 @@ allowed_in = ["cli"]
         );
         assert_eq!(findings.len(), 1);
         assert!(findings[0].message.contains("sketchy"));
+    }
+
+    // --- exclusions -------------------------------------------------------
+
+    fn excludes(patterns: &str) -> ExcludeSet {
+        Ruleset::parse(Utf8PathBuf::from("gdep.toml"), patterns)
+            .unwrap()
+            .exclude
+    }
+
+    #[test]
+    fn excludes_a_directory_tree() {
+        let set = excludes("exclude = [\"demo/**\"]\n");
+        assert_eq!(
+            set.excluded_by(Utf8Path::new("demo/go/go.mod")),
+            Some("demo/**")
+        );
+        assert_eq!(
+            set.excluded_by(Utf8Path::new("crates/core/src/lib.rs")),
+            None
+        );
+    }
+
+    /// The pattern that makes this repository's own CI gate possible.
+    #[test]
+    fn excludes_a_nested_fixture_directory() {
+        let set = excludes("exclude = [\"**/tests/fixtures/**\"]\n");
+        assert!(
+            set.excluded_by(Utf8Path::new(
+                "crates/gdep-lang/tests/fixtures/go-cycle/go.mod"
+            ))
+            .is_some()
+        );
+        assert!(
+            set.excluded_by(Utf8Path::new("crates/gdep-lang/src/go.rs"))
+                .is_none()
+        );
+    }
+
+    #[test]
+    fn no_exclude_key_means_nothing_is_excluded() {
+        assert!(excludes("[modules]\na = \"a/**\"\n").is_empty());
+    }
+
+    #[test]
+    fn an_invalid_exclude_glob_is_an_error() {
+        let error = parse_error("exclude = [\"a/**/[\"]\n");
+        assert!(error.contains("exclude pattern"), "{error}");
     }
 
     // --- ruleset errors ---------------------------------------------------

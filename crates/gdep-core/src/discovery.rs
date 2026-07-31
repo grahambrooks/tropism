@@ -9,6 +9,7 @@ use ignore::WalkBuilder;
 
 use crate::model::{Language, Project};
 use crate::provider::LanguageProvider;
+use crate::rules::ExcludeSet;
 
 #[derive(Debug, thiserror::Error)]
 pub enum DiscoveryError {
@@ -32,6 +33,7 @@ pub fn discover(
     scan_root: &Utf8Path,
     providers: &[&dyn LanguageProvider],
     respect_ignore: bool,
+    exclude: &ExcludeSet,
 ) -> Result<Vec<Project>, DiscoveryError> {
     if !scan_root.exists() {
         return Err(DiscoveryError::MissingRoot(scan_root.to_owned()));
@@ -89,6 +91,9 @@ pub fn discover(
             continue;
         };
         let relative = relativize(scan_root, path);
+        if exclude.excluded_by(&relative).is_some() {
+            continue;
+        }
         let dir = relative.parent().unwrap_or(Utf8Path::new("")).to_owned();
 
         let by_name = manifest_owners.get(file_name).cloned().unwrap_or_default();
@@ -131,6 +136,48 @@ pub fn discover(
 
     projects.sort_by(|a, b| (&a.root, a.language).cmp(&(&b.root, b.language)));
     Ok(projects)
+}
+
+/// How many paths each exclusion pattern kept out.
+///
+/// A separate walk rather than a return value from [`discover`], because the count
+/// is about disclosure and should not complicate the discovery signature. Walking
+/// is inode-bound and cheap next to parsing. A pattern reporting zero is stale —
+/// the directory was renamed and the exclusion silently stopped applying.
+pub fn count_exclusions(
+    scan_root: &Utf8Path,
+    respect_ignore: bool,
+    exclude: &ExcludeSet,
+) -> BTreeMap<String, usize> {
+    let mut counts: BTreeMap<String, usize> = exclude
+        .patterns()
+        .map(|pattern| (pattern.to_owned(), 0))
+        .collect();
+    if exclude.is_empty() {
+        return counts;
+    }
+
+    let walker = WalkBuilder::new(scan_root)
+        .standard_filters(respect_ignore)
+        .require_git(false)
+        .build();
+
+    for entry in walker.flatten() {
+        if !entry
+            .file_type()
+            .is_some_and(|file_type| file_type.is_file())
+        {
+            continue;
+        }
+        let Some(path) = Utf8Path::from_path(entry.path()) else {
+            continue;
+        };
+        let relative = relativize(scan_root, path);
+        if let Some(pattern) = exclude.excluded_by(&relative) {
+            *counts.entry(pattern.to_owned()).or_default() += 1;
+        }
+    }
+    counts
 }
 
 fn relativize(scan_root: &Utf8Path, path: &Utf8Path) -> Utf8PathBuf {
@@ -217,7 +264,7 @@ mod tests {
         write(&dir, "svc/go.mod", "module example.com/svc\n");
         write(&dir, "svc/go.sum", "");
 
-        let projects = discover(&dir, &[&go], true).unwrap();
+        let projects = discover(&dir, &[&go], true, &ExcludeSet::default()).unwrap();
 
         assert_eq!(projects.len(), 1);
         assert_eq!(projects[0].root, "svc");
@@ -233,7 +280,7 @@ mod tests {
         let dir = temp_dir("nolock");
         write(&dir, "go.mod", "module example.com/x\n");
 
-        let projects = discover(&dir, &[&go], true).unwrap();
+        let projects = discover(&dir, &[&go], true, &ExcludeSet::default()).unwrap();
 
         assert_eq!(projects.len(), 1);
         assert_eq!(
@@ -250,7 +297,11 @@ mod tests {
         let dir = temp_dir("orphan");
         write(&dir, "stray/go.sum", "");
 
-        assert!(discover(&dir, &[&go], true).unwrap().is_empty());
+        assert!(
+            discover(&dir, &[&go], true, &ExcludeSet::default())
+                .unwrap()
+                .is_empty()
+        );
 
         std::fs::remove_dir_all(&dir).unwrap();
     }
@@ -263,7 +314,7 @@ mod tests {
         write(&dir, "api/go.mod", "");
         write(&dir, "engine/Cargo.toml", "");
 
-        let projects = discover(&dir, &[&go, &rust], true).unwrap();
+        let projects = discover(&dir, &[&go, &rust], true, &ExcludeSet::default()).unwrap();
 
         assert_eq!(projects.len(), 2);
         assert_eq!(projects[0].root, "api");
@@ -281,7 +332,7 @@ mod tests {
         write(&dir, "vendor/dep/go.mod", "");
         write(&dir, "node_modules/pkg/go.mod", "");
 
-        let projects = discover(&dir, &[&go], true).unwrap();
+        let projects = discover(&dir, &[&go], true, &ExcludeSet::default()).unwrap();
 
         assert_eq!(projects.len(), 1, "vendored trees must not be analyzed");
         assert_eq!(projects[0].root, "api");
@@ -297,7 +348,7 @@ mod tests {
         write(&dir, "api/go.mod", "");
         write(&dir, "vendor/dep/go.mod", "");
 
-        let projects = discover(&dir, &[&go], false).unwrap();
+        let projects = discover(&dir, &[&go], false, &ExcludeSet::default()).unwrap();
 
         assert_eq!(projects.len(), 2);
 
@@ -307,7 +358,12 @@ mod tests {
     #[test]
     fn missing_scan_root_is_an_error() {
         let go = Stub(Language::Go, &["go.mod"], &["go.sum"]);
-        let result = discover(Utf8Path::new("/definitely/not/here"), &[&go], true);
+        let result = discover(
+            Utf8Path::new("/definitely/not/here"),
+            &[&go],
+            true,
+            &ExcludeSet::default(),
+        );
         assert!(matches!(result, Err(DiscoveryError::MissingRoot(_))));
     }
 }

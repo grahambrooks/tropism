@@ -122,38 +122,30 @@ jobs:
   dogfood:
     steps:
       - run: cargo build -p gdep-cli
-      # BLOCKED — see below. The intended gate is:
-      #   ./target/debug/gdep analyze . --exclude 'demo/**' --exclude '**/tests/fixtures/**' --fail-on error
+      # gdep gates its own merges on its own ruleset.
+      - run: ./target/debug/gdep analyze . --fail-on error
 ```
 
 `clippy -D warnings` matches the standard the repository already holds itself to.
 
-### The dogfood gate is blocked on a missing flag
+### The dogfood gate
 
-`gdep.toml` declares that the CLI and MCP server must stay independent and that core is a leaf.
-Running gdep against itself in CI is what would make those rules load-bearing rather than
-decorative — and it is the most on-brand job in the whole workflow.
+`gdep.toml` declares that the CLI and MCP server must stay independent, that core is a leaf, and
+that the tree-sitter grammars stay inside `gdep-lang`. Running gdep against itself in CI is what
+makes those rules load-bearing rather than decorative, and it is the most on-brand job in the
+workflow.
 
-**It does not work today.** Verified:
+It works because `gdep.toml` also carries `exclude` patterns for `demo/**` and
+`**/tests/fixtures/**` — directories full of deliberately-broken sample projects, which would
+otherwise keep the exit code permanently non-zero. Verified: `gdep analyze . --fail-on error` exits
+0, with 58 excluded paths disclosed in the report and 17 findings remaining, all of them genuine
+`Cargo.lock` duplicates below error severity.
 
-```
-gdep analyze .                       exit=1   demo/ and test fixtures are deliberately broken
-gdep analyze crates                  exit=1   fixtures live under crates/gdep-lang/tests/
-gdep analyze crates/a crates/b       exit=2   only one path argument is accepted
-```
-
-gdep has **no `--exclude`**, and `.gitignore` cannot help because those directories are tracked on
-purpose. Scanning one crate at a time would pass, but it would defeat the rules entirely: a rule
-like "the CLI must not depend on the MCP server" spans two crates, so narrowing the scan removes the
-very edges it exists to check.
-
-The test suite asserts the same property today (`gdep_satisfies_its_own_ruleset` in
-`crates/gdep-lang/tests/demos.rs`) by filtering in Rust. So the capability is proven; only the CLI
-cannot express it.
-
-**This job stays commented out until `--exclude` exists** — registered as D23 in
-[12-known-limitations.md](12-known-limitations.md). Shipping a green CI badge over a gate that was
-quietly narrowed until it passed would be worse than having no gate.
+The gate must never be narrowed to make it pass. Scanning one crate at a time would exit 0 and mean
+nothing: a rule like "the CLI must not depend on the MCP server" spans two crates, so narrowing the
+scan removes the very edges it exists to check. Two tests guard this —
+`gdep_passes_its_own_ci_gate` and `gdep_excludes_its_demos_and_fixtures` in
+`crates/gdep-lang/tests/demos.rs`, the second asserting that no exclusion is stale.
 
 ---
 

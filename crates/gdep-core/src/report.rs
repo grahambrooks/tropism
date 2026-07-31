@@ -267,6 +267,17 @@ impl ProjectReport {
     }
 }
 
+/// A path deliberately kept out of the analysis.
+///
+/// Disclosed for the same reason `CheckStatus` exists: a repository that excluded
+/// half of itself must not look like one that was fully analyzed.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct Exclusion {
+    pub pattern: String,
+    /// How many paths this pattern kept out. Zero means the pattern is stale.
+    pub matched: usize,
+}
+
 /// A file that could not be parsed. Recorded so silence is never mistaken for
 /// cleanliness.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -282,6 +293,8 @@ pub struct Report {
     pub scan_root: Utf8PathBuf,
     pub projects: Vec<ProjectReport>,
     pub skipped: Vec<SkippedFile>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub excluded: Vec<Exclusion>,
 }
 
 impl Report {
@@ -292,6 +305,7 @@ impl Report {
             scan_root: scan_root.into(),
             projects: Vec::new(),
             skipped: Vec::new(),
+            excluded: Vec::new(),
         }
     }
 

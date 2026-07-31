@@ -18,6 +18,6 @@ pub use provider::{
     Import, ImportForm, ImportTarget, LanguageProvider, ProjectContext, VersionOps,
 };
 pub use report::{
-    CheckId, CheckStatus, Confidence, Evidence, Finding, ProjectReport, Report, SCHEMA_VERSION,
-    Severity, SkippedFile,
+    CheckId, CheckStatus, Confidence, Evidence, Exclusion, Finding, ProjectReport, Report,
+    SCHEMA_VERSION, Severity, SkippedFile,
 };

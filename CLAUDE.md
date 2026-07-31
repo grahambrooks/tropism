@@ -101,6 +101,12 @@ lists, and stale-rule detection. **Not** implemented — and rejected at parse t
 error rather than silently ignored, so a ruleset never appears to enforce more than it does:
 `layers`, `require`, `transitive`, and version constraints.
 
+`gdep.toml` also carries `exclude` globs, applied before discovery, which is what lets
+`gdep analyze . --fail-on error` pass on this repository despite `demo/` and `tests/fixtures/`
+being deliberately broken. Exclusions are disclosed in every report with a match count — an
+exclusion is a blind spot, and a silent blind spot is the failure mode `CheckStatus` exists to
+prevent. **Never widen an exclusion to make the gate pass.**
+
 Rule findings are the only ones besides `cycle` that earn `High` confidence, and they default to
 `error` severity because the team asserted them.
 

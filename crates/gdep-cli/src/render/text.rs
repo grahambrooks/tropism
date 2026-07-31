@@ -90,6 +90,27 @@ pub fn render_with(report: &Report, styled: bool) -> String {
         out.push('\n');
     }
 
+    if !report.excluded.is_empty() {
+        let (dim, warn) = (palette.dim, palette.warn);
+        let total: usize = report.excluded.iter().map(|e| e.matched).sum();
+        let _ = writeln!(out, "{dim}{total} path(s) excluded by gdep.toml{dim:#}");
+        for exclusion in &report.excluded {
+            // A pattern matching nothing has stopped protecting anything.
+            let style = if exclusion.matched == 0 { warn } else { dim };
+            let note = if exclusion.matched == 0 {
+                " (matches nothing)"
+            } else {
+                ""
+            };
+            let _ = writeln!(
+                out,
+                "  {style}{} — {} path(s){note}{style:#}",
+                exclusion.pattern, exclusion.matched
+            );
+        }
+        out.push('\n');
+    }
+
     if !report.skipped.is_empty() {
         let (warn, dim) = (palette.warn, palette.dim);
         let _ = writeln!(
