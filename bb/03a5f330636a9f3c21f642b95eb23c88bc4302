@@ -1,0 +1,54 @@
+crates/gdep-core/src/discovery.rs
+  s_33258c54c67694::t_e7cabd0613f58d 12,36,267,283,317,335,351
+  s_33258c54c67694::t_fefaa3e523972d 152-155,166-169,172-174,300-304,361-366
+  s_33258c54c67694::t_1d09d8a4797903 94-96
+  s_33258c54c67694::t_09d95a79d183e0 141-151,156-165,170-171,175-182
+crates/gdep-core/src/lib.rs
+  s_33258c54c67694::t_e7cabd0613f58d 21-22
+crates/gdep-core/src/report.rs
+  s_33258c54c67694::t_e7cabd0613f58d 270-280,296-297,308
+crates/gdep-core/src/rules.rs
+  s_33258c54c67694::t_650c8ed276ea72 393
+  s_33258c54c67694::t_fefaa3e523972d 412-414,928-930,936-943,950-955,957-958
+  s_33258c54c67694::t_2b07d8b4cd6c8f 70-71,205-232,234,274-281,402-411,415,925-927,931-935,944-949,956,959-971
+  s_33258c54c67694::t_0220ff8fddc50f 416,972
+crates/gdep-cli/src/render/text.rs
+  s_33258c54c67694::t_09d95a79d183e0 93-99,105-113
+  s_33258c54c67694::t_fefaa3e523972d 100-104
+crates/gdep-lang/tests/demos.rs
+  s_33258c54c67694::t_fefaa3e523972d 433-434
+gdep.toml
+  s_33258c54c67694::t_09d95a79d183e0 12-26
+  s_33258c54c67694::t_17ddc681a0953f 11
+crates/gdep-core/src/pipeline.rs
+  s_33258c54c67694::t_09d95a79d183e0 79-81
+  s_33258c54c67694::t_f9602ccd9980cd 21,69-77,82,510
+  s_33258c54c67694::t_2896cdcc63669e 304-309,488-494
+  s_33258c54c67694::t_8c0ada86b0e4c5 40-53,139,141-144,146-148,302,325,486
+crates/gdep-lang/tests/js_pipeline.rs
+  s_33258c54c67694::t_2896cdcc63669e 40,43-47
+CLAUDE.md
+  s_33258c54c67694::t_359c966fbfc3d8 104-109
+design/11-dependency-rules.md
+  s_33258c54c67694::t_642d79443af878 80-108,247
+design/12-known-limitations.md
+  s_33258c54c67694::t_22ccb1ae228a51 133,135-138,140-142,144-145,233,235-236,238-239
+design/13-build-and-release.md
+  s_33258c54c67694::t_8021ad6ef81d83 125-126,131,133-136,138-142,144-148
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.19",
+  "base_commit_sha": "bb03a5f330636a9f3c21f642b95eb23c88bc4302",
+  "prompts": {},
+  "sessions": {
+    "s_33258c54c67694": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "7fc6e081-c8c1-4604-a221-b9597c043e2b",
+        "model": "claude-opus-5"
+      },
+      "human_author": "Graham Brooks <graham@grahambrooks.com>"
+    }
+  }
+}
