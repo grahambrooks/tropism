@@ -1,0 +1,84 @@
+crates/gdep-core/src/discovery.rs
+  s_33258c54c67694::t_beaaa1301aef06 43,51-56,94-105
+demo/dotnet/Shop.Api/OrderController.cs
+  s_33258c54c67694::t_7c3b3731cabaf5 1-5,7-16,18-19
+  s_33258c54c67694::t_a5298dc81fdec4 6,17
+crates/gdep-lang/src/javascript.rs
+  s_33258c54c67694::t_14cb1b905e694f 783
+demo/dotnet/Shop.Domain/Shop.Domain.csproj
+  s_33258c54c67694::t_7c3b3731cabaf5 1-9
+demo/dotnet/Shop.Domain.Tests/Shop.Domain.Tests.csproj
+  s_33258c54c67694::t_7c3b3731cabaf5 1-10
+demo/dotnet/Shop.Domain.Tests/PricingTests.cs
+  s_33258c54c67694::t_7c3b3731cabaf5 1-2,4-9,11
+  s_33258c54c67694::t_a5298dc81fdec4 3,10
+crates/gdep-core/src/pipeline.rs
+  s_33258c54c67694::t_d8b1d72497288e 7,363-374
+  s_33258c54c67694::t_4b803d43b5a1b2 375
+demo/dotnet/Shop.Domain/Order.cs
+  s_33258c54c67694::t_7c3b3731cabaf5 1-3,5-6,8-12,15-17
+  s_33258c54c67694::t_a5298dc81fdec4 4,7,13-14
+crates/gdep-lang/src/lib.rs
+  s_33258c54c67694::t_b829d6e8812d92 18-20,39-40
+  s_33258c54c67694::t_6c64e74263fa38 41
+demo/dotnet/Shop.Data/OrderStore.cs
+  s_33258c54c67694::t_7c3b3731cabaf5 1-4,6-16
+  s_33258c54c67694::t_a5298dc81fdec4 5
+demo/dotnet/gdep.toml
+  s_33258c54c67694::t_158119c5fb3b7b 37-56
+  s_33258c54c67694::t_f72b9882bfe78e 1-36,57-64
+demo/dotnet/Shop.Data/Shop.Data.csproj
+  s_33258c54c67694::t_7c3b3731cabaf5 1-11
+demo/dotnet/README.md
+  s_33258c54c67694::t_158119c5fb3b7b 1-55
+demo/dotnet/Shop.Domain/Invoice.cs
+  s_33258c54c67694::t_a5298dc81fdec4 1-10
+CLAUDE.md
+  s_33258c54c67694::t_0e42aa4407dbff 172-177,185,194-206
+  s_33258c54c67694::t_8362e1c03a336b 207
+crates/gdep-lang/src/rust.rs
+  s_33258c54c67694::t_7e45d3ad88886b 826,1033
+crates/gdep-core/src/provider.rs
+  s_33258c54c67694::t_beaaa1301aef06 9-10,30-35,125-130
+  s_33258c54c67694::t_6dbb32a9635e6f 131
+crates/gdep-lang/src/csharp.rs
+  s_33258c54c67694::t_f4cb9de429d56f 256,261-277,328
+  s_33258c54c67694::t_a5298dc81fdec4 290-293,297,556-557
+  s_33258c54c67694::t_64adf4a372b820 325
+  s_33258c54c67694::t_87fb9c6b4ccf8d 1-122,128-143,146-194,198-247,251-255,257-260,278-289,294-296,298-324,326-327,329-377,382-388,392-420,427-455,460-523,528-550,558-561,570-595,600-624,629-660,673-738,743-748,753-757,765-796,804-838
+  s_33258c54c67694::t_0e42aa4407dbff 123-127,144-145,195-197,378-381,389-391,421-426,456-459,524-527,551-555,562-569,596-599,625-628,661-672,739-742,749-752,758-764,797-803
+  s_33258c54c67694::t_14cb1b905e694f 248-250
+Cargo.toml
+  s_33258c54c67694::t_b829d6e8812d92 38-39
+crates/gdep-lang/Cargo.toml
+  s_33258c54c67694::t_b829d6e8812d92 19-20,24,28
+crates/gdep-lang/tests/demos.rs
+  s_33258c54c67694::t_0e42aa4407dbff 218-222,268-270,274-276,291-294
+  s_33258c54c67694::t_342beb3c7e138c 213-217,223-267,271-273,277-290,295-304
+demo/dotnet/Shop.Api/Shop.Api.csproj
+  s_33258c54c67694::t_7c3b3731cabaf5 1-10
+design/08-crates.md
+  s_33258c54c67694::t_0e42aa4407dbff 28-30,37
+scripts/demo.sh
+  s_33258c54c67694::t_0e42aa4407dbff 7,24,26,88-95,98,128,140,144,154
+crates/gdep-lang/src/go.rs
+  s_33258c54c67694::t_14cb1b905e694f 549
+Cargo.lock
+  s_33258c54c67694::t_38a969445560bc 693,697,1286-1294,1925-1934
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.19",
+  "base_commit_sha": "8ffb1e990ec7920b2abcac2635c8d78d17fb56ad",
+  "prompts": {},
+  "sessions": {
+    "s_33258c54c67694": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "7fc6e081-c8c1-4604-a221-b9597c043e2b",
+        "model": "claude-opus-5"
+      },
+      "human_author": "Graham Brooks <graham@grahambrooks.com>"
+    }
+  }
+}
