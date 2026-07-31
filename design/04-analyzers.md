@@ -27,6 +27,18 @@ Summary of what each check needs — this table is the reason the three-way grou
 Cycles and hygiene work on any checkout. The bottom three need a lockfile and are simply unavailable
 without one.
 
+Two further checks come from the ruleset in [11-dependency-rules.md](11-dependency-rules.md), and
+they are the only ones besides `cycle` that earn `High` confidence:
+
+| Check          | Repo-wide graph | Manifest | Lockfile           | Confidence ceiling |
+| -------------- | --------------- | -------- | ------------------ | ------------------ |
+| `module-rule`  | ✅               | ✅        | —                  | High               |
+| `package-rule` | —               | ✅        | only if transitive | High               |
+
+They are separated from the six above because their input is different in kind: a ruleset the team
+wrote, rather than a heuristic about intent. That is why they can be trusted where hygiene cannot —
+they detect the *presence* of a forbidden edge rather than the *absence* of a use.
+
 ---
 
 ## Circular dependencies

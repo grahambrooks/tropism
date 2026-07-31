@@ -98,7 +98,8 @@ Confidence describes how much the *analysis method* is trusted for this finding,
 severity.
 
 - **High** — derived from declarative data with no inference. A cycle found in explicitly resolved
-  imports. A duplicate version read straight from a lockfile.
+  imports. A duplicate version read straight from a lockfile. A violation of a rule the team wrote
+  ([11-dependency-rules.md](11-dependency-rules.md)).
 - **Medium** — sound method, known incomplete inputs. An unused dependency in a language where
   reflection or dynamic import could use it invisibly.
 - **Low** — heuristic, or derived from a partially-parsed manifest. Anything read out of

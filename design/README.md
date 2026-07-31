@@ -9,6 +9,12 @@ before planning further work.** Both slices contradicted parts of the plan below
 manifest hygiene measured a 63% false-positive rate on real JavaScript repositories and should not
 ship on by default, while cycle detection proved sound and is the strongest remaining claim.
 
+[11-dependency-rules.md](11-dependency-rules.md) specifies the feature that follows from those
+findings: a team-authored ruleset constraining what may depend on what. It detects the presence of a
+forbidden edge rather than the absence of a use, which places it in the same soundness class as
+cycle detection, and no native tool can enforce an architecture it was never told about. It is the
+recommended next build.
+
 These documents define what gdep should be before it is built. They exist so that implementation
 work can start anywhere without re-deriving the same decisions, and so that a decision that turns
 out to be wrong can be found and changed in one place.
@@ -31,6 +37,7 @@ annotated — see the `LanguageProvider` trait's location in
 | [08-crates.md](08-crates.md)                         | Verified dependency choices, and the gaps with no answer |
 | [09-product-review.md](09-product-review.md)         | Is this worth building? Evidence from the Go slice       |
 | [10-js-evaluation.md](10-js-evaluation.md)           | The kill-criterion run on ten real JS/TS repositories    |
+| [11-dependency-rules.md](11-dependency-rules.md)     | Team-defined architecture and package policy rules       |
 
 ## Design principles
 

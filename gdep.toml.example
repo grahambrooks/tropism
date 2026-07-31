@@ -1,0 +1,89 @@
+# gdep ruleset — worked example, describing this repository's own architecture.
+#
+# Rename to `gdep.toml` to activate. Specification: design/11-dependency-rules.md
+#
+# Everything here is a *presence* check: a violation is an import or a declaration
+# that exists and should not. That is why rule findings are High confidence while
+# the unused-dependency check is not — see design/10-js-evaluation.md.
+
+schema_version = 1
+
+# --------------------------------------------------------------------------
+# Modules: names bound to path globs. They need not match project boundaries.
+
+[modules]
+core = "crates/gdep-core/**"
+lang = "crates/gdep-lang/**"
+cli = "crates/gdep-cli/**"
+mcp = "crates/gdep-mcp/**"
+
+# --------------------------------------------------------------------------
+# Module rules: the architecture, written down.
+
+# The case that motivated the feature.
+[[module_rules]]
+id = "surfaces-are-independent"
+independent = ["cli", "mcp"]
+severity = "error"
+reason = """
+The CLI and MCP server are independent adapters over one analysis core
+(design/README.md, principle 4). Both may depend on core; neither may depend on
+the other. Shared behaviour belongs in core, not in a dependency between the two
+surfaces — that is what keeps "any question answerable by the CLI is answerable
+over MCP" true by construction rather than by discipline.
+"""
+
+# The dependency direction that the crate split exists to enforce.
+[[module_rules]]
+id = "core-is-a-leaf"
+allow_only = { from = "core", to = [] }
+severity = "error"
+reason = """
+gdep-core must not depend on rendering, CLI, or transport concerns. The crate
+split makes this structural rather than a matter of discipline: core cannot
+accidentally depend on clap because it does not have it (design/01-architecture.md).
+"""
+
+[[module_rules]]
+id = "providers-do-not-render"
+deny = { from = "lang", to = ["cli", "mcp"] }
+severity = "error"
+reason = "A language provider must not know how findings are displayed."
+
+# --------------------------------------------------------------------------
+# Package rules: dependency policy.
+
+[packages]
+# "allow" — a denylist: anything unlisted is fine.
+# "deny"  — an approved list: every dependency must be named.
+unlisted = "allow"
+
+[[package_rules]]
+id = "no-archived-yaml"
+deny = ["serde_yaml"]
+replacement = "saphyr"
+severity = "error"
+reason = """
+serde_yaml is archived (0.9.34+deprecated, last released 2024-03). Its forks are
+also stale; saphyr is the only actively maintained option. See design/08-crates.md.
+"""
+
+[[package_rules]]
+id = "tui-stays-in-the-cli"
+packages = ["ratatui"]
+allowed_in = ["cli"]
+severity = "error"
+reason = """
+The interactive browser is a CLI concern. Core must stay renderer-agnostic so the
+MCP server and any future surface are not forced to carry a terminal dependency.
+"""
+
+[[package_rules]]
+id = "no-native-package-managers"
+deny = ["cargo_metadata"]
+severity = "error"
+reason = """
+cargo_metadata shells out to cargo. gdep must never invoke a native package
+manager or execute the repository it analyzes (CLAUDE.md); use the cargo-lock
+crate, which parses Cargo.lock directly.
+"""

@@ -57,6 +57,7 @@ breaking; consumers must ignore unknown fields.
 
 ```
 gdep analyze [PATH]              # all checks, default command
+gdep check   [PATH]              # ruleset only: fast, high-signal, hook-friendly
 gdep cycles  [PATH]              # single check, for the common fast case
 gdep graph   [PATH]              # export the graph, do not analyze
 
@@ -67,8 +68,14 @@ Options:
   --severity <min>               # filter output
   --fail-on <severity>           # exit-code threshold for CI
   --config <path>
+  --rules <path>                 # override gdep.toml discovery
+  --no-rules                     # skip the ruleset entirely
   --no-ignore                    # do not honour .gitignore
 ```
+
+`gdep check` exists because rule violations default to `error` while the general checks are
+advisory. It is the subset a pre-commit hook or a merge gate should run — see
+[11-dependency-rules.md](11-dependency-rules.md).
 
 **Exit codes** are the CI contract and must be distinguishable:
 
@@ -125,6 +132,7 @@ Proposed tools:
 | `gdep_module_deps`  | What one module imports, and what imports it.                  |
 | `gdep_package_path` | Why a package is in the tree: the paths from root to it.       |
 | `gdep_check_status` | Which checks ran, which could not, and why.                    |
+| `gdep_rules`        | The active ruleset, each rule satisfied/violated/stale.        |
 
 Design rules for these tools:
 
@@ -145,9 +153,19 @@ Design rules for these tools:
 often needs answered when acting on a dependency finding, and it is exactly the question the
 resolved tree can answer precisely.
 
+`gdep_rules` deserves more. Every other tool here reports what an agent already did; this one lets
+it ask **before** acting — "may this module depend on that one?", "is this package approved?" — and
+each rule carries the team's `reason`, so the answer explains itself. That is the first capability in
+the product that is genuinely better as an agent interface than as a CLI.
+
 ## Configuration
 
 A single optional file at the scan root — format follows the ecosystem convention (TOML). It covers
 severity overrides, suppressions ([04-analyzers.md](04-analyzers.md)), extra ignore paths, and which
 checks are enabled. CLI flags override the file; the file overrides defaults. The MCP server reads
 the same file, so both surfaces agree.
+
+The ruleset lives in `gdep.toml` at the scan root and is specified separately in
+[11-dependency-rules.md](11-dependency-rules.md). Keeping it distinct from tool configuration is
+deliberate: the ruleset is a description of the architecture, reviewed like source, while the config
+is knobs. They have different audiences and different change rates.

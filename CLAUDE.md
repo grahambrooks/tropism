@@ -85,6 +85,24 @@ The remaining formats — `go.mod`/`go.sum`, `yarn.lock`, `Gemfile.lock`, `requi
 bespoke line-oriented formats. Evaluate whether a maintained crate exists before writing a parser;
 all are simple enough to parse directly if not.
 
+## Dependency rules
+
+Beyond finding problems generically, gdep accepts a **ruleset** — `gdep.toml` at the scan root —
+that constrains what may depend on what, in the manner of NDepend, JDepend, or ArchUnit:
+
+- **Module rules** — the intended architecture. "The CLI and MCP server must not depend on each
+  other, but both may depend on the shared core."
+- **Package rules** — approved and discouraged dependencies, optionally scoped to named modules.
+
+Specified in [design/11-dependency-rules.md](design/11-dependency-rules.md), with a worked example
+for this repository in [gdep.toml.example](gdep.toml.example).
+
+This is the strongest part of the product and the recommended next build. A rule violation is the
+*presence* of a forbidden import or declaration, which is a fact about a line of source — unlike the
+unused-dependency check, which must prove a negative and measured 63% false positives on real
+JavaScript. It is also the one thing no native tool can do: `go mod tidy` cannot know an
+architecture it was never told about.
+
 ## Design specification
 
 `design/` holds the spec — architecture, data model, the language-provider trait, per-check

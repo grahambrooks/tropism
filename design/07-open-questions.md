@@ -18,6 +18,13 @@ could produce for a monorepo.
 package-level graph so inter-package cycles are reported. Confirm before building, because retrofitting
 a repo-wide graph onto a per-root pipeline is expensive.
 
+**Update — this is now forced.** The JS slice implemented the `missing-dep` half (workspace siblings
+and root-hoisted dependencies are visible to children; see
+[10-js-evaluation.md](10-js-evaluation.md)). The graph half is settled by
+[11-dependency-rules.md](11-dependency-rules.md): a rule like "the CLI must not depend on the MCP
+server" spans two projects, so a repo-wide module graph is a precondition of the ruleset, not an
+optional refinement.
+
 *Blocks:* graph construction, missing-dep analyzer, and the Rust/JS providers where workspaces are
 the norm.
 
@@ -136,6 +143,17 @@ means the project has something worth running from early on.
 6. **MCP server** — over an analysis core that is already proven through the CLI.
 7. **Second and third languages** — Rust, then Python. Whatever forces a change to the
    `LanguageProvider` trait here is the real lesson of the whole design.
+
+**Revised after two slices and the rules specification.** Steps 1–5 are done for Go and
+JavaScript/TypeScript, and the second language duly forced two trait changes (`resolve_import` needs
+the importing file; `ProjectContext` needs the project's own file list). The order from here is:
+
+1. **The repo-wide module graph**, which rules require and open question 1 above deferred.
+2. **The ruleset** ([11-dependency-rules.md](11-dependency-rules.md)) — the first feature whose value
+   does not depend on out-competing an incumbent.
+3. **The MCP server**, now with `gdep_rules` as its highest-value tool.
+4. **More languages**, last. Two slices produced two different failure modes; a third would produce
+   a third, and none of them changes the product question.
 
 The trait will be wrong the first time. Adding the second language is what corrects it, which is why
 it comes before the remaining eight rather than after two more Go features.
