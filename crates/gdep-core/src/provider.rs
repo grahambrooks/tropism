@@ -6,7 +6,7 @@
 //!
 //! See `design/03-language-providers.md`.
 
-use camino::Utf8Path;
+use camino::{Utf8Path, Utf8PathBuf};
 
 use crate::graph::ModuleId;
 use crate::model::{DeclaredDep, Language, Manifest, Project, ResolvedDep};
@@ -18,6 +18,19 @@ pub struct ProjectContext<'a> {
     /// `name`. Required to distinguish internal imports from external ones.
     pub package_name: Option<&'a str>,
     pub declared: &'a [DeclaredDep],
+    /// Names of packages published by *other* projects in the same scan.
+    ///
+    /// In a monorepo, `@tanstack/query-core` is imported by its siblings and
+    /// declared only at the workspace root. Without this, every such import is
+    /// reported as an undeclared dependency — 101 of them in TanStack Query.
+    /// Resolves open question 1 in `design/07-open-questions.md`.
+    pub sibling_packages: &'a [String],
+    /// Every source file in the project, relative to the scan root.
+    ///
+    /// Needed to resolve extensionless relative imports: JavaScript's `./utils`
+    /// may mean `utils.ts`, `utils.tsx`, or `utils/index.ts`, and only the file
+    /// list distinguishes them. Go never needed this; the second language did.
+    pub source_files: &'a [Utf8PathBuf],
 }
 
 /// An import site found in source.
@@ -102,9 +115,21 @@ pub trait LanguageProvider: Send + Sync {
         ModuleId::module(default_id)
     }
 
-    /// Classifies one import. See `design/03-language-providers.md` — resolution
-    /// failure must surface as [`ImportTarget::Unresolved`], never a silent drop.
-    fn resolve_import(&self, import: &Import, ctx: &ProjectContext<'_>) -> ImportTarget;
+    /// Classifies one import, given the file it appears in.
+    ///
+    /// `from` is required because a relative specifier means nothing without it —
+    /// `./b` in `src/a.ts` and in `lib/a.ts` are different modules. Go's import
+    /// paths are absolute so it ignores this, which is why the first version of
+    /// this trait lacked the parameter.
+    ///
+    /// See `design/03-language-providers.md` — resolution failure must surface as
+    /// [`ImportTarget::Unresolved`], never a silent drop.
+    fn resolve_import(
+        &self,
+        import: &Import,
+        from: &Utf8Path,
+        ctx: &ProjectContext<'_>,
+    ) -> ImportTarget;
 
     /// Modules needing no declaration.
     fn is_stdlib(&self, module: &str) -> bool;

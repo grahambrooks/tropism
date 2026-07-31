@@ -38,6 +38,12 @@ pub struct AnalysisContext {
     /// Set when the ecosystem has a lockfile that is not a resolved graph, which
     /// is a different situation from having no lockfile at all.
     pub resolved_tree_note: Option<String>,
+    /// Packages published by other projects in the same scan.
+    ///
+    /// A monorepo sibling is resolvable at runtime through the workspace even when
+    /// the importing package does not declare it, so reporting it missing is wrong.
+    /// It stays visible to `unused-dep`, which still needs to see it used.
+    pub sibling_packages: Vec<String>,
 }
 
 impl AnalysisContext {
@@ -249,7 +255,12 @@ impl Analyzer for MissingDepAnalyzer {
     }
 
     fn run(&self, ctx: &AnalysisContext) -> CheckResult {
-        let declared: BTreeSet<&str> = ctx.declared.iter().map(|d| d.name.as_str()).collect();
+        let declared: BTreeSet<&str> = ctx
+            .declared
+            .iter()
+            .map(|d| d.name.as_str())
+            .chain(ctx.sibling_packages.iter().map(String::as_str))
+            .collect();
         let confidence = ctx.hygiene_confidence();
 
         // Group by package so one undeclared dependency imported in nine files is
@@ -293,16 +304,11 @@ impl Analyzer for MissingDepAnalyzer {
 
 // ---------------------------------------------------------------------------
 
-/// Reports `Unavailable` unless a genuinely resolved tree is present.
-fn require_resolved_tree(ctx: &AnalysisContext) -> Option<String> {
-    if ctx.resolved_tree.is_some() {
-        return None;
-    }
-    Some(
-        ctx.resolved_tree_note.clone().unwrap_or_else(|| {
-            "no lockfile found; the resolved dependency tree is unknown".to_owned()
-        }),
-    )
+/// Why a resolved-tree check could not run.
+fn unavailable_reason(ctx: &AnalysisContext) -> String {
+    ctx.resolved_tree_note
+        .clone()
+        .unwrap_or_else(|| "no lockfile found; the resolved dependency tree is unknown".to_owned())
 }
 
 pub struct VersionConflictAnalyzer;
@@ -313,10 +319,49 @@ impl Analyzer for VersionConflictAnalyzer {
     }
 
     fn run(&self, ctx: &AnalysisContext) -> CheckResult {
-        match require_resolved_tree(ctx) {
-            Some(reason) => CheckResult::Unavailable(reason),
-            None => CheckResult::Ran(Vec::new()),
+        let Some(resolved) = &ctx.resolved_tree else {
+            return CheckResult::Unavailable(unavailable_reason(ctx));
+        };
+
+        // Group by package name; more than one version means the tree carries
+        // duplicates. In npm this is legal and common (nesting is the mechanism
+        // that permits it), so it is Info — a bundle-size and
+        // instanceof-mismatch concern, not a build failure.
+        let mut versions: BTreeMap<&str, BTreeSet<&str>> = BTreeMap::new();
+        for dep in resolved {
+            versions
+                .entry(dep.name.as_str())
+                .or_default()
+                .insert(dep.version.as_str());
         }
+
+        let findings = versions
+            .into_iter()
+            .filter(|(_, found)| found.len() > 1)
+            .map(|(name, found)| {
+                let list: Vec<&str> = found.iter().copied().collect();
+                Finding::new(
+                    CheckId::VersionConflict,
+                    &ctx.project.root,
+                    &[name],
+                    Severity::Info,
+                    Confidence::High,
+                    format!(
+                        "`{name}` is resolved at {} versions: {}",
+                        list.len(),
+                        list.join(", ")
+                    ),
+                )
+                .with_evidence([Evidence::new(
+                    ctx.project.lockfile.clone().unwrap_or_default(),
+                    None,
+                    format!("{} copies in the resolved tree", list.len()),
+                )])
+                .with_details(serde_json::json!({ "dependency": name, "versions": list }))
+            })
+            .collect();
+
+        CheckResult::Ran(findings)
     }
 }
 
@@ -328,10 +373,75 @@ impl Analyzer for DiamondAnalyzer {
     }
 
     fn run(&self, ctx: &AnalysisContext) -> CheckResult {
-        match require_resolved_tree(ctx) {
-            Some(reason) => CheckResult::Unavailable(reason),
-            None => CheckResult::Ran(Vec::new()),
+        let Some(resolved) = &ctx.resolved_tree else {
+            return CheckResult::Unavailable(unavailable_reason(ctx));
+        };
+
+        let by_key: BTreeMap<&str, &ResolvedDep> =
+            resolved.iter().map(|dep| (dep.key.as_str(), dep)).collect();
+
+        // Dependents are counted per package *name*, not per copy. When a resolver
+        // duplicates a package to satisfy disagreeing dependents, each copy ends up
+        // with exactly one dependent — so counting per copy finds nothing, which is
+        // precisely backwards.
+        let mut arms: BTreeMap<&str, BTreeMap<&str, &str>> = BTreeMap::new();
+        for dep in resolved {
+            for edge in &dep.dependencies {
+                if let Some(target) = by_key.get(edge.as_str()) {
+                    arms.entry(target.name.as_str())
+                        .or_default()
+                        .insert(dep.name.as_str(), target.version.as_str());
+                }
+            }
         }
+
+        let mut versions: BTreeMap<&str, BTreeSet<&str>> = BTreeMap::new();
+        for dep in resolved {
+            versions
+                .entry(dep.name.as_str())
+                .or_default()
+                .insert(dep.version.as_str());
+        }
+
+        // Only diamonds with a consequence are reported. A shared dependency whose
+        // arms agreed on one version is the normal shape of every tree, and
+        // reporting those would bury the ones that actually cost something.
+        let findings = arms
+            .into_iter()
+            .filter(|(name, dependents)| {
+                dependents.len() > 1 && versions.get(name).is_some_and(|v| v.len() > 1)
+            })
+            .map(|(name, dependents)| {
+                let split: Vec<String> = dependents
+                    .iter()
+                    .map(|(dependent, version)| format!("{dependent} → {version}"))
+                    .collect();
+
+                Finding::new(
+                    CheckId::DiamondDep,
+                    &ctx.project.root,
+                    &[name],
+                    Severity::Warning,
+                    Confidence::High,
+                    format!(
+                        "`{name}` is pulled in by {} dependents that disagree on the version ({})",
+                        dependents.len(),
+                        split.join(", ")
+                    ),
+                )
+                .with_evidence([Evidence::new(
+                    ctx.project.lockfile.clone().unwrap_or_default(),
+                    None,
+                    format!("duplicated to satisfy {}", split.join(" and ")),
+                )])
+                .with_details(serde_json::json!({
+                    "dependency": name,
+                    "dependents": dependents,
+                }))
+            })
+            .collect();
+
+        CheckResult::Ran(findings)
     }
 }
 
@@ -367,6 +477,7 @@ mod tests {
             imports,
             resolved_tree: None,
             resolved_tree_note: None,
+            sibling_packages: Vec::new(),
         }
     }
 

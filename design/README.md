@@ -1,13 +1,13 @@
 # gdep design specification
 
-**Status:** the Go vertical slice is complete — discovery, `go.mod` parsing, import extraction, the
-module graph, and three of six analyzers, verified against five real repositories. The other nine
-languages and the MCP server are not built, and everything about them here is still intent rather
-than a description of behaviour.
+**Status:** two vertical slices are complete — Go, and JavaScript/TypeScript with a real resolved
+tree, so all six checks have now run. The remaining eight languages and the MCP server are not
+built, and everything about them here is still intent rather than a description of behaviour.
 
-**Read [09-product-review.md](09-product-review.md) before planning further work.** Building the
-slice contradicted parts of the plan below, most importantly the choice of Go as the first language
-and the assumption that the six checks are where the value lies.
+**Read [09-product-review.md](09-product-review.md) and [10-js-evaluation.md](10-js-evaluation.md)
+before planning further work.** Both slices contradicted parts of the plan below. In particular,
+manifest hygiene measured a 63% false-positive rate on real JavaScript repositories and should not
+ship on by default, while cycle detection proved sound and is the strongest remaining claim.
 
 These documents define what gdep should be before it is built. They exist so that implementation
 work can start anywhere without re-deriving the same decisions, and so that a decision that turns
@@ -30,6 +30,7 @@ annotated — see the `LanguageProvider` trait's location in
 | [07-open-questions.md](07-open-questions.md)         | Decisions deferred, and what they block                  |
 | [08-crates.md](08-crates.md)                         | Verified dependency choices, and the gaps with no answer |
 | [09-product-review.md](09-product-review.md)         | Is this worth building? Evidence from the Go slice       |
+| [10-js-evaluation.md](10-js-evaluation.md)           | The kill-criterion run on ten real JS/TS repositories    |
 
 ## Design principles
 

@@ -10,12 +10,16 @@ description = "Language provider implementations for gdep"
 gdep-core.workspace = true
 anyhow.workspace = true
 camino.workspace = true
+serde_json.workspace = true
 tree-sitter.workspace = true
 tree-sitter-go.workspace = true
+tree-sitter-javascript.workspace = true
+tree-sitter-typescript.workspace = true
 
 [features]
-default = ["go"]
+default = ["go", "javascript"]
 go = []
+javascript = []
 
 [lints]
 workspace = true

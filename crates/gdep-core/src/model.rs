@@ -70,13 +70,20 @@ pub enum DepKind {
     /// case. Reporting these as unused would be a false-positive storm, so the
     /// unused-dependency analyzer skips them.
     Indirect,
+    /// Declared to be *invoked or consumed by a build step*, not imported: a CLI
+    /// run from a script (`eslint`, `rollup`), or ambient type definitions the
+    /// compiler reads without any import (`@types/*`).
+    ///
+    /// Measured, not assumed: before this existed, every one of Chalk's six
+    /// findings and 25 of Zustand's 27 were packages of exactly this shape.
+    Tooling,
 }
 
 impl DepKind {
-    /// Whether an absent import makes this dependency suspicious. False for
-    /// `Indirect`, which is *expected* to have no import.
+    /// Whether an absent import makes this dependency suspicious. False for the
+    /// kinds that are *expected* to have no import.
     pub fn expects_direct_import(self) -> bool {
-        !matches!(self, Self::Indirect)
+        !matches!(self, Self::Indirect | Self::Tooling)
     }
 }
 
@@ -106,8 +113,13 @@ pub struct DeclaredDep {
 /// A dependency as the lockfile resolved it: a name and an exact version.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct ResolvedDep {
+    /// Identifies this *copy*, not this package. npm may install the same name at
+    /// several versions in different places, and `dependencies` edges point at a
+    /// specific copy — so the name alone cannot be the identity.
+    pub key: String,
     pub name: String,
     pub version: String,
+    /// Keys of the copies this one resolves to.
     pub dependencies: Vec<String>,
 }
 

@@ -170,7 +170,7 @@ mod tests {
         fn extract_imports(&self, _: &Utf8Path, _: &str) -> anyhow::Result<Vec<Import>> {
             Ok(vec![])
         }
-        fn resolve_import(&self, _: &Import, _: &ProjectContext<'_>) -> ImportTarget {
+        fn resolve_import(&self, _: &Import, _: &Utf8Path, _: &ProjectContext<'_>) -> ImportTarget {
             ImportTarget::Unresolved {
                 reason: "stub".to_owned(),
             }

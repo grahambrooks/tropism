@@ -9,6 +9,9 @@ use gdep_core::provider::LanguageProvider;
 #[cfg(feature = "go")]
 pub mod go;
 
+#[cfg(feature = "javascript")]
+pub mod javascript;
+
 /// Every enabled provider.
 ///
 /// Ordering is stable so discovery output does not depend on it.
@@ -20,6 +23,9 @@ pub fn registry() -> Vec<&'static dyn LanguageProvider> {
 
     #[cfg(feature = "go")]
     providers.push(&go::GoProvider);
+
+    #[cfg(feature = "javascript")]
+    providers.push(&javascript::JavaScriptProvider);
 
     providers
 }

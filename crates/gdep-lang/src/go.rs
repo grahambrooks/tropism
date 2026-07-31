@@ -150,7 +150,12 @@ impl LanguageProvider for GoProvider {
         }
     }
 
-    fn resolve_import(&self, import: &Import, ctx: &ProjectContext<'_>) -> ImportTarget {
+    fn resolve_import(
+        &self,
+        import: &Import,
+        _from: &Utf8Path,
+        ctx: &ProjectContext<'_>,
+    ) -> ImportTarget {
         let path = import.raw.as_str();
 
         // 1. Internal: the module path is a literal prefix of the import.
@@ -538,13 +543,15 @@ mod tests {
             project: &project,
             package_name: Some(module),
             declared: &deps,
+            sibling_packages: &[],
+            source_files: &[],
         };
         let import = Import {
             raw: path.to_owned(),
             line: 1,
             type_only: false,
         };
-        GoProvider.resolve_import(&import, &ctx)
+        GoProvider.resolve_import(&import, Utf8Path::new("svc/main.go"), &ctx)
     }
 
     #[test]

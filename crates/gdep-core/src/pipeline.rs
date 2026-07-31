@@ -34,6 +34,20 @@ pub fn analyze(
     let projects = discovery::discover(scan_root, providers, options.respect_ignore)?;
     let mut report = Report::new(scan_root);
 
+    // First pass: parse every manifest, so the second pass can tell what the
+    // workspace makes available from what is genuinely undeclared.
+    let parsed: Vec<(&Project, crate::model::Manifest)> = projects
+        .iter()
+        .filter_map(|project| {
+            let provider = providers
+                .iter()
+                .find(|candidate| candidate.language() == project.language)?;
+            let manifest_path = project.manifests.first()?;
+            let text = std::fs::read_to_string(scan_root.join(manifest_path)).ok()?;
+            Some((project, provider.parse_manifest(manifest_path, &text).ok()?))
+        })
+        .collect();
+
     // Longest root first, so a file inside a nested project is attributed to the
     // innermost one rather than to its parent.
     let mut roots: Vec<&Project> = projects.iter().collect();
@@ -47,7 +61,20 @@ pub fn analyze(
             continue;
         };
 
-        match analyze_project(scan_root, project, *provider, &roots, options) {
+        // Everything the workspace makes importable here without a local
+        // declaration: any sibling's published name, plus dependencies declared by
+        // an ancestor project. npm hoists a monorepo root's devDependencies into a
+        // shared node_modules, so a child importing `vitest` is not undeclared.
+        let provided: Vec<String> = parsed
+            .iter()
+            .filter(|(other, _)| {
+                other.root != project.root && project.root.starts_with(&other.root)
+            })
+            .flat_map(|(_, manifest)| manifest.deps.iter().map(|dep| dep.name.clone()))
+            .chain(parsed.iter().filter_map(|(_, m)| m.package_name.clone()))
+            .collect();
+
+        match analyze_project(scan_root, project, *provider, &roots, &provided, options) {
             Ok((project_report, mut skipped)) => {
                 report.projects.push(project_report);
                 report.skipped.append(&mut skipped);
@@ -77,6 +104,7 @@ fn analyze_project(
     project: &Project,
     provider: &dyn LanguageProvider,
     roots: &[&Project],
+    provided: &[String],
     options: &Options,
 ) -> anyhow::Result<(ProjectReport, Vec<SkippedFile>)> {
     let manifest_path = project
@@ -94,17 +122,20 @@ fn analyze_project(
         None => None,
     };
 
+    let files = source_files(scan_root, project, provider, roots, options);
     let ctx_for_resolution = ProjectContext {
         project,
         package_name: manifest.package_name.as_deref(),
         declared: &manifest.deps,
+        sibling_packages: provided,
+        source_files: &files,
     };
 
     let mut imports = Vec::new();
     let mut skipped = Vec::new();
     let mut module_graph = ModuleGraph::new();
 
-    for file in source_files(scan_root, project, provider, roots, options) {
+    for file in files.iter().cloned() {
         let text = match std::fs::read_to_string(scan_root.join(&file)) {
             Ok(text) => text,
             Err(error) => {
@@ -132,7 +163,7 @@ fn analyze_project(
         module_graph.add_module(owner.clone());
 
         for import in extracted {
-            let target = provider.resolve_import(&import, &ctx_for_resolution);
+            let target = provider.resolve_import(&import, &file, &ctx_for_resolution);
             if let ImportTarget::Internal(target_module) = &target {
                 module_graph.add_edge(owner.clone(), ModuleId::module(target_module.clone()));
             }
@@ -160,6 +191,7 @@ fn analyze_project(
             .as_ref()
             .and_then(|_| provider.resolved_tree_note())
             .map(str::to_owned),
+        sibling_packages: provided.to_vec(),
     };
 
     let (checks, findings) = analysis::run_all(&context);

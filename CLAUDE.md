@@ -139,7 +139,18 @@ hashes for the whole module graph rather than the versions MVS selected, and car
 there is no resolved tree to analyze without running the Go resolver. `dependency-bloat` is
 deferred by design.
 
-Not built: the other nine languages, and the MCP server.
+A JavaScript/TypeScript slice is also complete: `package.json`, `package-lock.json` (a genuinely
+resolved graph, unlike `go.sum`), tree-sitter extraction for JS/TS/TSX, and all six checks running.
+`version-conflict` and `diamond-dep` execute for the first time here.
+
+Not built: the other eight languages, and the MCP server.
+
+**Before extending the checks, read [design/10-js-evaluation.md](design/10-js-evaluation.md).**
+Manifest hygiene (`unused-dep` / `missing-dep`) measured a **63% false-positive rate** on real
+JavaScript repositories after three rounds of mitigation, because packages are legitimately used via
+HTML `<script src>`, config files, framework strings, and CLI arguments that gdep cannot see without
+an installed `node_modules` — which the hermetic constraint forbids. Cycle detection, by contrast,
+was sound on every repository. Do not turn hygiene on by default or let it gate CI.
 
 ### Go semantics that cost real debugging
 
