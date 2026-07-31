@@ -169,6 +169,12 @@ hashes for the whole module graph rather than the versions MVS selected, and car
 there is no resolved tree to analyze without running the Go resolver. `dependency-bloat` is
 deferred by design.
 
+A C#/.NET slice is complete: `.csproj` and `packages.lock.json` parsing, tree-sitter-c-sharp
+extraction, and namespace-based module identity. Two trait changes were forced by it —
+`manifest_extensions`, because `.csproj` is named after the project rather than by convention, and
+`ProjectContext::known_modules`, because a `using` names a namespace and the only reliable way to
+recognise the solution's own code is to know which namespaces it declares.
+
 A Rust slice is complete and gdep is run against itself — `crates/gdep-lang/tests/demos.rs`
 asserts that gdep reports nothing in its own source beyond genuine `Cargo.lock` duplicates.
 
@@ -176,7 +182,7 @@ A JavaScript/TypeScript slice is also complete: `package.json`, `package-lock.js
 resolved graph, unlike `go.sum`), tree-sitter extraction for JS/TS/TSX, and all six checks running.
 `version-conflict` and `diamond-dep` execute for the first time here.
 
-Not built: the other seven languages, the unimplemented rule kinds above, and the MCP server.
+Not built: the other six languages, the unimplemented rule kinds above, and the MCP server.
 
 **Before extending the checks, read [design/10-js-evaluation.md](design/10-js-evaluation.md).**
 Manifest hygiene (`unused-dep` / `missing-dep`) measured a **63% false-positive rate** on real
@@ -184,6 +190,20 @@ JavaScript repositories after three rounds of mitigation, because packages are l
 HTML `<script src>`, config files, framework strings, and CLI arguments that gdep cannot see without
 an installed `node_modules` — which the hermetic constraint forbids. Cycle detection, by contrast,
 was sound on every repository. Do not turn hygiene on by default or let it gate CI.
+
+### C# semantics worth knowing
+
+- **A module is the declared namespace, not the path.** Four languages have now needed four
+  different file→module strategies (Go: directory; JS: file path; Rust: path→module path; C#:
+  the `namespace` declaration read from the file), which is the clearest evidence the mapping
+  belongs to the provider rather than the pipeline.
+- **`PrivateAssets="all"` is `DepKind::Tooling`.** A Roslyn analyzer participates in the build and
+  is never referenced from code — the same shape as an npm package invoked from `scripts`.
+- **`System.*` is treated as framework.** In older non-SDK projects some of it shipped as packages,
+  so this can hide a genuinely missing reference. The alternative reports a missing dependency on
+  `System.Linq`, which is worse.
+- **A cross-project cycle is invisible to `cycle`** but caught by a rule, because cycle detection
+  runs per project and rules evaluate repo-wide. See `demo/dotnet/README.md`.
 
 ### Rust semantics that cost real debugging
 

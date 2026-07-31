@@ -210,6 +210,98 @@ fn rust_demo_has_no_unexpected_findings() {
     );
 }
 
+// --- .NET -------------------------------------------------------------------
+
+#[test]
+fn dotnet_demo_discovers_every_project_by_csproj_extension() {
+    let report = analyze("dotnet");
+    assert_eq!(
+        report.projects.len(),
+        4,
+        "manifests are named after the project"
+    );
+}
+
+/// C# permits namespace cycles, so nothing in the toolchain catches this.
+#[test]
+fn dotnet_demo_finds_the_namespace_cycle() {
+    let report = analyze("dotnet");
+    assert_eq!(messages(&report, CheckId::Cycle).len(), 1);
+}
+
+#[test]
+fn dotnet_demo_finds_the_hygiene_problems() {
+    let report = analyze("dotnet");
+    assert!(mentions(&report, CheckId::UnusedDep, "AutoMapper"));
+    assert!(mentions(&report, CheckId::MissingDep, "Serilog"));
+}
+
+/// A `using` names a namespace, so the framework, the solution's own code, and a
+/// test project all have to be told apart from packages.
+#[test]
+fn dotnet_demo_does_not_trip_on_its_traps() {
+    let report = analyze("dotnet");
+    for trap in ["System", "StyleCop", "Shop.Domain.Orders", "xunit"] {
+        for check in [CheckId::UnusedDep, CheckId::MissingDep] {
+            assert!(!mentions(&report, check, trap), "{check} tripped on {trap}");
+        }
+    }
+}
+
+/// packages.lock.json is opt-in and usually absent, so most .NET solutions get
+/// the same treatment Java will.
+#[test]
+fn dotnet_demo_reports_resolved_tree_checks_as_unavailable() {
+    let report = analyze("dotnet");
+    for project in &report.projects {
+        assert!(matches!(
+            project.checks[&CheckId::VersionConflict],
+            CheckStatus::Unavailable { .. }
+        ));
+    }
+}
+
+#[test]
+fn dotnet_demo_enforces_its_layering() {
+    let messages = rule_messages(&analyze("dotnet"));
+    assert!(
+        messages
+            .iter()
+            .any(|m| m.contains("`api` must not depend on `data`")),
+        "got {messages:?}"
+    );
+    assert!(
+        messages
+            .iter()
+            .any(|m| m.contains("`data` must not depend on anything")),
+        "got {messages:?}"
+    );
+}
+
+/// A denylist matches the code, not just the manifest: Shop.Api never declares
+/// Serilog, and the rule still fires on the `using`.
+#[test]
+fn dotnet_demo_denies_a_package_at_the_import() {
+    let report = analyze("dotnet");
+    let finding = report
+        .findings()
+        .find(|f| f.check == CheckId::PackageRule && f.message.contains("Serilog"))
+        .expect("expected the denylist to fire");
+    assert_eq!(finding.details["level"], "imported");
+    assert_eq!(
+        finding.details["replacement"],
+        "Microsoft.Extensions.Logging"
+    );
+}
+
+#[test]
+fn dotnet_demo_has_no_unexpected_findings() {
+    assert_no_unexpected(
+        &analyze("dotnet"),
+        &["cycle", "AutoMapper", "Serilog", "`api`", "`data`"],
+    );
+}
+
 // --- rulesets ---------------------------------------------------------------
 
 fn rule_messages(report: &Report) -> Vec<String> {

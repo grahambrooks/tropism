@@ -15,6 +15,9 @@ pub mod javascript;
 #[cfg(feature = "rust")]
 pub mod rust;
 
+#[cfg(feature = "csharp")]
+pub mod csharp;
+
 /// Every enabled provider.
 ///
 /// Ordering is stable so discovery output does not depend on it.
@@ -32,6 +35,9 @@ pub fn registry() -> Vec<&'static dyn LanguageProvider> {
 
     #[cfg(feature = "rust")]
     providers.push(&rust::RustProvider);
+
+    #[cfg(feature = "csharp")]
+    providers.push(&csharp::CSharpProvider);
 
     providers
 }

@@ -40,10 +40,17 @@ pub fn discover(
     // filename -> languages that claim it. `package.json` maps to both JS and TS.
     let mut manifest_owners: BTreeMap<&str, Vec<Language>> = BTreeMap::new();
     let mut lockfile_owners: BTreeMap<&str, Vec<Language>> = BTreeMap::new();
+    let mut manifest_extension_owners: BTreeMap<&str, Vec<Language>> = BTreeMap::new();
     for provider in providers {
         for name in provider.manifest_names() {
             manifest_owners
                 .entry(name)
+                .or_default()
+                .push(provider.language());
+        }
+        for extension in provider.manifest_extensions() {
+            manifest_extension_owners
+                .entry(extension)
                 .or_default()
                 .push(provider.language());
         }
@@ -84,14 +91,18 @@ pub fn discover(
         let relative = relativize(scan_root, path);
         let dir = relative.parent().unwrap_or(Utf8Path::new("")).to_owned();
 
-        if let Some(languages) = manifest_owners.get(file_name) {
-            for language in languages {
-                found
-                    .entry((dir.clone(), *language))
-                    .or_default()
-                    .0
-                    .push(relative.clone());
-            }
+        let by_name = manifest_owners.get(file_name).cloned().unwrap_or_default();
+        let by_extension = path
+            .extension()
+            .and_then(|extension| manifest_extension_owners.get(extension))
+            .cloned()
+            .unwrap_or_default();
+        for language in by_name.into_iter().chain(by_extension) {
+            found
+                .entry((dir.clone(), language))
+                .or_default()
+                .0
+                .push(relative.clone());
         }
         if let Some(languages) = lockfile_owners.get(file_name) {
             for language in languages {

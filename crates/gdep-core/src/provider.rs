@@ -6,6 +6,8 @@
 //!
 //! See `design/03-language-providers.md`.
 
+use std::collections::BTreeSet;
+
 use camino::{Utf8Path, Utf8PathBuf};
 
 use crate::graph::ModuleId;
@@ -25,6 +27,12 @@ pub struct ProjectContext<'a> {
     /// reported as an undeclared dependency — 101 of them in TanStack Query.
     /// Resolves open question 1 in `design/07-open-questions.md`.
     pub sibling_packages: &'a [String],
+    /// Modules this project defines, known before any import is resolved.
+    ///
+    /// C# needs it: a `using` names a namespace, and the only way to tell an
+    /// internal namespace from a package is to know which ones the project
+    /// declares. Rust uses it to avoid recomputing its module set per import.
+    pub known_modules: &'a BTreeSet<String>,
     /// Every source file in the project, relative to the scan root.
     ///
     /// Needed to resolve extensionless relative imports: JavaScript's `./utils`
@@ -113,6 +121,13 @@ pub trait LanguageProvider: Send + Sync {
 
     /// Filenames whose presence marks a directory as a project root.
     fn manifest_names(&self) -> &'static [&'static str];
+
+    /// Extensions that mark a manifest, for ecosystems that name the manifest after
+    /// the project rather than by convention. .NET's `MyApp.csproj` is the case;
+    /// every other language so far has a fixed filename.
+    fn manifest_extensions(&self) -> &'static [&'static str] {
+        &[]
+    }
 
     /// Lockfile names, most-preferred first.
     fn lockfile_names(&self) -> &'static [&'static str];

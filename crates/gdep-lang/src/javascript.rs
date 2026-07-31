@@ -780,6 +780,7 @@ mod tests {
             package_name: Some("app"),
             declared: &deps,
             sibling_packages: &[],
+            known_modules: &std::collections::BTreeSet::new(),
             source_files: &source_files,
         };
         let import = Import::statement(specifier.to_owned(), 1).type_only(false);

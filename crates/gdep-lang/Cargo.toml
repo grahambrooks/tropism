@@ -16,13 +16,16 @@ tree-sitter-go.workspace = true
 tree-sitter-javascript.workspace = true
 tree-sitter-typescript.workspace = true
 tree-sitter-rust.workspace = true
+tree-sitter-c-sharp.workspace = true
+quick-xml.workspace = true
 toml.workspace = true
 
 [features]
-default = ["go", "javascript", "rust"]
+default = ["go", "javascript", "rust", "csharp"]
 go = []
 javascript = []
 rust = []
+csharp = []
 
 [lints]
 workspace = true

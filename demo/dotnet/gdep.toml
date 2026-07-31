@@ -1,0 +1,64 @@
+# Ruleset for the .NET demo. Specification: design/11-dependency-rules.md
+#
+# A layered solution is the classic NDepend/JDepend case: the constraint that
+# matters is which project may reference which, and nothing infers it.
+
+schema_version = 1
+
+[modules]
+api = "Shop.Api/**"
+domain = "Shop.Domain/**"
+data = "Shop.Data/**"
+tests = "Shop.Domain.Tests/**"
+
+# VIOLATED. OrderController reaches straight into the data layer, and the .csproj
+# declares the reference that lets it — so this is caught at both levels.
+[[module_rules]]
+id = "api-goes-through-the-domain"
+deny = { from = "api", to = ["data"] }
+severity = "error"
+reason = """
+The API layer talks to the domain and nothing else. A controller that calls the
+data layer directly couples HTTP concerns to the storage schema, and the domain
+stops being the place where the rules live.
+"""
+
+# VIOLATED. Shop.Data references Shop.Domain, inverting the layering.
+[[module_rules]]
+id = "data-is-the-bottom-layer"
+allow_only = { from = "data", to = [] }
+severity = "error"
+reason = """
+Storage must not know about the model it stores. This one is invisible to the C#
+compiler, which is happy to compile mutually-referencing assemblies as long as
+the reference graph itself is acyclic.
+"""
+
+# VIOLATED. Caught at the `using` even though Shop.Api never declares Serilog —
+# a denylist matches the code, not just the manifest.
+[[package_rules]]
+id = "one-logging-abstraction"
+deny = ["Serilog"]
+replacement = "Microsoft.Extensions.Logging"
+severity = "error"
+reason = """
+The solution standardised on Microsoft.Extensions.Logging. A second logging stack
+means two configurations, two sinks, and two places to look when a log line is
+missing.
+"""
+
+# SATISFIED. Dapper is a storage concern and stays in the data layer.
+[[package_rules]]
+id = "sql-stays-in-the-data-layer"
+packages = ["Dapper"]
+allowed_in = ["data"]
+severity = "error"
+reason = "A SQL helper above the data layer means queries have escaped it."
+
+# SATISFIED. xunit stays in the test project.
+[[package_rules]]
+id = "test-frameworks-stay-in-tests"
+packages = ["xunit"]
+allowed_in = ["tests"]
+severity = "error"
+reason = "A test framework referenced from production code ships to customers."

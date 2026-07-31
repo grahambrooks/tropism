@@ -823,6 +823,7 @@ version = "2.0.0"
             package_name: Some("app"),
             declared: &deps,
             sibling_packages: &[],
+            known_modules: &BTreeSet::new(),
             source_files: &source_files,
         };
         let import = Import::statement(path, 1);
@@ -1029,6 +1030,7 @@ version = "2.0.0"
             package_name: Some("app"),
             declared: &[],
             sibling_packages: &[],
+            known_modules: &BTreeSet::new(),
             source_files: &[],
         };
         let import = Import::path_reference("Palette", 1);

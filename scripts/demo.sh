@@ -4,7 +4,7 @@
 # itself.
 #
 #   ./scripts/demo.sh            # full walkthrough
-#   ./scripts/demo.sh go         # one language: go | javascript | rust
+#   ./scripts/demo.sh go         # one language: go | javascript | rust | dotnet
 #   ./scripts/demo.sh self       # only the dogfood run
 #   ./scripts/demo.sh --tui      # end by opening the interactive browser
 #
@@ -21,9 +21,9 @@ ONLY=""
 for arg in "$@"; do
   case "$arg" in
     --tui) WITH_TUI=true ;;
-    go | javascript | rust | self) ONLY="$arg" ;;
+    go | javascript | rust | dotnet | self) ONLY="$arg" ;;
     *)
-      echo "usage: demo.sh [go|javascript|rust|self] [--tui]" >&2
+      echo "usage: demo.sh [go|javascript|rust|dotnet|self] [--tui]" >&2
       exit 2
       ;;
   esac
@@ -85,9 +85,17 @@ wants rust && {
   note "which is the part no inferred finding can supply."
 }
 
+wants dotnet && demo_language dotnet "4. .NET — a layered solution, the classic rules case"
+wants dotnet && {
+  note ""
+  note "The Shop.Domain <-> Shop.Data reference is caught by a *rule*, not by the"
+  note "cycle check: cycle detection runs per project, and rules evaluate repo-wide."
+  note "That gap is open question 1 in design/07-open-questions.md."
+}
+
 # ---------------------------------------------------------------------------
 if wants self; then
-  step "4. gdep analyzing gdep"
+  step "5. gdep analyzing gdep"
 
   note "The real test. Every finding below is on this repository's own source."
   run bash -c "'$BIN' analyze '$REPO' --format json \
@@ -117,7 +125,7 @@ fi
 
 # ---------------------------------------------------------------------------
 if [[ -z "$ONLY" ]]; then
-  step "5. Output formats and the CI contract"
+  step "6. Output formats and the CI contract"
 
   note "Piping selects JSON automatically — the same serializer the MCP server uses:"
   run bash -c "'$BIN' analyze '$REPO/demo/rust' | head -20"
@@ -129,11 +137,11 @@ if [[ -z "$ONLY" ]]; then
   run_status "$BIN" analyze "$REPO/demo/nope" --format json
 
   if $WITH_TUI; then
-    step "6. The interactive browser"
+    step "7. The interactive browser"
     note "j/k or arrows to move, g/G first/last, q to quit."
     "$BIN" analyze "$REPO/demo/javascript" --format tui
   else
-    step "6. The interactive browser"
+    step "7. The interactive browser"
     note "Needs a terminal, so it is not shown here. Re-run with --tui, or:"
     printf '\n  %s%s analyze demo/javascript --format tui%s\n' "$CYAN" "$BIN" "$R"
     note ""
@@ -143,7 +151,7 @@ if [[ -z "$ONLY" ]]; then
 
   step "Summary"
   cat <<EOF
-  Languages:   Go, JavaScript/TypeScript, Rust
+  Languages:   Go, JavaScript/TypeScript, Rust, C#/.NET
   Checks:      cycle, unused-dep, missing-dep, version-conflict, diamond-dep
   Deferred:    dependency-bloat (no crisp definition — design/07-open-questions.md)
   Rules:       module-rule, package-rule — from gdep.toml, High confidence

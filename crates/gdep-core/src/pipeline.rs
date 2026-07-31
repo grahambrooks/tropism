@@ -4,7 +4,7 @@
 //! is recorded and skipped; the others are still analyzed. See
 //! `design/01-architecture.md`, "Error handling".
 
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, BTreeSet};
 
 use camino::{Utf8Path, Utf8PathBuf};
 use ignore::WalkBuilder;
@@ -294,13 +294,6 @@ fn analyze_project(
     };
 
     let files = source_files(scan_root, project, provider, roots, options);
-    let ctx_for_resolution = ProjectContext {
-        project,
-        package_name: manifest.package_name.as_deref(),
-        declared: &manifest.deps,
-        sibling_packages: provided,
-        source_files: &files,
-    };
 
     let mut imports = Vec::new();
     let mut skipped = Vec::new();
@@ -366,6 +359,19 @@ fn analyze_project(
             .or_insert_with(|| file.clone());
         parsed_files.push((file, owner, extracted));
     }
+
+    // The resolution context is built *after* the first pass, so a provider can ask
+    // which modules the project defines. C# needs that to tell an internal
+    // namespace from a package name.
+    let known_modules: BTreeSet<String> = module_files.keys().cloned().collect();
+    let ctx_for_resolution = ProjectContext {
+        project,
+        package_name: manifest.package_name.as_deref(),
+        declared: &manifest.deps,
+        sibling_packages: provided,
+        known_modules: &known_modules,
+        source_files: &files,
+    };
 
     for (file, owner, extracted) in parsed_files {
         for import in extracted {

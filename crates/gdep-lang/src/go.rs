@@ -546,6 +546,7 @@ mod tests {
             package_name: Some(module),
             declared: &deps,
             sibling_packages: &[],
+            known_modules: &std::collections::BTreeSet::new(),
             source_files: &[],
         };
         let import = Import::statement(path.to_owned(), 1).type_only(false);

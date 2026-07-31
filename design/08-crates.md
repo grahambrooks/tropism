@@ -25,15 +25,16 @@ analyzer shipping unused dependencies would be a poor advertisement.
 | `insta`             | 1.48.0  | 2026-06-11   | Snapshot tests for the renderers              |
 | `petgraph`          | 0.8.3   | 2025-09-30   | Tarjan SCC for cycle detection                |
 | `tree-sitter`       | 0.26.11 | 2026-07-12   | Import extraction, with per-language grammars |
-| `toml`              | 1.1.4   | 2026-07-28   | Cargo.toml and Cargo.lock                     |
+| `toml`              | 1.1.4   | 2026-07-28   | Cargo.toml, Cargo.lock, and the ruleset       |
+| `globset`           | 0.4.19  | 2026-07-15   | Module path globs in the ruleset              |
+| `quick-xml`         | 0.41.0  | 2026-06-29   | `.csproj` parsing                             |
 
 Queued for the stages that need them, verified but not yet declared:
 
 | Crate         | Version | Last release | Needed at                               |
 | ------------- | ------- | ------------ | --------------------------------------- |
 | `rayon`       | 1.12.0  | 2026-04-14   | Whenever parsing becomes the bottleneck |
-| `globset`     | 0.4.19  | 2026-07-15   | Module globs in the ruleset (doc 11)    |
-| `quick-xml`   | 0.41.0  | 2026-06-29   | `pom.xml`, `.csproj`                    |
+| `quick-xml`   | 0.41.0  | 2026-06-29   | `pom.xml` when Java lands               |
 | `semver`      | 1.0.28  | 2026-04-04   | Cargo-flavoured `VersionOps`            |
 | `rmcp`        | 3.0.1   | 2026-07-29   | The MCP server                          |
 | `serde-sarif` | 0.8.0   | 2025-05-09   | `--format sarif` for CI annotations     |
