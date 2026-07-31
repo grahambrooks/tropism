@@ -1,0 +1,37 @@
+CLAUDE.md
+  s_33258c54c67694::t_4750a460ea49a8 88-105
+design/07-open-questions.md
+  s_33258c54c67694::t_2f37c464cca3de 21-27,147-156
+  s_33258c54c67694::t_f26cabf6046f30 157
+design/05-interfaces.md
+  s_33258c54c67694::t_153afced8da836 135
+  s_33258c54c67694::t_2f37c464cca3de 60,71-72,76-79,156-160,167-171
+design/11-dependency-rules.md
+  s_33258c54c67694::t_4750a460ea49a8 32-37,149-155,216-219,247-250
+  s_33258c54c67694::t_f033941240859d 1-31,38-148,156-215,220-246,251-323
+gdep.toml.example
+  s_33258c54c67694::t_116efb1b91e930 1-89
+design/02-data-model.md
+  s_33258c54c67694::t_4750a460ea49a8 101-102
+design/04-analyzers.md
+  s_33258c54c67694::t_6eb1f1a415ffc6 30-34,37-41
+  s_33258c54c67694::t_4750a460ea49a8 35-36
+design/README.md
+  s_33258c54c67694::t_6eb1f1a415ffc6 12-17,40
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.19",
+  "base_commit_sha": "603267673f46c90eba26f6d450c569f75e6dc7aa",
+  "prompts": {},
+  "sessions": {
+    "s_33258c54c67694": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "7fc6e081-c8c1-4604-a221-b9597c043e2b",
+        "model": "claude-opus-5"
+      },
+      "human_author": "Graham Brooks <graham@grahambrooks.com>"
+    }
+  }
+}
