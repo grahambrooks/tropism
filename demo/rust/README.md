@@ -1,0 +1,33 @@
+# Rust demo
+
+A two-crate Cargo workspace. `Cargo.lock` is a genuinely resolved graph, so
+version-conflict and diamond-dep run — but only at the workspace root, because
+that is where the lockfile lives.
+
+Planted problems:
+
+- A module cycle between `engine`'s `parser` and `evaluator`. Rust *permits*
+  module cycles, unlike Go, so nothing in the toolchain catches this.
+- `regex` is declared by `app` but never used.
+- `serde_json` is imported by `engine` but never declared.
+- `libc` is resolved at two versions in `Cargo.lock`.
+
+Planted traps, which gdep must **not** report:
+
+- `anyhow::Result` is used with no `use` statement at all. Idiomatic Rust does
+  this constantly; extracting only `use` would call `anyhow` unused.
+- `#[derive(thiserror::Error)]` — a path inside an attribute token tree.
+- `use super::*` inside `#[cfg(test)] mod tests` — containment, not a cycle.
+
+## A limitation this demo makes visible
+
+`missing-dep` fires for `serde_json` only because `parser.rs` writes
+`use serde_json::from_str`. Had it written `serde_json::from_str(..)` inline with
+no `use`, gdep would have counted the crate as *used* but would **not** have
+reported it missing.
+
+That asymmetry is deliberate. A bare path proves a crate is used, but it cannot
+prove one is undeclared — `Palette::plain()` is a local type, and treating every
+unrecognised path root as a missing dependency would invent findings on every
+file. Proving usage is sound; proving absence is not. The same asymmetry is why
+`unused-dep` is the least reliable check in the tool (design/10-js-evaluation.md).

@@ -372,11 +372,13 @@ fn collect_import_specs(node: tree_sitter::Node<'_>, source: &[u8], out: &mut Ve
         {
             // A blank import (`_ "embed"`) is a real dependency: it exists for its
             // side effects. Counting it as unused would be wrong.
-            out.push(Import {
-                raw: raw.trim_matches('"').to_owned(),
-                line: path_node.start_position().row as u32 + 1,
-                type_only: false,
-            });
+            out.push(
+                Import::statement(
+                    raw.trim_matches('"').to_owned(),
+                    path_node.start_position().row as u32 + 1,
+                )
+                .type_only(false),
+            );
         }
         return;
     }
@@ -546,11 +548,7 @@ mod tests {
             sibling_packages: &[],
             source_files: &[],
         };
-        let import = Import {
-            raw: path.to_owned(),
-            line: 1,
-            type_only: false,
-        };
+        let import = Import::statement(path.to_owned(), 1).type_only(false);
         GoProvider.resolve_import(&import, Utf8Path::new("svc/main.go"), &ctx)
     }
 

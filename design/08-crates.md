@@ -1,6 +1,6 @@
 # 08 — Crate selection
 
-Verified against the crates.io API on **2026-07-30**. Re-verify before adding anything new; the
+Verified against the crates.io API on **2026-07-30**, and adopted crates additionally proven by compiling and running. Re-verify before adding anything new; the
 point of this document is that nobody has to take an earlier guess on faith.
 
 ## Adopted
@@ -8,35 +8,38 @@ point of this document is that nobody has to take an earlier guess on faith.
 Declared in the workspace `Cargo.toml`. Only crates actually used are declared — a dependency
 analyzer shipping unused dependencies would be a poor advertisement.
 
-| Crate               | Version | Last release | Used for                                   |
-| ------------------- | ------- | ------------ | ------------------------------------------ |
-| `serde`             | 1.0.229 | 2026-07-18   | The report contract                        |
-| `serde_json`        | 1.0.151 | 2026-07-20   | JSON output, `details` payloads            |
-| `clap`              | 4.6.4   | 2026-07-21   | CLI, derive API                            |
-| `ignore`            | 0.4.31  | 2026-07-20   | Tree walking that understands `.gitignore` |
-| `camino`            | 1.2.5   | 2026-07-28   | UTF-8 paths that serialize without a dance |
-| `anyhow`            | 1.0.104 | 2026-07-18   | Errors in binaries and provider impls      |
-| `thiserror`         | 2.0.19  | 2026-07-18   | Typed errors in the library                |
-| `blake3`            | 1.8.5   | 2026-04-25   | Content-derived, stable finding IDs        |
-| `annotate-snippets` | 0.12.16 | 2026-05-06   | rustc/clippy-style diagnostic rendering    |
-| `anstream`          | 1.0.0   | 2026-02-11   | Colour that degrades when piped            |
-| `anstyle`           | 1.0.14  | 2026-03-13   | Style definitions for report chrome        |
-| `ratatui`           | 0.30.2  | 2026-06-19   | `--format tui` browser (feature-gated)     |
-| `insta`             | 1.48.0  | 2026-06-11   | Snapshot tests for the renderers           |
+| Crate               | Version | Last release | Used for                                      |
+| ------------------- | ------- | ------------ | --------------------------------------------- |
+| `serde`             | 1.0.229 | 2026-07-18   | The report contract                           |
+| `serde_json`        | 1.0.151 | 2026-07-20   | JSON output, `details` payloads               |
+| `clap`              | 4.6.4   | 2026-07-21   | CLI, derive API                               |
+| `ignore`            | 0.4.31  | 2026-07-20   | Tree walking that understands `.gitignore`    |
+| `camino`            | 1.2.5   | 2026-07-28   | UTF-8 paths that serialize without a dance    |
+| `anyhow`            | 1.0.104 | 2026-07-18   | Errors in binaries and provider impls         |
+| `thiserror`         | 2.0.19  | 2026-07-18   | Typed errors in the library                   |
+| `blake3`            | 1.8.5   | 2026-04-25   | Content-derived, stable finding IDs           |
+| `annotate-snippets` | 0.12.16 | 2026-05-06   | rustc/clippy-style diagnostic rendering       |
+| `anstream`          | 1.0.0   | 2026-02-11   | Colour that degrades when piped               |
+| `anstyle`           | 1.0.14  | 2026-03-13   | Style definitions for report chrome           |
+| `ratatui`           | 0.30.2  | 2026-06-19   | `--format tui` browser (feature-gated)        |
+| `insta`             | 1.48.0  | 2026-06-11   | Snapshot tests for the renderers              |
+| `petgraph`          | 0.8.3   | 2025-09-30   | Tarjan SCC for cycle detection                |
+| `tree-sitter`       | 0.26.11 | 2026-07-12   | Import extraction, with per-language grammars |
+| `toml`              | 1.1.4   | 2026-07-28   | Cargo.toml and Cargo.lock                     |
 
 Queued for the stages that need them, verified but not yet declared:
 
 | Crate         | Version | Last release | Needed at                               |
 | ------------- | ------- | ------------ | --------------------------------------- |
-| `tree-sitter` | 0.26.11 | 2026-07-12   | Step 2, import extraction               |
-| `petgraph`    | 0.8.3   | 2025-09-30   | Step 3, Tarjan SCC for cycle detection  |
 | `rayon`       | 1.12.0  | 2026-04-14   | Whenever parsing becomes the bottleneck |
-| `toml`        | 1.1.4   | 2026-07-28   | Rust and Python manifests               |
-| `cargo-lock`  | 11.1.0  | 2026-07-24   | `Cargo.lock`, without invoking cargo    |
+| `globset`     | 0.4.19  | 2026-07-15   | Module globs in the ruleset (doc 11)    |
 | `quick-xml`   | 0.41.0  | 2026-06-29   | `pom.xml`, `.csproj`                    |
 | `semver`      | 1.0.28  | 2026-04-04   | Cargo-flavoured `VersionOps`            |
-| `rmcp`        | 3.0.1   | 2026-07-29   | Step 6, the MCP server                  |
+| `rmcp`        | 3.0.1   | 2026-07-29   | The MCP server                          |
 | `serde-sarif` | 0.8.0   | 2025-05-09   | `--format sarif` for CI annotations     |
+
+`cargo-lock` was on this list and is no longer needed: `Cargo.lock` is small, line-oriented TOML and
+the `toml` crate already in the tree parses it directly, so the extra dependency bought nothing.
 
 `rmcp` is the official Rust MCP SDK and is actively released, so the MCP surface in
 [05-interfaces.md](05-interfaces.md) rests on maintained ground.
@@ -100,12 +103,14 @@ pre-0.1 API. Re-check when JS/TS work starts; the decision does not need to be m
 2025-01) are the right crates but have not been released in over a year — development moved into
 uv's tree. Re-check at step 7; be prepared to vendor or reimplement the subset gdep needs.
 
-**tree-sitter grammar ABI compatibility is unverified.** The core is at 0.26.11 while
-`tree-sitter-go` (0.25.0), `tree-sitter-python` (0.25.0), and `tree-sitter-typescript` (0.23.2) were
-released against older cores. Grammar crates and the core version independently, and mismatches are
-a known source of friction. **Verify this at step 2 with a single grammar before committing to
-tree-sitter for all ten languages** — it is the one adopted-stack assumption that has not been
-compiled yet.
+**tree-sitter grammar ABI compatibility — resolved.** Verified at runtime: the 0.26 core loads
+`tree-sitter-go` and `tree-sitter-javascript` (ABI 15) and `tree-sitter-typescript` and
+`tree-sitter-rust` (ABI 14) without complaint. tree-sitter supports a range of ABI versions, so the
+lag between core and grammar releases is not the problem it appeared to be.
+
+The original concern, kept for the record: grammar crates version independently of the core, and the
+lag was large — `tree-sitter-typescript` at 0.23.2 against a 0.26.11 core — which looked like the
+riskiest unverified assumption in the adopted stack.
 
 ## Toolchain
 

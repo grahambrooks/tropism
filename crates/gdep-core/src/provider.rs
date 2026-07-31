@@ -33,6 +33,22 @@ pub struct ProjectContext<'a> {
     pub source_files: &'a [Utf8PathBuf],
 }
 
+/// How a dependency reference appeared in source.
+///
+/// Rust forced this distinction. `anyhow::Result<T>` is a genuine use of the
+/// `anyhow` crate with no `use` statement anywhere, so extracting only import
+/// statements reports most of an idiomatic Rust crate's dependencies as unused.
+/// But a bare path is also how local types are named — `Palette::plain()` — so a
+/// path reference must never be allowed to invent a *missing* dependency.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum ImportForm {
+    /// An explicit import statement: `use`, `import`, `require`.
+    Statement,
+    /// A fully-qualified path used inline. Proves usage; proves nothing about
+    /// what should have been declared.
+    PathReference,
+}
+
 /// An import site found in source.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Import {
@@ -42,6 +58,33 @@ pub struct Import {
     /// Set when the import cannot affect runtime deps in the usual way
     /// (TypeScript `import type`), so analyzers can weigh it differently.
     pub type_only: bool,
+    pub form: ImportForm,
+}
+
+impl Import {
+    pub fn statement(raw: impl Into<String>, line: u32) -> Self {
+        Self {
+            raw: raw.into(),
+            line,
+            type_only: false,
+            form: ImportForm::Statement,
+        }
+    }
+
+    pub fn path_reference(raw: impl Into<String>, line: u32) -> Self {
+        Self {
+            raw: raw.into(),
+            line,
+            type_only: false,
+            form: ImportForm::PathReference,
+        }
+    }
+
+    #[must_use]
+    pub fn type_only(mut self, type_only: bool) -> Self {
+        self.type_only = type_only;
+        self
+    }
 }
 
 /// What an import turned out to refer to.

@@ -115,6 +115,8 @@ The build order is at the end of [design/07-open-questions.md](design/07-open-qu
 ## Layout
 
 ```
+demo/               deliberately-broken sample projects, one per language; excluded from
+                    the cargo workspace, asserted by crates/gdep-lang/tests/demos.rs
 crates/gdep-core/   model, discovery, LanguageProvider trait, analyzers, report contract
 crates/gdep-lang/   provider implementations, one feature-gated module per language
 crates/gdep-cli/    binary `gdep`      — clap front-end, text and JSON renderers
@@ -135,8 +137,11 @@ cargo fmt --all
 cargo insta accept                           # after intentional renderer changes
 cargo build -p gdep-cli --no-default-features # must still build without ratatui
 
-./scripts/demo.sh                            # guided tour of the CLI on a fixture repo
+./scripts/demo.sh                            # guided tour across all three languages
+./scripts/demo.sh rust                       # one language: go | javascript | rust
+./scripts/demo.sh self                       # gdep analyzing gdep
 ./scripts/demo.sh --tui                      # ...ending in the interactive browser
+./target/debug/gdep analyze .                # dogfood directly
 ```
 
 Output formats: `--format auto` (default; diagnostics on a tty, JSON when piped), `text`, `json`,
@@ -157,11 +162,14 @@ hashes for the whole module graph rather than the versions MVS selected, and car
 there is no resolved tree to analyze without running the Go resolver. `dependency-bloat` is
 deferred by design.
 
+A Rust slice is complete and gdep is run against itself — `crates/gdep-lang/tests/demos.rs`
+asserts that gdep reports nothing in its own source beyond genuine `Cargo.lock` duplicates.
+
 A JavaScript/TypeScript slice is also complete: `package.json`, `package-lock.json` (a genuinely
 resolved graph, unlike `go.sum`), tree-sitter extraction for JS/TS/TSX, and all six checks running.
 `version-conflict` and `diamond-dep` execute for the first time here.
 
-Not built: the other eight languages, and the MCP server.
+Not built: the other seven languages, the ruleset, and the MCP server.
 
 **Before extending the checks, read [design/10-js-evaluation.md](design/10-js-evaluation.md).**
 Manifest hygiene (`unused-dep` / `missing-dep`) measured a **63% false-positive rate** on real
@@ -169,6 +177,25 @@ JavaScript repositories after three rounds of mitigation, because packages are l
 HTML `<script src>`, config files, framework strings, and CLI arguments that gdep cannot see without
 an installed `node_modules` — which the hermetic constraint forbids. Cycle detection, by contrast,
 was sound on every repository. Do not turn hygiene on by default or let it gate CI.
+
+### Rust semantics that cost real debugging
+
+Four false-positive classes that only dogfooding surfaced. Each has a regression test in
+`crates/gdep-lang/src/rust.rs` and a trap in `demo/rust`:
+
+- **`use` statements are not sufficient to determine crate usage.** Idiomatic Rust writes
+  `anyhow::Result<T>` with no import anywhere. Extracting only `use` reported most of this
+  workspace's own dependencies as unused. Path references are extracted as
+  `ImportForm::PathReference`.
+- **A path reference proves usage but never absence.** `Palette::plain()` is a local type, so an
+  unrecognised path root resolves to `Unresolved`, never `External` — otherwise every file invents
+  missing dependencies.
+- **Macro arguments and attribute bodies are flat token trees.** `#[derive(thiserror::Error)]` and
+  `eprintln!("{}", gdep_core::report::S)` are real uses that the structured walk cannot see; the
+  extractor scans token trees for `identifier ::` pairs.
+- **Containment is not dependency.** Rust 2018 uniform paths let `pub use model::X` name a local
+  module, and a submodule reaching back with `use super::*` is part of its parent. Modelling either
+  as a dependency reported a cycle in `gdep-core` — and would in essentially every Rust crate.
 
 ### Go semantics that cost real debugging
 

@@ -12,6 +12,9 @@ pub mod go;
 #[cfg(feature = "javascript")]
 pub mod javascript;
 
+#[cfg(feature = "rust")]
+pub mod rust;
+
 /// Every enabled provider.
 ///
 /// Ordering is stable so discovery output does not depend on it.
@@ -26,6 +29,9 @@ pub fn registry() -> Vec<&'static dyn LanguageProvider> {
 
     #[cfg(feature = "javascript")]
     providers.push(&javascript::JavaScriptProvider);
+
+    #[cfg(feature = "rust")]
+    providers.push(&rust::RustProvider);
 
     providers
 }

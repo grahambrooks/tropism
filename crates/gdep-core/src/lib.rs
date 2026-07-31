@@ -13,7 +13,9 @@ pub mod provider;
 pub mod report;
 
 pub use model::{DeclaredDep, DepKind, Language, Manifest, Project, Provenance, ResolvedDep};
-pub use provider::{Import, ImportTarget, LanguageProvider, ProjectContext, VersionOps};
+pub use provider::{
+    Import, ImportForm, ImportTarget, LanguageProvider, ProjectContext, VersionOps,
+};
 pub use report::{
     CheckId, CheckStatus, Confidence, Evidence, Finding, ProjectReport, Report, SCHEMA_VERSION,
     Severity, SkippedFile,

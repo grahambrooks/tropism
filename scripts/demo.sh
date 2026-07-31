@@ -1,23 +1,33 @@
 #!/usr/bin/env bash
 #
-# A guided tour of the gdep CLI, run against a throwaway fixture repository.
+# A guided tour of gdep across every supported language, plus gdep analyzing
+# itself.
 #
-#   ./scripts/demo.sh          # non-interactive walkthrough
-#   ./scripts/demo.sh --tui    # ...then open the interactive browser
+#   ./scripts/demo.sh            # full walkthrough
+#   ./scripts/demo.sh go         # one language: go | javascript | rust
+#   ./scripts/demo.sh self       # only the dogfood run
+#   ./scripts/demo.sh --tui      # end by opening the interactive browser
 #
-# Everything here runs against a temporary directory that is removed on exit; the
-# script never touches the repository it lives in.
+# The sample projects live in demo/ and are deliberately broken. They are
+# excluded from the cargo workspace, so cargo never tries to build them.
 
 set -euo pipefail
 
 REPO="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 BIN="$REPO/target/debug/gdep"
-WITH_TUI=false
-[[ "${1:-}" == "--tui" ]] && WITH_TUI=true
 
-WORK="$(mktemp -d "${TMPDIR:-/tmp}/gdep-demo.XXXXXX")"
-cleanup() { rm -rf "$WORK"; }
-trap cleanup EXIT
+WITH_TUI=false
+ONLY=""
+for arg in "$@"; do
+  case "$arg" in
+    --tui) WITH_TUI=true ;;
+    go | javascript | rust | self) ONLY="$arg" ;;
+    *)
+      echo "usage: demo.sh [go|javascript|rust|self] [--tui]" >&2
+      exit 2
+      ;;
+  esac
+done
 
 if [[ -t 1 ]]; then
   B=$'\033[1m'; DIM=$'\033[2m'; CYAN=$'\033[36m'; R=$'\033[0m'
@@ -27,202 +37,110 @@ fi
 
 step() { printf '\n%s══ %s %s\n' "$B" "$1" "$R"; }
 note() { printf '%s%s%s\n' "$DIM" "$1" "$R"; }
-run() {
-  printf '\n%s$ %s%s\n' "$CYAN" "$*" "$R"
-  "$@" || return $?
-}
-# Runs a command that is expected to influence the exit code, and reports it.
+run() { printf '\n%s$ %s%s\n' "$CYAN" "$*" "$R"; "$@"; }
 run_status() {
   printf '\n%s$ %s%s\n' "$CYAN" "$*" "$R"
-  set +e
-  "$@"
-  local code=$?
-  set -e
+  set +e; "$@"; local code=$?; set -e
   printf '%sexit=%s%s\n' "$DIM" "$code" "$R"
-  return 0
 }
+
+wants() { [[ -z "$ONLY" || "$ONLY" == "$1" ]]; }
 
 step "0. Build"
 cargo build -q -p gdep-cli --manifest-path "$REPO/Cargo.toml"
 note "built $BIN"
 
 # ---------------------------------------------------------------------------
-step "1. A fixture repository"
+demo_language() {
+  local lang="$1" title="$2"
+  step "$title"
 
-mkdir -p "$WORK/api" "$WORK/store" "$WORK/worker" "$WORK/vendor/thirdparty" "$WORK/node_modules/junk"
+  note "What the sample plants, and what it deliberately traps:"
+  sed 's/^/  /' "$REPO/demo/$lang/README.md" | head -30
 
-cat > "$WORK/.gitignore" <<'EOF'
-vendor/
-node_modules/
-EOF
-
-# A Go module with three deliberate problems and three deliberate traps.
-cat > "$WORK/go.mod" <<'EOF'
-module example.com/shop
-
-go 1.24
-
-require (
-	github.com/spf13/cobra v1.8.0
-	github.com/google/uuid v1.6.0
-	golang.org/x/sync v0.7.0
-	github.com/lib/pq v1.10.9
-	github.com/stretchr/testify v1.9.0 // indirect
-)
-EOF
-printf 'github.com/spf13/cobra v1.8.0 h1:fake\n' > "$WORK/go.sum"
-
-cat > "$WORK/main.go" <<'EOF'
-package main
-
-import (
-	"fmt"
-
-	"github.com/spf13/cobra"
-
-	"example.com/shop/api"
-)
-
-func main() {
-	cmd := &cobra.Command{Use: "shop"}
-	fmt.Println(api.Name, cmd.Use)
+  run "$BIN" analyze "$REPO/demo/$lang" --format text
 }
-EOF
 
-cat > "$WORK/api/api.go" <<'EOF'
-package api
-
-import (
-	"github.com/google/uuid"
-	"github.com/rs/zerolog"
-
-	"example.com/shop/store"
-)
-
-var Name = "api"
-
-func New() string {
-	zerolog.Nop().Info().Msg("new")
-	return uuid.New().String() + store.Driver
+wants go && demo_language go "1. Go — where the compiler already forbids cycles"
+wants go && {
+  note ""
+  note "Note the two unavailable checks. go.sum records hashes for the whole module"
+  note "graph rather than the versions MVS selected, so there is no resolved tree to"
+  note "analyze offline. gdep says so instead of reporting a clean bill of health."
 }
-EOF
 
-cat > "$WORK/store/store.go" <<'EOF'
-package store
+wants javascript && demo_language javascript "2. JavaScript — the only ecosystem where all six checks run"
+wants javascript && {
+  note ""
+  note "version-conflict and diamond-dep both report \`ms\`. That is not a bug: for npm"
+  note "a duplicated package IS the resolved outcome of a diamond with incompatible"
+  note "constraints, so the two checks overlap. See design/10-js-evaluation.md."
+}
 
-import (
-	_ "github.com/lib/pq"
-)
-
-var Driver = "postgres"
-EOF
-
-# A second module without a lockfile, to contrast check availability.
-printf 'module example.com/worker\n\ngo 1.24\n' > "$WORK/worker/go.mod"
-printf 'package worker\n\nimport "fmt"\n\nfunc Run() { fmt.Println("work") }\n' > "$WORK/worker/worker.go"
-
-# Neither of these should ever be analyzed: both are ignored.
-printf 'module example.com/vendored\n' > "$WORK/vendor/thirdparty/go.mod"
-printf 'module example.com/junk\n' > "$WORK/node_modules/junk/go.mod"
-
-note "created:"
-(cd "$WORK" && find . \( -name 'go.*' -o -name '*.go' \) | sort | sed 's/^/  /')
-note ""
-note "Planted problems:  golang.org/x/sync declared but never imported"
-note "                   github.com/rs/zerolog imported but never declared"
-note "Planted traps:     _ \"github.com/lib/pq\"  (blank import — is a real use)"
-note "                   testify // indirect     (not expected to be imported)"
+wants rust && demo_language rust "3. Rust — module cycles are legal, so nothing else catches them"
 
 # ---------------------------------------------------------------------------
-step "2. Discovery, and what --format auto does"
+if wants self; then
+  step "4. gdep analyzing gdep"
 
-note "On a terminal, 'auto' gives human diagnostics. Forcing --format text shows"
-note "the same thing regardless of where output is going."
-run "$BIN" analyze "$WORK" --format text
-
-note ""
-note "Note what is NOT listed: vendor/ and node_modules/ were skipped because"
-note ".gitignore says so — gdep honours it even outside a git repository."
-
-# ---------------------------------------------------------------------------
-step "3. The same run as JSON"
-
-note "This is the contract in design/05-interfaces.md, and it is the exact"
-note "serializer the MCP server uses — Report::to_json_pretty in gdep-core."
-note "Piping automatically selects it, so CI needs no extra flag:"
-run bash -c "'$BIN' analyze '$WORK' | head -32"
-note "  ...(truncated)"
-
-# ---------------------------------------------------------------------------
-step "4. 'Zero findings' is not the same as 'checked and clean'"
-
-note "Three checks report 'unavailable' rather than passing silently. Two need a"
-note "resolved dependency tree, and go.sum is not one: it records hashes for the"
-note "whole module graph, not the versions MVS selected, and carries no edges."
-note "Saying so beats reporting a clean bill of health gdep cannot actually give."
-run bash -c "'$BIN' analyze '$WORK' --format json | python3 -c \"
-import sys, json
-for p in json.load(sys.stdin)['projects']:
-    for check, s in p['checks'].items():
-        if s['status'] == 'unavailable':
-            print(f\\\"  {p['root'] or '.':8} {check:18} {s['reason'][:60]}\\\")
-\""
-
-# ---------------------------------------------------------------------------
-step "5. Exit codes are the CI contract"
-
-note "0 = ran, nothing at or above --fail-on"
-note "1 = ran, findings at or above --fail-on"
-note "2 = could not run at all"
-note ""
-note "The planted missing dependency is an error, so the default threshold fails:"
-run_status bash -c "'$BIN' analyze '$WORK' --format json > /dev/null"
-
-note ""
-note "Raising the threshold above every finding passes again:"
-run_status bash -c "'$BIN' analyze '$WORK' --fail-on error --format json | python3 -c \"
+  note "The real test. Every finding below is on this repository's own source."
+  run bash -c "'$BIN' analyze '$REPO' --format json \
+    | python3 -c \"
 import sys, json
 d = json.load(sys.stdin)
-print('  findings:', sum(len(p['findings']) for p in d['projects']))
+rows = 0
+for p in d['projects']:
+    if 'fixtures' in p['root'] or p['root'].startswith('demo'):
+        continue
+    for f in p['findings']:
+        print(f\\\"  {p['root'] or '.':16} {f['check']:17} {f['message'][:58]}\\\")
+        rows += 1
+print(f'  {rows} finding(s) on gdep itself')
 \""
 
-note ""
-note "A bad path is exit 2, never exit 1 — a broken invocation must not look"
-note "like a passing build:"
-run_status "$BIN" analyze "$WORK/does-not-exist" --format json
-
-# ---------------------------------------------------------------------------
-step "6. --no-ignore, for when you do want the vendored tree"
-
-run bash -c "'$BIN' analyze '$WORK' --no-ignore --format json | grep '\"root\"'"
-note "vendor/ and node_modules/ now appear."
-
-# ---------------------------------------------------------------------------
-step "7. The interactive browser"
-
-if $WITH_TUI; then
-  note "Opening --format tui. Keys: j/k or arrows to move, g/G first/last, q to quit."
-  "$BIN" analyze "$WORK" --format tui
-else
-  note "Not shown here because it needs a terminal and takes over the screen."
-  note "Re-run with --tui to open it, or try it directly:"
-  printf '\n  %s%s analyze <path> --format tui%s\n' "$CYAN" "$BIN" "$R"
   note ""
-  note "It refuses to run when redirected, rather than emitting escape codes:"
-  run_status bash -c "'$BIN' analyze '$WORK' --format tui > /dev/null"
+  note "Everything reported is a genuine duplicate in Cargo.lock. Getting to zero"
+  note "false positives took four bug fixes that only dogfooding surfaced — Rust 2018"
+  note "uniform paths, fully-qualified paths counting as usage, paths inside macro and"
+  note "attribute token trees, and module containment not being a dependency."
 fi
 
 # ---------------------------------------------------------------------------
-step "Summary"
-cat <<EOF
-  --format text   rustc/clippy-style diagnostics with source snippets
-  --format json   machine contract, shared verbatim with the MCP server
-  --format tui    interactive browser (terminal only)
-  --format auto   text on a tty, json when piped  [default]
+if [[ -z "$ONLY" ]]; then
+  step "5. Output formats and the CI contract"
 
-  Working today: the full Go slice — discovery, go.mod parsing, tree-sitter
-                 import extraction, module graph, and three of six checks.
-  Unavailable:   version-conflict and diamond (need a resolved tree Go cannot
-                 give offline), and dependency-bloat (deferred by design).
-  Not built yet: the other nine languages, and the MCP server.
+  note "Piping selects JSON automatically — the same serializer the MCP server uses:"
+  run bash -c "'$BIN' analyze '$REPO/demo/rust' | head -20"
+  note "  ...(truncated)"
+
+  note ""
+  note "0 = ran, clean.  1 = findings at or above --fail-on.  2 = could not run."
+  run_status bash -c "'$BIN' analyze '$REPO/demo/javascript' --format json > /dev/null"
+  run_status "$BIN" analyze "$REPO/demo/nope" --format json
+
+  if $WITH_TUI; then
+    step "6. The interactive browser"
+    note "j/k or arrows to move, g/G first/last, q to quit."
+    "$BIN" analyze "$REPO/demo/javascript" --format tui
+  else
+    step "6. The interactive browser"
+    note "Needs a terminal, so it is not shown here. Re-run with --tui, or:"
+    printf '\n  %s%s analyze demo/javascript --format tui%s\n' "$CYAN" "$BIN" "$R"
+    note ""
+    note "It refuses to run when redirected rather than emitting escape codes:"
+    run_status bash -c "'$BIN' analyze '$REPO/demo/javascript' --format tui > /dev/null"
+  fi
+
+  step "Summary"
+  cat <<EOF
+  Languages:   Go, JavaScript/TypeScript, Rust
+  Checks:      cycle, unused-dep, missing-dep, version-conflict, diamond-dep
+  Deferred:    dependency-bloat (no crisp definition — design/07-open-questions.md)
+  Not built:   the ruleset (design/11-dependency-rules.md) and the MCP server
+
+  Reliability differs sharply by check, and the difference is measured:
+    cycle            sound — reads only import syntax
+    version/diamond  sound where a real resolved tree exists (npm, Cargo; not Go)
+    unused-dep       63% false positives on real JS repos (design/10-js-evaluation.md)
 EOF
+fi

@@ -544,11 +544,9 @@ fn push_string(node: tree_sitter::Node<'_>, source: &[u8], type_only: bool, out:
     if specifier.is_empty() || specifier.contains("${") {
         return;
     }
-    out.push(Import {
-        raw: specifier.to_owned(),
-        line: node.start_position().row as u32 + 1,
-        type_only,
-    });
+    out.push(
+        Import::statement(specifier, node.start_position().row as u32 + 1).type_only(type_only),
+    );
 }
 
 /// Counts how many distinct versions of each package the resolved tree contains.
@@ -784,11 +782,7 @@ mod tests {
             sibling_packages: &[],
             source_files: &source_files,
         };
-        let import = Import {
-            raw: specifier.to_owned(),
-            line: 1,
-            type_only: false,
-        };
+        let import = Import::statement(specifier.to_owned(), 1).type_only(false);
         JavaScriptProvider.resolve_import(&import, Utf8Path::new(from), &ctx)
     }
 
