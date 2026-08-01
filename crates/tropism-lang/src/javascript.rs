@@ -252,7 +252,12 @@ fn resolve_relative(specifier: &str, from: &Utf8Path, ctx: &ProjectContext<'_>) 
 /// not exist.
 fn normalize(path: &Utf8Path) -> String {
     let mut parts: Vec<&str> = Vec::new();
-    for segment in path.as_str().split('/') {
+    // Both separators: the caller joins with `Utf8Path::join`, which produces `\`
+    // on Windows, while the specifier being joined on always uses `/`. Splitting
+    // on `/` alone left `src\./b` as a single segment, so `.` and `..` were never
+    // resolved and every relative import on Windows produced a module name no
+    // file could match.
+    for segment in path.as_str().split(['/', '\\']) {
         match segment {
             "" | "." => {}
             ".." => {
@@ -572,6 +577,17 @@ mod tests {
 
     fn extract(file: &str, source: &str) -> Vec<Import> {
         extract_js_imports(Utf8Path::new(file), source).unwrap()
+    }
+
+    /// Runs on every platform, and would have caught the Windows-only failure
+    /// that `Utf8Path::join` produced: `src\./b` was one segment, so `.` and `..`
+    /// were never resolved.
+    #[test]
+    fn path_normalization_handles_both_separators() {
+        assert_eq!(normalize(Utf8Path::new("src/./b")), "src/b");
+        assert_eq!(normalize(Utf8Path::new("src\\./b")), "src/b");
+        assert_eq!(normalize(Utf8Path::new("src/deep\\../b")), "src/b");
+        assert_eq!(normalize(Utf8Path::new("src\\deep\\..\\b")), "src/b");
     }
 
     fn specifiers(file: &str, source: &str) -> Vec<String> {

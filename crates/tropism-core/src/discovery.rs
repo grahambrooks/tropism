@@ -180,8 +180,25 @@ pub fn count_exclusions(
     counts
 }
 
-fn relativize(scan_root: &Utf8Path, path: &Utf8Path) -> Utf8PathBuf {
-    path.strip_prefix(scan_root).unwrap_or(path).to_owned()
+/// A path relative to the scan root, always with `/` separators.
+///
+/// Windows hands back `\`, and everything downstream is `/`-shaped: module
+/// identity, the ruleset's globs, and the JSON contract. Normalizing once, here,
+/// is what makes a report byte-identical across platforms — principle 5 — and it
+/// is what stops a provider that joins an import path with `/` from failing to
+/// match a file the walker produced with `\`. Five tests failed on Windows and
+/// only on Windows before this existed.
+///
+/// Gated on `cfg!(windows)` rather than replacing unconditionally, because `\` is
+/// a legal character in a Unix filename and rewriting it there would corrupt a
+/// path rather than normalize it.
+pub(crate) fn relativize(scan_root: &Utf8Path, path: &Utf8Path) -> Utf8PathBuf {
+    let relative = path.strip_prefix(scan_root).unwrap_or(path);
+    if cfg!(windows) {
+        Utf8PathBuf::from(relative.as_str().replace('\\', "/"))
+    } else {
+        relative.to_owned()
+    }
 }
 
 #[cfg(test)]

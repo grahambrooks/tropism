@@ -725,7 +725,9 @@ fn source_files(
             path.extension()
                 .is_some_and(|ext| extensions.contains(&ext))
         })
-        .map(|path| path.strip_prefix(scan_root).unwrap_or(&path).to_owned())
+        // Same normalization as discovery: `/` on every platform, so a provider
+        // comparing an import path against this list matches on Windows too.
+        .map(|path| discovery::relativize(scan_root, &path))
         .filter(|path| exclude.excluded_by(path).is_none())
         .filter(|path| owning_project(path, roots).is_some_and(|owner| owner == project.root))
         .collect();

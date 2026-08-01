@@ -300,14 +300,13 @@ fn gem_candidates(require: &str) -> Vec<String> {
 /// `bundler/setup` and every gemspec set up. Both are tried, and a hit only counts
 /// when the file is one tropism actually walked.
 fn load_path_target(require: &str, ctx: &ProjectContext<'_>) -> Option<String> {
-    let root = &ctx.project.root;
-    for prefix in ["lib", ""] {
-        let candidate = if prefix.is_empty() {
-            root.join(require)
-        } else {
-            root.join(prefix).join(require)
-        };
-        let module = candidate.as_str().trim_start_matches('/').to_owned();
+    let root = ctx.project.root.as_str();
+    for prefix in ["lib/", ""] {
+        // Joined as a string rather than with `Utf8Path::join`, which inserts the
+        // platform separator — `\` on Windows — while module identity is always
+        // `/`. Mixing the two silently turned an internal require into a gem.
+        let candidate = format!("{root}/{prefix}{require}");
+        let module = candidate.trim_start_matches('/').to_owned();
         if ctx.known_modules.contains(&module) {
             return Some(module);
         }
@@ -856,6 +855,32 @@ mod tests {
                 &["app/lib/models/order"],
             ),
             ImportTarget::Internal("app/lib/models/order".to_owned())
+        );
+    }
+
+    /// The load-path candidate must be built with `/` on every platform.
+    /// `Utf8Path::join` inserts `\` on Windows, and module identity never does, so
+    /// this resolved to a gem called `shop` there and only there.
+    #[test]
+    fn load_path_candidates_use_forward_slashes_on_every_platform() {
+        let project = Project {
+            root: Utf8PathBuf::from("app"),
+            language: Language::Ruby,
+            manifests: vec![],
+            lockfile: None,
+        };
+        let known: BTreeSet<String> = ["app/lib/shop/order".to_owned()].into_iter().collect();
+        let ctx = ProjectContext {
+            project: &project,
+            package_name: None,
+            declared: &[],
+            sibling_packages: &[],
+            known_modules: &known,
+            source_files: &[],
+        };
+        assert_eq!(
+            load_path_target("shop/order", &ctx).as_deref(),
+            Some("app/lib/shop/order")
         );
     }
 
