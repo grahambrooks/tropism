@@ -37,6 +37,7 @@ help:
 	@echo 'make version      print the next version'
 	@echo 'make check        fmt, clippy, tests, and tropism on itself'
 	@echo 'make plan         what dist would build for the current version'
+	@echo 'make alerts       Dependabot alerts, split demo fixtures from real ones'
 
 .PHONY: version
 version:
@@ -54,6 +55,13 @@ check:
 .PHONY: plan
 plan:
 	dist plan
+
+# Dependabot alerts cannot be filtered by path, and every manifest under demo/ is
+# a deliberately-broken fixture, so the real count is buried unless it is split
+# out. Read-only; pass --apply to the script itself to dismiss.
+.PHONY: alerts
+alerts:
+	@./scripts/dismiss-demo-alerts.sh
 
 # Refuse to cut a release from a tree that would produce a surprise: the wrong
 # branch, uncommitted work, a stale local main, or a tag that already exists.

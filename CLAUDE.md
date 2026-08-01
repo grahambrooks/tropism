@@ -192,9 +192,17 @@ via zigbuild/xwin; that is untested here and the native-runner matrix is deliber
 binary, and the command are all `tropism`. Nothing reserves a name, and nothing has been published
 yet — `publish-crate.yml` has never run.
 
-The highest-value distribution work remaining is **code signing**, not more channels: an unsigned
-`.exe` trips SmartScreen and cannot be allowlisted by publisher in AppLocker or WDAC. SignPath
-Foundation is free for qualifying open source.
+The highest-value distribution work remaining is **code signing**, not more channels — specified in
+[design/16-signing.md](design/16-signing.md). Build provenance attestation already ships and is
+*not* the same thing: it proves where an artifact came from, and answers nothing the operating
+system asks before running it.
+
+**Dependabot alerts on `demo/` are noise by construction** and cannot be filtered by path — alerts
+come from the dependency graph, which finds every manifest by filename, and auto-triage rules match
+severity and package but not directory. `make alerts` splits the real count from the fixtures;
+`./scripts/dismiss-demo-alerts.sh --apply` dismisses the fixtures as `not_used`, which is accurate:
+nothing under `demo/` is ever installed. Never "fix" a demo dependency — the pinned, conflicting,
+outdated versions are what the samples demonstrate, and `demos.rs` asserts them.
 
 ## Cycle scopes
 

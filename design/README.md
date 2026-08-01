@@ -83,6 +83,7 @@ built, and everything about them here is still intent rather than a description 
 | [13-build-and-release.md](13-build-and-release.md)   | CI, CalVer, binaries, crates.io                          |
 | [14-incremental-checking.md](14-incremental-checking.md) | **The product.** Commit-time and whole-repo checking  |
 | [15-dist-evaluation.md](15-dist-evaluation.md)       | cargo-dist, measured against the release pipeline        |
+| [16-signing.md](16-signing.md)                       | Code signing: what it buys, and what it would take       |
 
 ## Design principles
 

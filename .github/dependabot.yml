@@ -1,0 +1,50 @@
+# Dependabot version updates.
+#
+# **This file controls update pull requests, not alerts.** The two are separate
+# systems and only one of them is configurable by path, which is the whole
+# difficulty here — see `scripts/dismiss-demo-alerts.sh` and design/16 for the
+# other half.
+#
+# Only `/` is listed, so only the Cargo workspace gets update PRs. Everything
+# under `demo/` is deliberately absent: those manifests are *fixtures*. They pin
+# old, broken, and conflicting versions on purpose, because that is what the
+# demos demonstrate — `demo/javascript` plants a version conflict on `ms`, and
+# `demo/python` plants a forked `urllib3`. A bot helpfully upgrading them would
+# silently repair the samples the test suite asserts against, and
+# `crates/tropism-lang/tests/demos.rs` would fail with no obvious cause.
+#
+# The same reasoning is already encoded twice elsewhere: `tropism.toml` excludes
+# `demo/**` from tropism's own analysis, and the demos are excluded from the cargo
+# workspace so `cargo` never builds them. This is the third place the same fact
+# has to be stated, because three different tools each discover manifests by
+# filename and none of them can be told "these are props".
+
+version: 2
+updates:
+  - package-ecosystem: cargo
+    directory: /
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 5
+    groups:
+      # One PR for the grammars: they move together and each one is a C build, so
+      # reviewing them separately is nine times the CI for the same decision.
+      tree-sitter:
+        patterns:
+          - tree-sitter
+          - tree-sitter-*
+      # Patch and minor bumps of everything else, batched. A major bump still
+      # arrives on its own, which is when a human should be reading it.
+      minor-and-patch:
+        update-types:
+          - minor
+          - patch
+
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: monthly
+    # dist regenerates .github/workflows/release.yml, so a bot editing action
+    # versions there is wasted work: `dist generate` overwrites it. Only the
+    # hand-written workflows are worth updating.
+    open-pull-requests-limit: 3
