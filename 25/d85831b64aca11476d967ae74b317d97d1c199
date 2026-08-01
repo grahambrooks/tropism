@@ -1,0 +1,30 @@
+design/README.md
+  s_c00712d345767e::t_8e4e6270ecd34b 86
+design/16-signing.md
+  s_c00712d345767e::t_61fe47efb77332 1-150
+Makefile
+  s_c00712d345767e::t_b1837cd2a5cf4e 40,59-64
+  s_c00712d345767e::t_6dfe1861d37252 65
+CLAUDE.md
+  s_c00712d345767e::t_8e4e6270ecd34b 195-205
+.github/dependabot.yml
+  s_c00712d345767e::t_76eec2e54ac159 1-50
+scripts/dismiss-demo-alerts.sh
+  s_c00712d345767e::t_96be7c2b81d467 1-74
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.19",
+  "base_commit_sha": "25d85831b64aca11476d967ae74b317d97d1c199",
+  "prompts": {},
+  "sessions": {
+    "s_c00712d345767e": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "67ffe3c3-fe44-413d-b7bb-3239cf952460",
+        "model": "claude-opus-5"
+      },
+      "human_author": "Graham Brooks <graham@grahambrooks.com>"
+    }
+  }
+}
