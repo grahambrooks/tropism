@@ -1,0 +1,43 @@
+Cargo.toml
+  s_c00712d345767e::t_b8b73bfaac2e28 63-67
+  s_c00712d345767e::t_c5cbfd1bd16551 14-15
+crates/tropism-mcp/Cargo.toml
+  s_c00712d345767e::t_7a38d572f2d983 10-14
+  s_c00712d345767e::t_c5cbfd1bd16551 7
+crates/tropism/Cargo.toml
+  s_c00712d345767e::t_c5cbfd1bd16551 7-8
+design/15-dist-evaluation.md
+  s_c00712d345767e::t_e9bf41a4a04433 1-140
+dist-workspace.toml
+  s_c00712d345767e::t_e7f1c9036b78fb 6
+  s_c00712d345767e::t_8d6bc8ca978c1c 21-25
+  s_c00712d345767e::t_7a38d572f2d983 1-5,8-17,26-29
+  s_c00712d345767e::t_169543d7da15fa 18-20
+  s_c00712d345767e::t_cae07f02645b06 7
+design/README.md
+  s_c00712d345767e::t_5d6bd99a20f4f2 85
+.github/workflows/release-dist.yml
+  s_c00712d345767e::t_8b846f638a61ed 1-300
+crates/tropism-lang/Cargo.toml
+  s_c00712d345767e::t_7a38d572f2d983 10-14
+  s_c00712d345767e::t_c5cbfd1bd16551 7
+crates/tropism-core/Cargo.toml
+  s_c00712d345767e::t_c5cbfd1bd16551 7
+  s_c00712d345767e::t_7a38d572f2d983 10-14
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.19",
+  "base_commit_sha": "7c95e65b8647419b415af330d2fed0bd871f3105",
+  "prompts": {},
+  "sessions": {
+    "s_c00712d345767e": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "67ffe3c3-fe44-413d-b7bb-3239cf952460",
+        "model": "claude-opus-5"
+      },
+      "human_author": "Graham Brooks <graham@grahambrooks.com>"
+    }
+  }
+}
