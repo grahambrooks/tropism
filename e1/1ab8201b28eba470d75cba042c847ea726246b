@@ -1,0 +1,21 @@
+README.md
+  s_c00712d345767e::t_915437af887bad 117
+.pre-commit-hooks.yaml
+  s_c00712d345767e::t_915437af887bad 7,11-16
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.19",
+  "base_commit_sha": "e11ab8201b28eba470d75cba042c847ea726246b",
+  "prompts": {},
+  "sessions": {
+    "s_c00712d345767e": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "67ffe3c3-fe44-413d-b7bb-3239cf952460",
+        "model": "claude-opus-5"
+      },
+      "human_author": "Graham Brooks <graham@grahambrooks.com>"
+    }
+  }
+}
