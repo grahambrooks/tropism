@@ -195,6 +195,22 @@ impl LanguageProvider for GoProvider {
         }
     }
 
+    /// A Go import path is the target's module path followed by the package
+    /// directory inside it, so stripping the former leaves the latter.
+    fn resolve_cross_project(
+        &self,
+        import: &Import,
+        target: &ProjectContext<'_>,
+    ) -> Option<String> {
+        let module_path = target.package_name?;
+        let rest = strip_module_prefix(&import.raw, module_path)?;
+        Some(if rest.is_empty() {
+            ".".to_owned()
+        } else {
+            rest
+        })
+    }
+
     fn is_stdlib(&self, module: &str) -> bool {
         let root = module.split('/').next().unwrap_or(module);
         !root.contains('.') && STDLIB_ROOTS.contains(&root)

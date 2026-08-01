@@ -6,9 +6,15 @@ A dependency analyzer's own supply chain should model the practices it advocates
 is more careful than the size of the project strictly warrants: reproducible builds, checksums,
 build provenance, and an explicit statement of what is irreversible.
 
-**Nothing here is implemented.** No `.github/workflows/` files exist, deliberately — adding them
-makes them live on the next push, and two of the requirements below (continuous release, crates.io
-publishing) take actions that cannot be undone. The blocking decision in §1 should be settled first.
+**Implemented**, in `.github/workflows/ci.yml` and `.github/workflows/release.yml`. These are live:
+CI runs on every push and pull request, and a green `main` cuts a release.
+
+**The crates.io publish is deliberately not continuous.** It runs only on a manual
+`workflow_dispatch` with `publish_crate: true`, because a published version can be yanked but never
+deleted or reused. Binaries are replaceable; a registry version is permanent. §6 explains how to
+flip it and what that costs.
+
+Two things must be settled before the first successful release — see §10.
 
 ---
 
@@ -102,6 +108,12 @@ version and injects it before building and publishing; it is **not** committed b
 ## 4. CI workflow (`.github/workflows/ci.yml`)
 
 Runs on pull requests and pushes to `main`. Release is gated on it passing.
+
+Action versions were verified against the GitHub API on 2026-07-31 and are current:
+`actions/checkout@v7`, `actions/upload-artifact@v7`, `actions/download-artifact@v8`,
+`actions/attest-build-provenance@v4`, `Swatinem/rust-cache@v2`, `softprops/action-gh-release@v3`.
+`dtolnay/rust-toolchain` is pinned by channel (`@stable`, `@1.85`) rather than by version, which is
+how that action is meant to be used — its only tag is a `v1` from 2022.
 
 ```yaml
 jobs:
@@ -289,6 +301,19 @@ Counting tags for the micro makes the version a pure function of the release his
 cannot silently produce a duplicate.
 
 ---
+
+## 10. Blockers before the first release
+
+**No `LICENSE` file.** `Cargo.toml` declares `license = "MIT OR Apache-2.0"` but neither text is in
+the repository. `cargo publish` accepts that, and the packaging step tolerates it, but shipping
+binaries and a crate under a licence whose text is absent is not a thing to do by accident. Add
+`LICENSE-MIT` and `LICENSE-APACHE`, or change the declaration.
+
+**The workspace root is a virtual manifest.** Verified: `cargo install --bins --locked --path .`
+fails with *"found a virtual manifest … instead of a package manifest"*. That does not affect the
+release workflow, which builds with `-p tropism`, but it does block one route to the pre-commit hook
+— see [14-incremental-checking.md](14-incremental-checking.md). Registered as D25 in
+[12-known-limitations.md](12-known-limitations.md).
 
 ## 8. Open questions
 

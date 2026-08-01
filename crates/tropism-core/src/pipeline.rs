@@ -12,8 +12,8 @@ use ignore::WalkBuilder;
 use crate::analysis::{self, AnalysisContext, ResolvedImport};
 use crate::discovery::{self, DiscoveryError};
 use crate::graph::{ModuleGraph, ModuleId};
-use crate::model::Project;
-use crate::provider::{ImportTarget, LanguageProvider, ProjectContext};
+use crate::model::{DeclaredDep, Project};
+use crate::provider::{Import, ImportTarget, LanguageProvider, ProjectContext};
 use crate::report::{
     CheckId, CheckStatus, Confidence, Evidence, Finding, ProjectReport, Report, Severity,
     SkippedFile,
@@ -59,6 +59,18 @@ struct Pass<'a> {
 struct RuleInput {
     edges: Vec<DependencyEdge>,
     uses: Vec<PackageUse>,
+}
+
+/// What a project looks like from outside it.
+///
+/// Kept so an edge reaching *into* a project can be resolved against that
+/// project's own context after every project has been parsed.
+struct ProjectIndex {
+    project: Project,
+    package_name: Option<String>,
+    declared: Vec<DeclaredDep>,
+    files: Vec<Utf8PathBuf>,
+    modules: BTreeSet<String>,
 }
 
 pub fn analyze(
@@ -114,6 +126,7 @@ pub fn analyze(
         .collect();
 
     let mut rule_input = RuleInput::default();
+    let mut indexes: Vec<ProjectIndex> = Vec::new();
 
     for project in &projects {
         let Some(provider) = providers
@@ -146,11 +159,12 @@ pub fn analyze(
         };
 
         match analyze_project(project, *provider, &pass) {
-            Ok((project_report, mut skipped, mut input)) => {
+            Ok((project_report, mut skipped, mut input, index)) => {
                 report.projects.push(project_report);
                 report.skipped.append(&mut skipped);
                 rule_input.edges.append(&mut input.edges);
                 rule_input.uses.append(&mut input.uses);
+                indexes.push(index);
             }
             Err(error) => {
                 // A project-level failure: record it, keep going.
@@ -168,6 +182,11 @@ pub fn analyze(
         }
     }
 
+    // Now that every project has been parsed, name the module each cross-project
+    // edge actually reaches. Until this runs, such an edge knows only its target
+    // package.
+    resolve_cross_project_edges(&mut rule_input, &indexes, providers);
+
     // Cycles that span projects are invisible to the per-project graphs above, and
     // in a monorepo they are the ones that matter most.
     add_project_cycles(&mut report, &rule_input);
@@ -181,6 +200,55 @@ pub fn analyze(
 ///
 /// Rule findings land on the project containing the offending file, so the report
 /// shape is unchanged; the *evaluation* is repo-wide.
+/// Fills in the target module of every edge that crosses a project boundary.
+///
+/// `resolve_import` runs while a project is being parsed and can only see that
+/// project, so an edge reaching outward knows the package it lands in but not the
+/// module. Resolving it needs the *target's* context, which does not exist until
+/// every project has been indexed — hence a second pass.
+fn resolve_cross_project_edges(
+    input: &mut RuleInput,
+    indexes: &[ProjectIndex],
+    providers: &[&dyn LanguageProvider],
+) {
+    for edge in &mut input.edges {
+        if edge.to_module.is_some() || edge.from_module.is_none() {
+            continue;
+        }
+        let Some(index) = indexes
+            .iter()
+            .filter(|index| {
+                index.project.root.as_str().is_empty() || edge.to.starts_with(&index.project.root)
+            })
+            .max_by_key(|index| index.project.root.as_str().len())
+        else {
+            continue;
+        };
+        let Some(provider) = providers
+            .iter()
+            .find(|candidate| candidate.language() == index.project.language)
+        else {
+            continue;
+        };
+
+        let ctx = ProjectContext {
+            project: &index.project,
+            package_name: index.package_name.as_deref(),
+            declared: &index.declared,
+            sibling_packages: &[],
+            known_modules: &index.modules,
+            source_files: &index.files,
+        };
+        let import = Import::statement(edge.label.clone(), edge.line.unwrap_or(1));
+
+        // `None` is a legitimate answer: the graph then falls back to the target
+        // project's root, which is less precise but never wrong.
+        if let Some(module) = provider.resolve_cross_project(&import, &ctx) {
+            edge.to_module = Some(ModuleId::module(module).in_project(index.project.root.as_str()));
+        }
+    }
+}
+
 /// Detects cycles between whole projects.
 ///
 /// `analyze_project` builds one module graph per project, so a cycle whose arms
@@ -202,20 +270,33 @@ fn add_project_cycles(report: &mut Report, input: &RuleInput) {
     }
 
     let mut graph = ModuleGraph::new();
-    // One representative edge per project pair, for evidence.
-    let mut witness: BTreeMap<(String, String), &DependencyEdge> = BTreeMap::new();
+    // One representative edge per node pair, for evidence.
+    let mut witness: BTreeMap<(ModuleId, ModuleId), &DependencyEdge> = BTreeMap::new();
 
     for edge in &input.edges {
-        let (Some(from), Some(to)) = (
+        let (Some(from_root), Some(to_root)) = (
             containing_root(&edge.from, &roots),
             containing_root(&edge.to, &roots),
         ) else {
             continue;
         };
-        if from == to {
+        if from_root == to_root {
             continue;
         }
-        graph.add_edge(ModuleId::module(from.clone()), ModuleId::module(to.clone()));
+
+        // Prefer the precise module at each end; fall back to the project's root
+        // module when a provider could not name one, so the edge is still
+        // represented — less precise, never wrong.
+        let from = edge
+            .from_module
+            .clone()
+            .unwrap_or_else(|| ModuleId::module(".").in_project(from_root));
+        let to = edge
+            .to_module
+            .clone()
+            .unwrap_or_else(|| ModuleId::module(".").in_project(to_root));
+
+        graph.add_edge(from.clone(), to.clone());
         witness.entry((from, to)).or_insert(edge);
     }
 
@@ -229,9 +310,7 @@ fn add_project_cycles(report: &mut Report, input: &RuleInput) {
             .filter_map(|member| {
                 witness
                     .iter()
-                    .find(|((from, to), _)| {
-                        from == &member.name && members.iter().any(|m| &m.name == to)
-                    })
+                    .find(|((from, to), _)| from == member && members.contains(to))
                     .map(|((_, to), edge)| {
                         Evidence::new(
                             edge.from.clone(),
@@ -242,6 +321,13 @@ fn add_project_cycles(report: &mut Report, input: &RuleInput) {
             })
             .collect();
 
+        let projects: Vec<String> = members
+            .iter()
+            .map(|member| member.project.clone())
+            .collect::<BTreeSet<String>>()
+            .into_iter()
+            .collect();
+
         let finding = Finding::new(
             CheckId::Cycle,
             &Utf8PathBuf::new(),
@@ -249,13 +335,17 @@ fn add_project_cycles(report: &mut Report, input: &RuleInput) {
             Severity::Warning,
             Confidence::High,
             format!(
-                "dependency cycle between {} projects: {}",
-                members.len(),
+                "dependency cycle across {} projects: {}",
+                projects.len(),
                 labels.join(" → ")
             ),
         )
         .with_evidence(evidence)
-        .with_details(serde_json::json!({ "members": labels, "scope": "project" }));
+        .with_details(serde_json::json!({
+            "members": labels,
+            "scope": "project",
+            "projects": projects,
+        }));
 
         let owner = owning_root(&finding, report);
         if let Some(project) = report.projects.iter_mut().find(|p| p.project.root == owner) {
@@ -408,7 +498,7 @@ fn analyze_project(
     project: &Project,
     provider: &dyn LanguageProvider,
     pass: &Pass<'_>,
-) -> anyhow::Result<(ProjectReport, Vec<SkippedFile>, RuleInput)> {
+) -> anyhow::Result<(ProjectReport, Vec<SkippedFile>, RuleInput, ProjectIndex)> {
     let Pass {
         scan_root,
         provided,
@@ -450,6 +540,9 @@ fn analyze_project(
                 line: dep.declared_at.line,
                 label: dep.name.clone(),
                 level: EdgeLevel::Declared,
+                // A manifest entry names a package, not a module.
+                from_module: None,
+                to_module: None,
             }),
             Some(_) => {}
             None => rule_input.uses.push(PackageUse {
@@ -527,6 +620,10 @@ fn analyze_project(
                             line: Some(import.line),
                             label: import.raw.clone(),
                             level: EdgeLevel::Imported,
+                            from_module: Some(owner.clone().in_project(project.root.as_str())),
+                            to_module: Some(
+                                ModuleId::module(module.clone()).in_project(project.root.as_str()),
+                            ),
                         });
                     }
                 }
@@ -538,6 +635,10 @@ fn analyze_project(
                             line: Some(import.line),
                             label: import.raw.clone(),
                             level: EdgeLevel::Imported,
+                            from_module: Some(owner.clone().in_project(project.root.as_str())),
+                            // Filled in by the cross-project pass, which needs the
+                            // target project's own context.
+                            to_module: None,
                         });
                     }
                     Some(_) => {}
@@ -560,6 +661,16 @@ fn analyze_project(
             });
         }
     }
+
+    // Kept before `manifest.deps` is moved into the analysis context; the index
+    // outlives this function so cross-project edges can be resolved later.
+    let index = ProjectIndex {
+        project: project.clone(),
+        package_name: manifest.package_name.clone(),
+        declared: manifest.deps.clone(),
+        files,
+        modules: known_modules,
+    };
 
     let context = AnalysisContext {
         project: project.clone(),
@@ -584,7 +695,7 @@ fn analyze_project(
     project_report.findings = findings;
     project_report.finalize();
 
-    Ok((project_report, skipped, rule_input))
+    Ok((project_report, skipped, rule_input, index))
 }
 
 /// Source files belonging to this project, excluding those owned by a nested one.

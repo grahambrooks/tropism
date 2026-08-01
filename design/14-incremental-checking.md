@@ -81,19 +81,52 @@ repository at all.
 works. If that proves awkward, they can be dropped without loss — the file-list form is what the
 hooks actually use.
 
-### Distribution
+### Distribution, and what prek actually does
 
-```yaml
-# .pre-commit-hooks.yaml, shipped in this repository
-- id: tropism
-  name: tropism — architecture rules
-  entry: tropism check
-  language: system
-  pass_filenames: true
-  types_or: [go, javascript, ts, rust, c#]
+[prek](https://github.com/j178/prek) is a Rust reimplementation of pre-commit — a single binary with
+no Python runtime, config-compatible with pre-commit, and already used by CPython, Airflow, and
+FastAPI. It is the right target: a hook framework that needs no runtime, for a hook that needs no
+runtime.
+
+Verified against prek's documentation on 2026-07-31 (prek v0.4.11):
+
+> prek installs binaries via `cargo install --bins --locked` and runs the specified executable. The
+> repository should contain a `Cargo.toml` that produces the binary referenced by `entry`.
+> `additional_dependencies` and `language_version` are supported.
+
+That gives three possible integrations, and **the obvious one does not currently work**:
+
+| Route                                                  | Mechanism                                            | Status                                 |
+| ------------------------------------------------------ | ---------------------------------------------------- | -------------------------------------- |
+| `language: system`                                     | user installs `tropism` first                        | works as soon as binaries are released |
+| `language: rust` on this repo                          | prek runs `cargo install --bins --locked` on a clone | **blocked** — see below                |
+| `repo: local` + `additional_dependencies: ["tropism"]` | prek installs from crates.io                         | works once published                   |
+
+**`language: rust` is blocked by the workspace layout.** The repository root is a virtual manifest,
+and `cargo install --path .` refuses it:
+
+```
+error: found a virtual manifest at `/…/Cargo.toml` instead of a package manifest
 ```
 
-That file plus a released binary is the whole integration.
+Enabling it means making the root an installable package — moving the CLI crate to the repository
+root, in the layout ripgrep uses. That is a real restructure with knock-on effects on
+`tropism.toml`'s module globs and on the crate layout in
+[01-architecture.md](01-architecture.md), so it is a decision rather than a detail. Recorded as D25
+in [12-known-limitations.md](12-known-limitations.md).
+
+Note the useful consequence of prek's `--locked`: it installs the exact versions from `Cargo.lock`,
+which is why that file is committed ([.gitignore](../.gitignore) says so explicitly).
+
+### Not shipped yet, and why
+
+`.pre-commit-hooks.yaml` is deliberately absent. The hook's `entry` is `tropism check`, and that
+subcommand does not exist — D24 in [12-known-limitations.md](12-known-limitations.md). Shipping a
+hooks file whose entry point is missing would advertise something broken, and shipping one that ran
+`tropism analyze` over the whole repository instead would be the slow hook this document opens by
+warning against.
+
+The order is therefore: `tropism check [FILES...]`, then binaries, then the hooks file.
 
 ---
 

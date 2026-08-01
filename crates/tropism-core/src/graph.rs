@@ -34,8 +34,13 @@ impl ModuleKind {
 }
 
 /// A module within a project, and how it participates in the build.
+///
+/// `project` is empty in a per-project graph, where it is implicit. The repo-wide
+/// graph qualifies every node with it, so a cycle spanning packages can name the
+/// modules involved rather than only the packages.
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct ModuleId {
+    pub project: String,
     pub name: String,
     pub kind: ModuleKind,
 }
@@ -43,6 +48,7 @@ pub struct ModuleId {
 impl ModuleId {
     pub fn module(name: impl Into<String>) -> Self {
         Self {
+            project: String::new(),
             name: name.into(),
             kind: ModuleKind::Normal,
         }
@@ -50,6 +56,7 @@ impl ModuleId {
 
     pub fn internal_test(name: impl Into<String>) -> Self {
         Self {
+            project: String::new(),
             name: name.into(),
             kind: ModuleKind::InternalTest,
         }
@@ -57,9 +64,17 @@ impl ModuleId {
 
     pub fn external_test(name: impl Into<String>) -> Self {
         Self {
+            project: String::new(),
             name: name.into(),
             kind: ModuleKind::ExternalTest,
         }
+    }
+
+    /// Qualifies this module with the project that contains it.
+    #[must_use]
+    pub fn in_project(mut self, project: impl Into<String>) -> Self {
+        self.project = project.into();
+        self
     }
 
     /// The module whose test build this one belongs to.
@@ -71,12 +86,34 @@ impl ModuleId {
     }
 }
 
+impl ModuleId {
+    /// `project::module`, collapsing the cases where repeating both adds nothing:
+    /// an unqualified node, a project's root module, and a module whose name is
+    /// already the project name (routine in C#, where the namespace matches the
+    /// assembly).
+    fn qualified(&self) -> String {
+        let project = if self.project.is_empty() {
+            "."
+        } else {
+            self.project.as_str()
+        };
+        if self.project.is_empty() {
+            self.name.clone()
+        } else if self.name == "." || self.name == project {
+            project.to_owned()
+        } else {
+            format!("{project}::{}", self.name)
+        }
+    }
+}
+
 impl std::fmt::Display for ModuleId {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let base = self.qualified();
         match self.kind {
-            ModuleKind::Normal => f.write_str(&self.name),
-            ModuleKind::InternalTest => write!(f, "{} [test]", self.name),
-            ModuleKind::ExternalTest => write!(f, "{} [external test]", self.name),
+            ModuleKind::Normal => f.write_str(&base),
+            ModuleKind::InternalTest => write!(f, "{base} [test]"),
+            ModuleKind::ExternalTest => write!(f, "{base} [external test]"),
         }
     }
 }
@@ -340,6 +377,44 @@ mod tests {
         let mut graph = ModuleGraph::new();
         graph.add_edge(ModuleId::internal_test("a"), m("b"));
         graph.add_edge(m("b"), m("a"));
+        assert!(graph.cycles().is_empty());
+    }
+
+    #[test]
+    fn a_qualified_module_displays_project_and_module() {
+        assert_eq!(
+            ModuleId::module("api::handlers")
+                .in_project("crates/web")
+                .to_string(),
+            "crates/web::api::handlers"
+        );
+    }
+
+    /// Repeating the name adds nothing when the module *is* the project — the
+    /// routine case in C#, where the namespace matches the assembly.
+    #[test]
+    fn a_qualified_module_collapses_redundant_names() {
+        assert_eq!(
+            ModuleId::module(".").in_project("Shop.Data").to_string(),
+            "Shop.Data"
+        );
+        assert_eq!(
+            ModuleId::module("Shop.Data")
+                .in_project("Shop.Data")
+                .to_string(),
+            "Shop.Data"
+        );
+    }
+
+    /// Two modules of the same name in different projects are different nodes.
+    #[test]
+    fn projects_namespace_their_modules() {
+        let mut graph = ModuleGraph::new();
+        graph.add_edge(
+            ModuleId::module("util").in_project("a"),
+            ModuleId::module("util").in_project("b"),
+        );
+        assert_eq!(graph.module_count(), 2);
         assert!(graph.cycles().is_empty());
     }
 

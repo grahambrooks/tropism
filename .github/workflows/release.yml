@@ -1,0 +1,189 @@
+name: release
+
+on:
+  # Continuous: every green push to main cuts a release.
+  workflow_run:
+    workflows: [ci]
+    types: [completed]
+    branches: [main]
+  # Manual, for re-cutting or for publishing to crates.io.
+  workflow_dispatch:
+    inputs:
+      publish_crate:
+        description: Also publish to crates.io (irreversible)
+        type: boolean
+        default: false
+
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  version:
+    name: compute version
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      github.event.workflow_run.conclusion == 'success'
+    runs-on: ubuntu-24.04
+    outputs:
+      version: ${{ steps.calver.outputs.version }}
+      tag: ${{ steps.calver.outputs.tag }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          # Tags are how the micro is counted, so a shallow clone is not enough.
+          fetch-depth: 0
+      - id: calver
+        name: CalVer YYYY.MM.MICRO
+        run: |
+          set -euo pipefail
+          YEAR=$(date -u +%Y)
+          # %-m strips the leading zero: 2026.07.1 is not valid semver.
+          MONTH=$(date -u +%-m)
+          MICRO=$(git tag -l "v${YEAR}.${MONTH}.*" | wc -l | tr -d ' ')
+          VERSION="${YEAR}.${MONTH}.${MICRO}"
+          echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
+          echo "tag=v${VERSION}" >> "$GITHUB_OUTPUT"
+          echo "::notice::releasing ${VERSION}"
+
+  build:
+    name: ${{ matrix.target }}
+    needs: version
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          # Every tree-sitter grammar compiles C, so cross-compiling needs a cross
+          # C toolchain and not merely a Rust target. Each entry therefore builds
+          # on a native runner; musl is the one exception and gets a linker.
+          - { target: x86_64-unknown-linux-gnu, os: ubuntu-24.04 }
+          - { target: x86_64-unknown-linux-musl, os: ubuntu-24.04, musl: true }
+          - { target: aarch64-unknown-linux-gnu, os: ubuntu-24.04-arm }
+          - { target: x86_64-apple-darwin, os: macos-15-intel }
+          - { target: aarch64-apple-darwin, os: macos-15 }
+          - { target: x86_64-pc-windows-msvc, os: windows-2022 }
+    steps:
+      - uses: actions/checkout@v7
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.target }}
+      - uses: Swatinem/rust-cache@v2
+        with:
+          key: ${{ matrix.target }}
+
+      - name: Install musl toolchain
+        if: matrix.musl
+        run: sudo apt-get update && sudo apt-get install -y musl-tools
+
+      - name: Set version
+        shell: bash
+        run: |
+          set -euo pipefail
+          # Injected, never committed back: no push loop, and no release-bump
+          # noise in the history. The tag records which commit was released.
+          perl -pi -e 's/^version = "0\.0\.0"$/version = "${{ needs.version.outputs.version }}"/' Cargo.toml
+          cargo update --workspace --offline 2>/dev/null || cargo update --workspace
+
+      - name: Build
+        shell: bash
+        env:
+          CC_x86_64_unknown_linux_musl: musl-gcc
+          CARGO_TARGET_X86_64_UNKNOWN_LINUX_MUSL_LINKER: musl-gcc
+        run: cargo build --release -p tropism --target ${{ matrix.target }}
+
+      - name: Package
+        id: package
+        shell: bash
+        run: |
+          set -euo pipefail
+          NAME="tropism-${{ needs.version.outputs.version }}-${{ matrix.target }}"
+          mkdir -p "dist/${NAME}"
+          if [[ "${{ matrix.target }}" == *windows* ]]; then
+            cp "target/${{ matrix.target }}/release/tropism.exe" "dist/${NAME}/"
+          else
+            cp "target/${{ matrix.target }}/release/tropism" "dist/${NAME}/"
+          fi
+          cp README.md LICENSE* "dist/${NAME}/" 2>/dev/null || cp README.md "dist/${NAME}/"
+          cd dist
+          if [[ "${{ matrix.target }}" == *windows* ]]; then
+            7z a "${NAME}.zip" "${NAME}" > /dev/null
+            echo "archive=dist/${NAME}.zip" >> "$GITHUB_OUTPUT"
+          else
+            tar czf "${NAME}.tar.gz" "${NAME}"
+            echo "archive=dist/${NAME}.tar.gz" >> "$GITHUB_OUTPUT"
+          fi
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: ${{ matrix.target }}
+          path: ${{ steps.package.outputs.archive }}
+          if-no-files-found: error
+
+  release:
+    name: publish release
+    needs: [version, build]
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+      # Required for build provenance: a downloaded binary can be traced back to
+      # the workflow run and commit that produced it.
+      id-token: write
+      attestations: write
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/download-artifact@v8
+        with:
+          path: dist
+          merge-multiple: true
+
+      - name: Checksums
+        run: cd dist && sha256sum ./* > SHA256SUMS && cat SHA256SUMS
+
+      - uses: actions/attest-build-provenance@v4
+        with:
+          subject-path: dist/tropism-*
+
+      - uses: softprops/action-gh-release@v3
+        with:
+          tag_name: ${{ needs.version.outputs.tag }}
+          name: ${{ needs.version.outputs.version }}
+          target_commitish: ${{ github.sha }}
+          generate_release_notes: true
+          files: dist/*
+          fail_on_unmatched_files: true
+
+  publish-crate:
+    name: publish to crates.io
+    # Deliberately NOT continuous. A crates.io version can be yanked but never
+    # deleted and never reused, so publishing on every commit permanently burns a
+    # version per commit. Binaries are replaceable; this is not. Flip the
+    # condition to `needs.version.result == 'success'` to make it continuous, and
+    # read design/13 first.
+    if: github.event_name == 'workflow_dispatch' && inputs.publish_crate
+    needs: [version, release]
+    runs-on: ubuntu-24.04
+    environment: crates-io
+    steps:
+      - uses: actions/checkout@v7
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Set version
+        run: perl -pi -e 's/^version = "0\.0\.0"$/version = "${{ needs.version.outputs.version }}"/' Cargo.toml
+      - name: Skip if already published
+        id: check
+        run: |
+          set -euo pipefail
+          if cargo info "tropism@${{ needs.version.outputs.version }}" >/dev/null 2>&1; then
+            echo "already=true" >> "$GITHUB_OUTPUT"
+            echo "::notice::tropism@${{ needs.version.outputs.version }} is already on crates.io"
+          else
+            echo "already=false" >> "$GITHUB_OUTPUT"
+          fi
+      # --allow-dirty because the version is injected rather than committed.
+      - if: steps.check.outputs.already == 'false'
+        run: cargo publish -p tropism --allow-dirty
+        env:
+          CARGO_REGISTRY_TOKEN: ${{ secrets.CARGO_REGISTRY_TOKEN }}

@@ -47,6 +47,14 @@ pub struct DependencyEdge {
     /// What was written — the import specifier or the dependency name.
     pub label: String,
     pub level: EdgeLevel,
+    /// The module each end belongs to, project-qualified.
+    ///
+    /// Rules only need the paths; the repo-wide cycle graph needs the modules, and
+    /// collecting them here avoids a second walk. `to_module` is `None` when the
+    /// provider could not name the module inside the target project, in which case
+    /// the cycle graph falls back to that project's root.
+    pub from_module: Option<crate::graph::ModuleId>,
+    pub to_module: Option<crate::graph::ModuleId>,
 }
 
 /// One use of an external package.
@@ -735,6 +743,9 @@ allowed_in = ["cli"]
             line: Some(1),
             label: "x".to_owned(),
             level: EdgeLevel::Imported,
+            // Rules match on paths; module identity is only used by the cycle graph.
+            from_module: None,
+            to_module: None,
         }
     }
 

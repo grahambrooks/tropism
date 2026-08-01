@@ -161,6 +161,28 @@ filter. Neither exists; `--help` offers only `--format`, `--fail-on`, `--no-igno
 leaving the noisier checks advisory — which is the division
 [10-js-evaluation.md](10-js-evaluation.md) argues for.
 
+### D25. The workspace root is a virtual manifest, so the repo is not `cargo install`-able
+
+`cargo install --bins --locked --path .` fails with *"found a virtual manifest … instead of a
+package manifest"*. The release workflow is unaffected because it builds `-p tropism`, but it blocks
+prek's `language: rust` integration, which installs a hook by running exactly that command on a
+clone of the hook repository.
+
+**Cost:** one of three routes to the pre-commit hook is closed. The other two —
+`language: system` with a released binary, and `repo: local` with `additional_dependencies` from
+crates.io — both work.
+**Fix:** make the root an installable package by moving the CLI crate to the repository root, the
+layout ripgrep uses. Knock-on effects on `tropism.toml`'s module globs and on the documented crate
+layout, so it is a decision rather than a detail.
+
+### D26. No `LICENSE` file
+
+`Cargo.toml` declares `license = "MIT OR Apache-2.0"`; neither text is in the repository.
+
+**Cost:** binaries and a crate would ship under a licence whose text is absent.
+**Fix:** add `LICENSE-MIT` and `LICENSE-APACHE`, or change the declaration. Blocks the first
+release.
+
 ---
 
 ## Deferred — rules

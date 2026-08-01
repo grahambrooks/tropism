@@ -182,6 +182,16 @@ impl LanguageProvider for CSharpProvider {
         }
     }
 
+    /// A `using` names an absolute namespace, so the module inside the target is
+    /// just the longest namespace that project declares.
+    fn resolve_cross_project(
+        &self,
+        import: &Import,
+        target: &ProjectContext<'_>,
+    ) -> Option<String> {
+        longest_prefix(&import.raw, target.known_modules.iter().map(String::as_str))
+    }
+
     fn is_stdlib(&self, module: &str) -> bool {
         is_framework(module)
     }

@@ -1,0 +1,81 @@
+name: ci
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+# A second push to the same branch cancels the first; main is never cancelled
+# because release keys off its result.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
+
+env:
+  CARGO_TERM_COLOR: always
+  RUSTFLAGS: -D warnings
+
+jobs:
+  test:
+    name: test (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-24.04, macos-15, windows-2022]
+    steps:
+      - uses: actions/checkout@v7
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+      - run: cargo test --workspace --all-targets
+      # Doc-tests are excluded from --all-targets and would otherwise never run.
+      - run: cargo test --workspace --doc
+
+  lint:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v7
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
+      - uses: Swatinem/rust-cache@v2
+      - run: cargo fmt --all --check
+      - run: cargo clippy --workspace --all-targets -- -D warnings
+
+  features:
+    name: build without default features
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v7
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+      # The TUI must stay optional. Nothing else proves it.
+      - run: cargo build -p tropism --no-default-features
+
+  msrv:
+    name: minimum supported rust version
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v7
+      # Must match `rust-version` in Cargo.toml.
+      - uses: dtolnay/rust-toolchain@1.85
+      - uses: Swatinem/rust-cache@v2
+      - run: cargo check --workspace --all-targets
+
+  dogfood:
+    name: tropism analyzes tropism
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v7
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+      - run: cargo build -p tropism
+      # tropism.toml declares that the CLI and MCP server stay independent, that
+      # core is a leaf, and that the tree-sitter grammars stay inside tropism-lang.
+      # This is what makes those rules load-bearing rather than decorative.
+      #
+      # Never narrow the scope to make this pass: rules evaluate repo-wide, so a
+      # smaller scan removes the cross-crate edges they exist to check. The
+      # deliberately-broken demos and fixtures are excluded in tropism.toml, and
+      # the report discloses every exclusion with a count.
+      - run: ./target/debug/tropism analyze . --fail-on error

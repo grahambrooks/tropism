@@ -156,6 +156,26 @@ impl LanguageProvider for RustProvider {
         }
     }
 
+    /// A cross-crate path starts with the crate name; the rest is a module path
+    /// inside it, disambiguated by longest-prefix match as usual.
+    fn resolve_cross_project(
+        &self,
+        import: &Import,
+        target: &ProjectContext<'_>,
+    ) -> Option<String> {
+        let crate_name = normalize_crate_name(target.package_name?);
+        let path = import.raw.trim_start_matches("::");
+        let mut segments = path.split("::").filter(|s| !s.is_empty());
+        if normalize_crate_name(segments.next()?) != crate_name {
+            return None;
+        }
+        let rest: Vec<String> = segments.map(str::to_owned).collect();
+        match resolve_internal_owned(&rest, target) {
+            ImportTarget::Internal(module) => Some(module),
+            _ => None,
+        }
+    }
+
     fn is_stdlib(&self, module: &str) -> bool {
         let root = module.split("::").next().unwrap_or(module);
         BUILTIN_ROOTS.contains(&root)

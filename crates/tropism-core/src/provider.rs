@@ -173,6 +173,24 @@ pub trait LanguageProvider: Send + Sync {
         ModuleId::module(default_id)
     }
 
+    /// The module *inside another project* that an import refers to.
+    ///
+    /// `resolve_import` answers "which package does this reach", which is enough for
+    /// hygiene but loses the module once an edge crosses a project boundary — the
+    /// repo-wide cycle graph then knows only that two packages are circular, not
+    /// which modules make them so.
+    ///
+    /// `target` is the context of the project being reached into. Returning `None`
+    /// is honest and falls back to package granularity; a wrong answer would name
+    /// the wrong module in a finding, so guessing is worse than declining.
+    fn resolve_cross_project(
+        &self,
+        _import: &Import,
+        _target: &ProjectContext<'_>,
+    ) -> Option<String> {
+        None
+    }
+
     /// Classifies one import, given the file it appears in.
     ///
     /// `from` is required because a relative specifier means nothing without it —
