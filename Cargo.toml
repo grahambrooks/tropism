@@ -11,7 +11,11 @@ resolver = "3"
 version = "0.0.0"
 edition = "2024"
 license = "MIT OR Apache-2.0"
-rust-version = "1.85"
+# Tracks latest stable. It was 1.85 — the 2024 edition's minimum — but that was
+# never true in practice: `ignore`, `ratatui`, and `time` all require 1.88, so
+# `cargo check` refused before compiling a line and the msrv job had been red.
+# A declared floor nothing is tested at is worse than an honest one.
+rust-version = "1.97"
 
 # Versions verified against crates.io on 2026-07-30. See design/08-crates.md for the
 # rationale behind each choice and the ones deliberately deferred.

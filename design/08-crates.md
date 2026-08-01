@@ -144,5 +144,20 @@ riskiest unverified assumption in the adopted stack.
 
 ## Toolchain
 
-Rust edition 2024, `rust-version = "1.85"` (the edition's minimum). Developed against 1.97.1.
-`unsafe_code = "forbid"` and `clippy::all = "warn"` are set workspace-wide.
+Rust edition 2024, `rust-version = "1.97"`, which is latest stable and what the project is developed
+against. `unsafe_code = "forbid"` and `clippy::all = "warn"` are set workspace-wide.
+
+**The policy is "tracks latest stable", chosen after the alternative failed.** The declaration was
+`1.85`, the 2024 edition's minimum, and it was never true: `ignore`, `ratatui`, and `time` each
+require 1.88, so `cargo check` refused before compiling a line and the msrv job in CI had been red.
+A floor that nothing builds at is worse than no floor at all — it tells a would-be consumer something
+false, and it trains everyone to ignore a failing job.
+
+Holding a low MSRV is a real commitment with a real cost: it means pinning dependencies back, and
+here it would have meant giving up the `ratatui` 0.30 the TUI is written against. That trade is worth
+making for a widely-consumed library. tropism is a binary, and nothing is published yet, so it is not
+worth making today. Revisit if tropism is ever published as a library rather than a tool.
+
+The msrv job stays, and pinning it is the point: when stable moves ahead, it keeps building at the
+version the manifest still claims, so a dependency that raises the real floor fails loudly instead of
+turning `rust-version` back into a fiction.

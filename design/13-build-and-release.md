@@ -112,7 +112,7 @@ Runs on pull requests and pushes to `main`. Release is gated on it passing.
 Action versions were verified against the GitHub API on 2026-07-31 and are current:
 `actions/checkout@v7`, `actions/upload-artifact@v7`, `actions/download-artifact@v8`,
 `actions/attest-build-provenance@v4`, `Swatinem/rust-cache@v2`, `softprops/action-gh-release@v3`.
-`dtolnay/rust-toolchain` is pinned by channel (`@stable`, `@1.85`) rather than by version, which is
+`dtolnay/rust-toolchain` is pinned by channel (`@stable`, `@1.97`) rather than by version, which is
 how that action is meant to be used — its only tag is a `v1` from 2022.
 
 ```yaml
@@ -133,7 +133,7 @@ jobs:
 
   msrv:
     steps:
-      - uses: dtolnay/rust-toolchain@1.85     # matches rust-version
+      - uses: dtolnay/rust-toolchain@1.97     # matches rust-version
       - run: cargo check --workspace
 
   dogfood:

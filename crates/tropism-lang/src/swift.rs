@@ -403,17 +403,16 @@ fn collect_target_dependencies(
                         line,
                     });
                 }
-            } else if callee == "target" || callee == "byName" {
-                if let Some(name) =
+            } else if (callee == "target" || callee == "byName")
+                && let Some(name) =
                     argument(child, "name", source).and_then(|n| string_value(n, source))
-                {
-                    out.push(ProductRef {
-                        package: name.clone(),
-                        product: name,
-                        test_only,
-                        line,
-                    });
-                }
+            {
+                out.push(ProductRef {
+                    package: name.clone(),
+                    product: name,
+                    test_only,
+                    line,
+                });
             }
             continue;
         }
