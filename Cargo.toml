@@ -11,6 +11,8 @@ resolver = "3"
 version = "0.0.0"
 edition = "2024"
 license = "MIT OR Apache-2.0"
+repository = "https://github.com/grahambrooks/tropism"
+homepage = "https://github.com/grahambrooks/tropism"
 # Tracks latest stable. It was 1.85 — the 2024 edition's minimum — but that was
 # never true in practice: `ignore`, `ratatui`, and `time` all require 1.88, so
 # `cargo check` refused before compiling a line and the msrv job had been red.
@@ -58,3 +60,8 @@ unsafe_code = "forbid"
 
 [workspace.lints.clippy]
 all = { level = "warn", priority = -1 }
+
+# The profile that 'dist' will build with
+[profile.dist]
+inherits = "release"
+lto = "thin"

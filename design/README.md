@@ -82,6 +82,7 @@ built, and everything about them here is still intent rather than a description 
 | [12-known-limitations.md](12-known-limitations.md)   | Everything that does not work, structural or deferred    |
 | [13-build-and-release.md](13-build-and-release.md)   | CI, CalVer, binaries, crates.io                          |
 | [14-incremental-checking.md](14-incremental-checking.md) | **The product.** Commit-time and whole-repo checking  |
+| [15-dist-evaluation.md](15-dist-evaluation.md)       | cargo-dist, measured against the release pipeline        |
 
 ## Design principles
 
