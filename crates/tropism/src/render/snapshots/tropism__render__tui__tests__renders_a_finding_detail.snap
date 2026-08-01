@@ -2,7 +2,7 @@
 source: crates/tropism/src/render/tui.rs
 expression: "render_to_string(&mut app, 100, 24)"
 ---
-" tropism  /Users/graham/dev/projects/gdep/crates/tropism/tests/fixtures · 1 finding(s) · 1 check(s) "
+" tropism  crates/tropism/tests/fixtures · 1 finding(s) · 1 check(s) did not run                     "
 "┌ report ───────────────────────────────────┐┌ detail ─────────────────────────────────────────────┐"
 "│  cycle (go)                               ││import cycle between 2 packages                      │"
 "│>   warning  import cycle between 2 package││cycle:cycle:465ee449                                 │"

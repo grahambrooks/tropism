@@ -12,9 +12,19 @@ use tropism_core::report::{
     SkippedFile,
 };
 
+/// The report's scan root. Absolute, because the text renderer reads the fixture
+/// sources through it to print the source line under each piece of evidence.
 pub fn fixtures() -> Utf8PathBuf {
     Utf8PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("tests/fixtures")
 }
+
+/// The scan root a snapshot may contain.
+///
+/// The TUI header prints the scan root verbatim into a fixed-width buffer, so
+/// [`fixtures`] would bake the checkout location into the snapshot — and its
+/// length, which decides where the header truncates. Either makes the snapshot
+/// pass on exactly one machine. Tests that render the header substitute this.
+pub const STABLE_SCAN_ROOT: &str = "crates/tropism/tests/fixtures";
 
 pub fn sample_report() -> Report {
     let project = Project {

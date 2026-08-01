@@ -391,7 +391,7 @@ mod tests {
     use ratatui::Terminal;
     use ratatui::backend::TestBackend;
 
-    use crate::render::testdata::sample_report;
+    use crate::render::testdata::{STABLE_SCAN_ROOT, sample_report};
 
     #[test]
     fn rows_cover_projects_findings_and_unavailable_checks() {
@@ -475,7 +475,9 @@ mod tests {
 
     #[test]
     fn renders_a_finding_detail() {
-        let report = sample_report();
+        let mut report = sample_report();
+        // The header renders the scan root verbatim; see STABLE_SCAN_ROOT.
+        report.scan_root = STABLE_SCAN_ROOT.into();
         let mut app = App::new(&report);
         app.select_next(); // the finding
         insta::assert_snapshot!(render_to_string(&mut app, 100, 24));
