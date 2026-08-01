@@ -1,0 +1,27 @@
+Cargo.toml
+  s_c00712d345767e::t_550241cd2d6c4d 14-18
+crates/tropism-lang/src/swift.rs
+  s_c00712d345767e::t_c566b93334243c 406-407,409-415
+.github/workflows/ci.yml
+  s_c00712d345767e::t_61ea0e456bb7cd 60-67
+design/13-build-and-release.md
+  s_c00712d345767e::t_d7ced17da5264f 115,136
+design/08-crates.md
+  s_c00712d345767e::t_356911904fca40 147-163
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.19",
+  "base_commit_sha": "ad1e32686a9d8b99aea1e099e79605a9db7c100c",
+  "prompts": {},
+  "sessions": {
+    "s_c00712d345767e": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "67ffe3c3-fe44-413d-b7bb-3239cf952460",
+        "model": "claude-opus-5"
+      },
+      "human_author": "Graham Brooks <graham@grahambrooks.com>"
+    }
+  }
+}
