@@ -44,7 +44,26 @@ updates:
     directory: /
     schedule:
       interval: monthly
-    # dist regenerates .github/workflows/release.yml, so a bot editing action
-    # versions there is wasted work: `dist generate` overwrites it. Only the
-    # hand-written workflows are worth updating.
     open-pull-requests-limit: 3
+    # Every entry below produced a pull request that could not merge. The
+    # ecosystem stays enabled so a *new* action added by hand is still watched;
+    # these four are excluded because a bot cannot correctly update them.
+    ignore:
+      # dist generates .github/workflows/release.yml and its `plan` job verifies
+      # the file matches what it would generate. Any edit — by a bot or by hand —
+      # fails with "has out of date contents and needs to be regenerated". These
+      # three appear only there, or there and in a hand-written file at a version
+      # dist has not caught up to, so a bump always touches the generated file.
+      # They move when dist moves: upgrade dist, run `dist generate`, commit.
+      - dependency-name: actions/checkout
+      - dependency-name: actions/upload-artifact
+      - dependency-name: actions/download-artifact
+      # The msrv job's pin must equal `rust-version` in Cargo.toml and `channel`
+      # in rust-toolchain.toml. That number is a support commitment, not a
+      # dependency, and the job only proves anything while all three agree.
+      #
+      # Dependabot also gets this one actively wrong: it ordered the action's tags
+      # semver-wise and proposed 1.100, which is numerically newer than 1.97 and
+      # is not a Rust release that exists. The build failed with "could not
+      # download nonexistent rust version".
+      - dependency-name: dtolnay/rust-toolchain
