@@ -18,6 +18,21 @@ pub mod rust;
 #[cfg(feature = "csharp")]
 pub mod csharp;
 
+#[cfg(feature = "python")]
+pub mod python;
+
+#[cfg(feature = "ruby")]
+pub mod ruby;
+
+#[cfg(feature = "java")]
+pub mod java;
+
+#[cfg(feature = "swift")]
+pub mod swift;
+
+#[cfg(feature = "cpp")]
+pub mod cpp;
+
 /// Every enabled provider.
 ///
 /// Ordering is stable so discovery output does not depend on it.
@@ -38,6 +53,21 @@ pub fn registry() -> Vec<&'static dyn LanguageProvider> {
 
     #[cfg(feature = "csharp")]
     providers.push(&csharp::CSharpProvider);
+
+    #[cfg(feature = "python")]
+    providers.push(&python::PythonProvider);
+
+    #[cfg(feature = "ruby")]
+    providers.push(&ruby::RubyProvider);
+
+    #[cfg(feature = "java")]
+    providers.push(&java::JavaProvider);
+
+    #[cfg(feature = "swift")]
+    providers.push(&swift::SwiftProvider);
+
+    #[cfg(feature = "cpp")]
+    providers.push(&cpp::CppProvider);
 
     providers
 }

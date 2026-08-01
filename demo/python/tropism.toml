@@ -1,0 +1,37 @@
+# Ruleset for the Python demo. Specification: design/11-dependency-rules.md
+
+schema_version = 1
+
+[modules]
+entry = "src/app/main.py"
+api = "src/app/api.py"
+storage = "src/app/storage.py"
+
+# VIOLATED. main.py imports app.storage directly instead of going through the api.
+[[module_rules]]
+id = "entrypoint-goes-through-the-api"
+allow_only = { from = "entry", to = ["api"] }
+severity = "error"
+reason = """
+The entrypoint composes the api and nothing else. Reaching into storage from
+__main__ means the process cannot be reused as a library, and every caller
+inherits a database connection it never asked for.
+"""
+
+# SATISFIED. Storage is the bottom layer and must not know what calls it.
+[[module_rules]]
+id = "storage-is-the-bottom-layer"
+deny = { from = "storage", to = ["api", "entry"] }
+severity = "error"
+reason = "Storage must not import the layers above it."
+
+# VIOLATED. storage.py calls requests.get to fetch its schema.
+[[package_rules]]
+id = "http-calls-live-in-the-api"
+packages = ["requests"]
+allowed_in = ["api"]
+severity = "error"
+reason = """
+Network access belongs at the edge. A storage module that makes HTTP calls cannot
+be tested without a network, and a timeout there surfaces as a database error.
+"""

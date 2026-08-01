@@ -1,6 +1,6 @@
 # 12 — Known limitations
 
-Every limitation found while building the four language slices and the rule engine, in one place.
+Every limitation found while building the ten language providers and the rule engine, in one place.
 Each entry says what it costs and what it would take to fix.
 
 The register splits into two halves, and the split is the important part:
@@ -42,46 +42,105 @@ reported as a *missing* dependency — `ImportForm::PathReference` exists to enf
 `demo/rust/README.md` documents this deliberately.
 **Why it stays:** the alternative invents a missing dependency on every local type.
 
-### S3. Resolved-tree checks are unavailable for three of ten target languages
+### S3. Resolved-tree checks are unavailable for most of the ten target languages
 
-`version-conflict` and `diamond-dep` need a resolved graph.
+`version-conflict` and `diamond-dep` need a resolved graph — exact versions *and* edges. Most
+ecosystems ship a lockfile with only one of the two.
 
-| Ecosystem | Lockfile             | Resolved graph?                                                             |
-| --------- | -------------------- | --------------------------------------------------------------------------- |
-| npm       | `package-lock.json`  | yes                                                                         |
-| Cargo     | `Cargo.lock`         | yes                                                                         |
-| Go        | `go.sum`             | **no** — hashes for the whole module graph, no edges, not the MVS selection |
-| .NET      | `packages.lock.json` | yes, but opt-in and usually absent                                          |
-| Maven     | none                 | **no**                                                                      |
+| Ecosystem | Lockfile                          | Resolved graph?                                                             |
+| --------- | --------------------------------- | --------------------------------------------------------------------------- |
+| npm       | `package-lock.json`               | yes                                                                         |
+| Cargo     | `Cargo.lock`                      | yes                                                                         |
+| Python    | `uv.lock`, `poetry.lock`          | yes — but the environment is flat, see S7                                   |
+| Ruby      | `Gemfile.lock`                    | yes — but Bundler resolves flat, see S7                                     |
+| .NET      | `packages.lock.json`              | yes, but opt-in and usually absent                                          |
+| Go        | `go.sum`                          | **no** — hashes for the whole module graph, no edges, not the MVS selection |
+| Maven     | none                              | **no** — there is no lockfile at all                                        |
+| Gradle    | `gradle.lockfile`                 | **no** — versions per configuration, no edges; also opt-in                  |
+| Swift     | `Package.resolved`                | **no** — a flat list of pinned packages, no edges                           |
+| C++       | `conan.lock`, vcpkg baseline      | **no** — flat pinned references; vcpkg pins a registry commit, not a graph  |
 
-**Cost:** on Go, and on most Java and .NET repositories, two of the advertised checks never run.
+**Cost:** on five of the ten ecosystems, two of the advertised checks never run.
 **Why it stays:** obtaining the tree means running the resolver.
 **Mitigation:** `CheckStatus::Unavailable` with the ecosystem-specific reason, so silence is never
 mistaken for a clean result.
 
 ### S4. Manifests that are programs are read incompletely
 
-`build.gradle[.kts]`, `Package.swift`, `conanfile.py`, and `vitest.config.mts` are code. tropism parses
-the declarative subset and cannot see anything dynamic.
+`Gemfile`, `build.gradle[.kts]`, `Package.swift`, `conanfile.py`, and `vitest.config.mts` are code.
+tropism parses the declarative subset and cannot see anything dynamic.
+
+Every implemented case skips rather than guesses, and each has a regression test:
+`gem "rails-#{variant}"`, `.package(url: "\(base)/y.git")`, `self.requires(f"fmt/{self.version}")`,
+and `implementation libs.guava` all contribute *nothing*, because a package name that does not exist
+is worse in a report than a package that is missing from it. Gradle is the one exception, and it is
+deliberate: `implementation "org.x:y:$version"` has a real coordinate around an unknowable version,
+so the coordinate is kept and only the version is dropped.
 
 **Why it stays:** principle 1 — tropism never executes the repository it analyzes. This is a security
 property for the agent use case, not a convenience.
 
 ### S5. Import name ≠ package name, and the gap has no complete answer
 
-`import yaml` means `PyYAML`; `using Xunit` means `xunit`. Structural rules and a curated exception
-table cover most of it; the residue stays `Unresolved` rather than guessing.
+`import yaml` means `PyYAML`; `using Xunit` means `xunit`; `com.google.common` means
+`com.google.guava:guava`. Structural rules and a curated exception table cover most of it; the
+residue stays `Unresolved` rather than guessing.
 
-**Cost:** unresolved imports cap hygiene confidence for the whole project.
+Now measured across all ten. The gap is widest in Java, where a coordinate
+(`groupId:artifactId`) and an import (a package) are different namespaces with only a convention
+between them — and it closes entirely in exactly one ecosystem: **Swift states the mapping in the
+manifest**, in the target that uses the product (`.product(name: "Logging", package: "swift-log")`),
+so that provider needs no table at all.
+
+Java is also the one language where an unmatched import stays `Unresolved` rather than becoming a
+missing-dep finding. Maven puts a dependency's own dependencies on the compile classpath, so code can
+import a transitive artifact and compile cleanly; a coordinate guessed from a package prefix would
+have no artifactId in it.
+
+**Cost:** unresolved imports cap hygiene confidence for the whole project, and Java reports fewer
+missing dependencies than exist.
 **Why it stays:** the authoritative mapping lives in installed package metadata.
-**Not yet validated:** Python is the worst case and has not been attempted
-([09-product-review.md](09-product-review.md), risk 6).
 
 ### S6. License policy is out of scope
 
 `cargo-deny`-style licence checks need each dependency's licence metadata, which lives in the
 registry or an installed tree. Stated in [11-dependency-rules.md](11-dependency-rules.md) rather
 than half-implemented.
+
+### S7. A flat environment cannot have a diamond, so the check correctly finds nothing
+
+Python, Ruby, Swift, and Gradle install **one version of each package**. A diamond finding claims two
+dependents forced two *installed* copies; in a flat environment that cannot happen, so `diamond-dep`
+runs and reports nothing. That is the right answer rather than a gap — what such an ecosystem has
+instead is one version that some dependent is not getting, which is a resolution failure the package
+manager already refuses.
+
+A second consequence: a lockfile for a flat environment names an edge by *distribution*, not by copy.
+When a resolution forks — `uv.lock` locking `urllib3` twice for two interpreter ranges — an edge
+naming it is genuinely ambiguous, and the Python provider drops it rather than attaching it to an
+arbitrary copy (`demo/python`).
+
+### S8. A lockfile is feature- and target-agnostic, so a conflict may be one no build compiles
+
+Found by dogfooding, and it changes how the two resolved-tree checks should be read.
+
+Running tropism on this repository reports 17 findings, every one of them a correct statement about
+`Cargo.lock`. But `cargo tree --duplicates` shows only **three** duplicate sets in the graph actually
+compiled — `syn`, `hashbrown`, `foldhash`. The rest (`thiserror`, `bitflags`, `fixedbitset`,
+`cpufeatures`, `getrandom`, `r-efi`) are reachable only through `ratatui`'s optional `termwiz`
+backend, which is never enabled, or through another target platform entirely: `r-efi` is UEFI.
+
+`Cargo.lock` is resolved once for *all* feature combinations and *all* targets, and records no
+feature information whatsoever. The same is true of npm's `optionalDependencies` and of platform-
+specific entries in a `Gemfile.lock`. Deciding which copies a given build compiles needs the feature
+resolution of every dependency's own manifest — files that are not in the repository.
+
+**Cost:** `version-conflict` and `diamond-dep` overstate. A finding is true of the lockfile and may
+be irrelevant to every build anyone runs.
+**Why it stays:** feature resolution is a resolver step, and the dependencies' manifests are not
+present to resolve from.
+**Mitigation:** none yet. The honest fix is wording — these checks report what the lockfile resolved,
+not what the build compiles. Worth stating in the finding message itself.
 
 ---
 
@@ -245,6 +304,15 @@ Never implemented; reports `Unavailable` with that reason. Deferred in
 | D20 | C#       | `.sln` files are not parsed                                                     | projects are found by `.csproj` discovery instead, which is equivalent in practice                                                                                        |
 | D21 | C#       | conditional `ItemGroup`s are not evaluated                                      | every branch is taken, deliberately — the same choice as Rust `cfg` — which can overstate dependencies                                                                    |
 | D22 | C#       | `System.*` is treated as framework                                              | in older non-SDK projects some shipped as packages, so a genuinely missing reference can hide                                                                             |
+| D27 | Python   | `requirements.txt` `-r other.txt` includes are not followed                     | the included file is analyzed on its own if it is also named `requirements.txt`; otherwise its entries are invisible. Inlining it would put a finding's provenance on the wrong file |
+| D28 | Python   | `[build-system] requires` is not read                                           | build backends (`hatchling`, `setuptools`) are not recorded, so they can never be reported unused — which is the safe direction, since they are never imported             |
+| D29 | Ruby     | `.gemspec` is not a claimed manifest                                            | a gem whose dependencies live only in its gemspec reads as declaring nothing; `Gemfile` covers the application case, which is the common one                              |
+| D30 | Java     | Gradle version catalogs (`libs.versions.toml`) are not read                     | `implementation libs.guava` contributes nothing, so a catalog-based build looks like it declares fewer dependencies than it does                                          |
+| D31 | Java     | `<properties>` version placeholders are kept raw                                | `${spring.version}` is recorded as the requirement verbatim; no check needs the value yet                                                                                 |
+| D32 | Java     | Maven `<parent>` and multi-module inheritance are not resolved                  | a module inheriting dependencies from its parent POM shows only its own, so an import satisfied by an inherited dependency stays unresolved                               |
+| D33 | Swift    | a target with a custom `path:` is not found                                     | the file falls back to its directory as the module — less precise, never wrong                                                                                            |
+| D34 | C++      | include-path roots are a fixed list                                             | a project using an unconventional root (`headers/`, `api/`) gets component names that no `#include` matches, so its internal edges are lost                               |
+| D35 | C++      | `#include MACRO` and generated headers are invisible                            | a computed include names nothing readable and is skipped                                                                                                                  |
 
 ---
 

@@ -46,8 +46,8 @@ This is not negotiable, and it drives the design:
 
 ## Language scope
 
-Ten target languages. Each needs a manifest parser (declared deps), a lockfile parser (resolved
-tree), and import extraction from source.
+Ten target languages, **all implemented**. Each needs a manifest parser (declared deps), a lockfile
+parser (resolved tree), and import extraction from source.
 
 | Language   | Package manager | Manifest                              | Lockfile                                           |
 | ---------- | --------------- | ------------------------------------- | -------------------------------------------------- |
@@ -62,12 +62,26 @@ tree), and import extraction from source.
 | Swift      | SwiftPM         | `Package.swift`                       | `Package.resolved`                                 |
 | Ruby       | Bundler         | `Gemfile`                             | `Gemfile.lock`                                     |
 
+Only Cargo and npm produce a genuinely resolved *tree* — exact versions and edges. `uv.lock`,
+`poetry.lock`, and `Gemfile.lock` have both but describe a flat environment, so a diamond cannot
+occur in them. `go.sum`, `gradle.lockfile`, `Package.resolved`, and `conan.lock` have versions and
+no edges at all, and Maven has no lockfile whatsoever; those four report `Unavailable` with a
+reason naming the file.
+
 ### Manifests that are code, not data
 
-`build.gradle[.kts]` (Groovy/Kotlin), `Package.swift` (Swift), and `conanfile.py` (Python) are
-programs, not declarative documents. They cannot be fully resolved without executing them, which the
-constraint above forbids. Handle these by parsing the common declarative subset and reporting
-low confidence when a file uses dynamic constructs — never by executing it.
+`Gemfile` (Ruby), `build.gradle[.kts]` (Groovy/Kotlin), `Package.swift` (Swift), and `conanfile.py`
+(Python) are programs, not declarative documents. They cannot be fully resolved without executing
+them, which the constraint above forbids. All four are implemented by parsing the declarative subset
+**with a grammar** — the Ruby, Swift, and Python grammars respectively, and a line parser for Gradle
+— never by executing the file.
+
+The rule when a construct is dynamic is to contribute *nothing*, not to guess: `gem "rails-#{v}"`,
+`.package(url: "\(base)/y.git")`, `self.requires(f"fmt/{self.version}")`, and
+`implementation libs.guava` all yield no dependency, because a package name that does not exist is
+worse in a report than one missing from it. Each has a regression test. Gradle is the single
+deliberate exception — `implementation "org.x:y:$version"` has a real coordinate wrapped around an
+unknowable version, so the coordinate is kept and only the version dropped.
 
 Note also that Maven has no lockfile, and Gradle/NuGet lockfiles are opt-in and often absent. For
 these, resolved-tree checks will frequently be unavailable; the manifest-hygiene checks still work.
@@ -148,26 +162,35 @@ invoking a package manager, which gets reported rather than resolved — or genu
 document separates the two, because conflating them is how the core constraint gets traded away by
 accident.
 
-Add to it rather than rediscovering the same gap. The highest-priority deferred item is the
-repo-wide module graph: cycle detection currently runs per project, so a cycle spanning two packages
-is invisible to the check named after it.
+Add to it rather than rediscovering the same gap.
+
+The most important entry to read before touching the resolved-tree checks is **S8**: a lockfile is
+resolved for every feature combination and every target platform and records neither, so
+`version-conflict` and `diamond-dep` describe the *lockfile*, not the build. Dogfooding measures the
+gap — 17 findings against this repository, all correct about `Cargo.lock`, against three duplicate
+sets that `cargo tree --duplicates` says actually compile. The rest come from an optional `ratatui`
+backend that is never enabled and from a UEFI-only crate. Nothing is wrong with the lockfile and
+`cargo update` changes none of it.
 
 ## Design specification
 
 `design/` holds the spec — architecture, data model, the language-provider trait, per-check
 algorithms, CLI/MCP surfaces, testing strategy, verified crate choices, and open questions. Start at
 [design/README.md](design/README.md), and read the relevant document before implementing in that
-area: most of it is not re-derivable from the code, because most of it is not built yet.
+area: much of it is not re-derivable from the code, and the parts still unbuilt (the MCP server, the
+remaining rule kinds) exist only there.
 
 The build order is at the end of [design/07-open-questions.md](design/07-open-questions.md).
 
 ## Layout
 
 ```
-demo/               deliberately-broken sample projects, one per language; excluded from
-                    the cargo workspace, asserted by crates/tropism-lang/tests/demos.rs
+demo/               deliberately-broken sample projects, one per language (go, javascript, rust,
+                    dotnet, python, ruby, java, swift, cpp); excluded from the cargo workspace,
+                    asserted by crates/tropism-lang/tests/demos.rs
 crates/tropism-core/   model, discovery, LanguageProvider trait, analyzers, report contract
-crates/tropism-lang/   provider implementations, one feature-gated module per language
+crates/tropism-lang/   provider implementations, one feature-gated module per language — go,
+                    javascript, rust, csharp, python, ruby, java, swift, cpp
 crates/tropism/    binary `tropism`      — clap front-end, text and JSON renderers
 crates/tropism-mcp/    binary `tropism-mcp`  — placeholder until build-order step 6
 ```
@@ -186,8 +209,9 @@ cargo fmt --all
 cargo insta accept                           # after intentional renderer changes
 cargo build -p tropism --no-default-features # must still build without ratatui
 
-./scripts/demo.sh                            # guided tour across all three languages
-./scripts/demo.sh rust                       # one language: go | javascript | rust
+./scripts/demo.sh                            # guided tour across every language
+./scripts/demo.sh rust                       # one: go | javascript | rust | dotnet
+                                             #      python | ruby | java | swift | cpp
 ./scripts/demo.sh self                       # tropism analyzing tropism
 ./scripts/demo.sh --tui                      # ...ending in the interactive browser
 ./target/debug/tropism analyze .                # dogfood directly
@@ -224,7 +248,12 @@ A JavaScript/TypeScript slice is also complete: `package.json`, `package-lock.js
 resolved graph, unlike `go.sum`), tree-sitter extraction for JS/TS/TSX, and all six checks running.
 `version-conflict` and `diamond-dep` execute for the first time here.
 
-Not built: the other six languages, the unimplemented rule kinds above, and the MCP server.
+All ten target languages are now built. The five added last — Python, Ruby, Java, Swift, and C++ —
+each have a provider, a demo under `demo/`, and assertions in `crates/tropism-lang/tests/demos.rs`.
+No trait change was needed for any of them, which is the first real evidence that
+`LanguageProvider` is the right shape.
+
+Not built: the unimplemented rule kinds above, and the MCP server.
 
 **Before extending the checks, read [design/10-js-evaluation.md](design/10-js-evaluation.md).**
 Manifest hygiene (`unused-dep` / `missing-dep`) measured a **63% false-positive rate** on real
@@ -233,12 +262,42 @@ HTML `<script src>`, config files, framework strings, and CLI arguments that tro
 an installed `node_modules` — which the hermetic constraint forbids. Cycle detection, by contrast,
 was sound on every repository. Do not turn hygiene on by default or let it gate CI.
 
+### What the last five languages taught
+
+- **Nine file→module strategies for ten languages.** Go: directory. JS and Ruby: file path. Rust:
+  path→module path. C# and Java: the declaration in the source. Python: dotted path with `src/`
+  stripped and `__init__` collapsed. Swift: the *target*, which is a name in the manifest. C++: the
+  component — path with the include-path root stripped and the extension dropped, so a header and
+  its translation unit are one module. The mapping belongs to the provider; the pipeline should
+  never assume it.
+- **`import` order matters when translating names.** The Python provider translates an import name
+  to a distribution *before* comparing against the manifest. Doing it the other way round makes
+  `import yaml` miss a declared `PyYAML`, and the project then collects a false missing-dep on
+  `pyyaml` and a false unused-dep on `PyYAML` — two findings, both wrong, from one correct line.
+  There is a regression test named after this.
+- **Swift is the only ecosystem that solves import→package itself.** The manifest states the
+  mapping, in the target that uses it: `.product(name: "Logging", package: "swift-log")`. So the
+  Swift provider carries no curated table, and records a dependency under its *product* name — with
+  one exception, a package no target uses, which keeps its own identity so `unused-dep` can report
+  it.
+- **A flat environment cannot have a diamond.** Python, Ruby, and Swift install one version of each
+  package, so `diamond-dep` runs and correctly finds nothing. Do not "fix" this. What a fork in a
+  `uv.lock` means is a platform-conditional resolution, which is a version conflict and never a
+  diamond — and an edge naming a forked package is ambiguous, so the Python provider drops it rather
+  than attaching it to an arbitrary copy.
+- **Only Cargo and npm produce a real resolved tree.** Maven has no lockfile at all;
+  `gradle.lockfile`, `Package.resolved`, and `conan.lock` are flat lists with no edges. Each returns
+  `Ok(None)` from `parse_lockfile` with a `resolved_tree_note`, exactly as Go does for `go.sum`.
+  Returning the flat list would let `diamond-dep` report a confident `0 findings` about a graph it
+  never had.
+- **Two grammars do double duty.** `conanfile.py` is parsed with the Python grammar and the
+  `Gemfile` with the Ruby one. That is what makes "manifests that are code" tractable without a
+  bespoke parser per format, and neither file is ever executed.
+
 ### C# semantics worth knowing
 
-- **A module is the declared namespace, not the path.** Four languages have now needed four
-  different file→module strategies (Go: directory; JS: file path; Rust: path→module path; C#:
-  the `namespace` declaration read from the file), which is the clearest evidence the mapping
-  belongs to the provider rather than the pipeline.
+- **A module is the declared namespace, not the path.** The first four languages needed four
+  different file→module strategies, and the last five added four more — see above.
 - **`PrivateAssets="all"` is `DepKind::Tooling`.** A Roslyn analyzer participates in the build and
   is never referenced from code — the same shape as an npm package invoked from `scripts`.
 - **`System.*` is treated as framework.** In older non-SDK projects some of it shipped as packages,

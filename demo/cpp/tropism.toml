@@ -1,0 +1,34 @@
+# Ruleset for the C++ demo. Specification: design/11-dependency-rules.md
+
+schema_version = 1
+
+# A C++ component is a header and its translation unit, so a module names both.
+# Mapping only the header would leave store.cpp in no module, and a rule about the
+# store would then say nothing about the code that implements it.
+[modules]
+entry = "src/main.cpp"
+store = { paths = ["include/shop/store.hpp", "src/store.cpp"] }
+invoice = { paths = ["include/shop/invoice.hpp", "src/invoice.cpp"] }
+
+# VIOLATED. main.cpp includes shop/invoice.hpp directly instead of reaching the
+# billing surface through the store.
+[[module_rules]]
+id = "the-entrypoint-goes-through-the-store"
+allow_only = { from = "entry", to = ["store"] }
+severity = "error"
+reason = """
+main.cpp wires one collaborator. Including the invoice header pulls its whole
+transitive include set into the entrypoint's translation unit, and every change to
+billing recompiles the binary.
+"""
+
+# VIOLATED. store.cpp logs through spdlog.
+[[package_rules]]
+id = "logging-is-configured-at-the-entrypoint"
+packages = ["spdlog"]
+allowed_in = ["entry"]
+severity = "error"
+reason = """
+A library component that logs decides its own output format for every consumer.
+The entrypoint owns the sinks and the level; everything below it returns errors.
+"""

@@ -1,0 +1,32 @@
+// A Gradle module beside a Maven one, so both manifest parsers run in this demo.
+//
+// build.gradle is a program. tropism reads the declarative subset — a configuration
+// name followed by a quoted coordinate — and skips anything that would need the
+// script to be evaluated.
+
+plugins {
+    id 'java'
+}
+
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    implementation 'org.slf4j:slf4j-api:2.0.13'
+
+    // The sibling Maven module, by coordinate. This is what makes the edge between
+    // the two projects visible to the rule engine.
+    implementation 'com.example:shop-api:1.0.0'
+
+    // PLANTED: declared and never imported.
+    implementation 'com.fasterxml.jackson.core:jackson-databind:2.17.0'
+
+    // TRAP: the version is interpolated. The coordinate is still real, so it is
+    // kept; only the version is dropped rather than invented.
+    runtimeOnly "org.postgresql:postgresql:$postgresVersion"
+
+    // TRAP: a version catalog reference names nothing without reading
+    // gradle/libs.versions.toml, so it contributes nothing rather than a guess.
+    testImplementation libs.junit.jupiter
+}

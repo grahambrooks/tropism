@@ -17,6 +17,12 @@ target/
 # MSVC Windows builds of rustc generate these, which store debugging information
 *.pdb
 
+# demo/swift is a real SwiftPM package, so an editor with SourceKit will resolve and
+# build it if it is opened. The manifest and Package.resolved are committed; the
+# 100MB of build output is not. The demos are analyzed by tropism, never built by us.
+demo/swift/.build/
+demo/**/.swiftpm/
+
 # RustRover
 #  JetBrains specific template is maintained in a separate JetBrains.gitignore that can
 #  be found at https://github.com/github/gitignore/blob/main/Global/JetBrains.gitignore

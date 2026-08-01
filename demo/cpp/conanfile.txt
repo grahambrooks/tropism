@@ -1,0 +1,21 @@
+[requires]
+fmt/10.2.1
+spdlog/1.13.0
+# PLANTED: declared and never included.
+nlohmann_json/3.11.3
+
+[tool_requires]
+# TRAP: a build tool. It is never included from source, so an absent include is
+# expected rather than suspicious.
+cmake/3.29.0
+
+[test_requires]
+# TRAP: included only from tests/.
+gtest/1.14.0
+
+[generators]
+CMakeDeps
+CMakeToolchain
+
+[layout]
+cmake_layout

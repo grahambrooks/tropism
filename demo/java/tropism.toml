@@ -1,0 +1,35 @@
+# Ruleset for the Java demo. Specification: design/11-dependency-rules.md
+#
+# Two build tools, one ruleset. The rule engine evaluates repo-wide, so a Gradle
+# module reaching into a Maven one is an edge like any other.
+
+schema_version = 1
+
+[modules]
+api = "api/**"
+worker = "worker/**"
+
+# VIOLATED, twice. Reconciler.java imports com.example.shop.api.orders, and
+# build.gradle declares the coordinate that lets it — the declaration and the
+# import are separate findings, because a rule broken in a manifest is still
+# broken.
+[[module_rules]]
+id = "the-worker-consumes-events"
+deny = { from = "worker", to = ["api"] }
+severity = "error"
+reason = """
+The worker reads the event stream and owns its own model. Importing the api's
+classes couples a background process to an HTTP module's release cycle, and the
+two stop being independently deployable.
+"""
+
+# VIOLATED. OrderStore imports com.google.common.collect, which is guava.
+[[package_rules]]
+id = "guava-stays-in-the-worker"
+packages = ["com.google.guava:guava"]
+allowed_in = ["worker"]
+severity = "error"
+reason = """
+The api module ships in a size-constrained container and guava is the largest
+dependency in the build. The batch worker has no such limit.
+"""

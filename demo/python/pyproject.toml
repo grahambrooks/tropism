@@ -1,0 +1,19 @@
+[project]
+name = "shop"
+version = "0.1.0"
+requires-python = ">=3.12"
+dependencies = [
+  "requests>=2.31",
+  # Declared as PyYAML; imported as `yaml`. Nothing in either name implies the
+  # other, and tropism must not report this as both unused and missing.
+  "PyYAML>=6.0",
+  # PLANTED: declared, never imported.
+  "rich>=13.7",
+]
+
+[dependency-groups]
+dev = ["pytest>=8.0"]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"

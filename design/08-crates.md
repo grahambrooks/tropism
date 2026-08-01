@@ -1,7 +1,9 @@
 # 08 — Crate selection
 
-Verified against the crates.io API on **2026-07-30**, and adopted crates additionally proven by compiling and running. Re-verify before adding anything new; the
-point of this document is that nobody has to take an earlier guess on faith.
+Verified against the crates.io API on **2026-07-30**, and the five grammars added with the remaining
+language providers on **2026-08-01**. Adopted crates are additionally proven by compiling and
+running. Re-verify before adding anything new; the point of this document is that nobody has to take
+an earlier guess on faith.
 
 ## Adopted
 
@@ -27,14 +29,41 @@ analyzer shipping unused dependencies would be a poor advertisement.
 | `tree-sitter`       | 0.26.11 | 2026-07-12   | Import extraction, with per-language grammars |
 | `toml`              | 1.1.4   | 2026-07-28   | Cargo.toml, Cargo.lock, and the ruleset       |
 | `globset`           | 0.4.19  | 2026-07-15   | Module path globs in the ruleset              |
-| `quick-xml`         | 0.41.0  | 2026-06-29   | `.csproj` parsing                             |
+| `quick-xml`         | 0.41.0  | 2026-06-29   | `.csproj` and `pom.xml` parsing                |
+
+### tree-sitter grammars
+
+One per language, all confirmed to load against the `tree-sitter` 0.26 runtime before anything was
+built on them. Every one exposes the modern `LANGUAGE: LanguageFn` constant rather than the older
+`language()` function, so the ABI is uniform across all nine.
+
+| Crate                    | Version | Owner                                | Used for                          |
+| ------------------------ | ------- | ------------------------------------ | --------------------------------- |
+| `tree-sitter-go`         | 0.25.0  | tree-sitter                          | Go imports                        |
+| `tree-sitter-javascript` | 0.25.0  | tree-sitter                          | JS imports                        |
+| `tree-sitter-typescript` | 0.23.2  | tree-sitter                          | TS/TSX imports                    |
+| `tree-sitter-rust`       | 0.24.2  | tree-sitter                          | Rust `use` and path references    |
+| `tree-sitter-c-sharp`    | 0.23.5  | tree-sitter                          | C# `using`                        |
+| `tree-sitter-python`     | 0.25.0  | tree-sitter                          | Python imports, and `conanfile.py` |
+| `tree-sitter-java`       | 0.23.5  | tree-sitter                          | Java imports                      |
+| `tree-sitter-ruby`       | 0.23.1  | tree-sitter                          | Ruby `require`, and the `Gemfile` |
+| `tree-sitter-cpp`        | 0.23.4  | tree-sitter                          | `#include`                        |
+| `tree-sitter-swift`      | 0.7.3   | alex-pinkus                          | Swift imports, and `Package.swift` |
+
+`tree-sitter-swift` is the one grammar not under the `tree-sitter` organisation. It is the
+de-facto Swift grammar — the one Zed and Neovim use — and it is the only maintained option, so the
+alternative was hand-parsing a language with no other parser available. Worth re-checking at each
+upgrade for that reason.
+
+Two grammars do double duty, which is what makes "manifests that are code" tractable at all:
+`conanfile.py` is parsed with the Python grammar and the `Gemfile` with the Ruby one, so neither
+needs a bespoke parser and neither is ever executed.
 
 Queued for the stages that need them, verified but not yet declared:
 
 | Crate         | Version | Last release | Needed at                               |
 | ------------- | ------- | ------------ | --------------------------------------- |
 | `rayon`       | 1.12.0  | 2026-04-14   | Whenever parsing becomes the bottleneck |
-| `quick-xml`   | 0.41.0  | 2026-06-29   | `pom.xml` when Java lands               |
 | `semver`      | 1.0.28  | 2026-04-04   | Cargo-flavoured `VersionOps`            |
 | `rmcp`        | 3.0.1   | 2026-07-29   | The MCP server                          |
 | `serde-sarif` | 0.8.0   | 2025-05-09   | `--format sarif` for CI annotations     |

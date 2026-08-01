@@ -2,7 +2,8 @@
 
 A dependency analyzer for polyglot repositories. It finds import cycles, manifest problems, and
 duplicated packages, and it enforces the architecture rules your team actually wrote down — across
-Go, JavaScript/TypeScript, Rust, and C#, through one CLI and one JSON contract.
+Go, JavaScript/TypeScript, Rust, C#, Python, Ruby, Java, Swift, and C++, through one CLI and one
+JSON contract.
 
 **It never invokes a package manager and never executes the code it analyzes.** tropism works on a
 fresh checkout with no toolchain, no network, and no installed dependencies, by reading manifests,
@@ -71,6 +72,7 @@ Or take the guided tour, which runs against deliberately-broken sample projects 
 ```sh
 ./scripts/demo.sh              # every language, plus tropism analyzing itself
 ./scripts/demo.sh dotnet       # one language: go | javascript | rust | dotnet
+                               #               python | ruby | java | swift | cpp
 ./scripts/demo.sh --tui        # end in the interactive browser
 ```
 
@@ -81,8 +83,8 @@ Or take the guided tour, which runs against deliberately-broken sample projects 
 | `cycle`            | Import cycles between modules             | **Sound.** Reads only import syntax                             |
 | `module-rule`      | Violations of your architecture rules     | **Sound.** A violation is a line of source                      |
 | `package-rule`     | Banned, unapproved, or misplaced packages | **Sound.** Same                                                 |
-| `version-conflict` | A package installed at several versions   | **Sound** where a real lockfile exists                          |
-| `diamond-dep`      | Dependents that disagreed about a version | **Sound** where a real lockfile exists                          |
+| `version-conflict` | A package installed at several versions   | Sound about the **lockfile**; a lockfile is feature-agnostic    |
+| `diamond-dep`      | Dependents that disagreed about a version | Same. Cannot fire at all in a flat ecosystem                    |
 | `missing-dep`      | Imported but not declared                 | Good. Capped at Medium confidence                               |
 | `unused-dep`       | Declared but never imported               | **Weak — 63% false positives on real JS.** Do not gate CI on it |
 | `dependency-bloat` | —                                         | Not implemented; reports unavailable                            |
@@ -93,16 +95,34 @@ Those reliability ratings are measured, not asserted. The method and the numbers
 *presence* of an import, which is a fact about a line of source. An unused dependency is an
 *absence*, and absence cannot be proven without an installed dependency tree.
 
+**Read `version-conflict` and `diamond-dep` as statements about the lockfile, not about your build.**
+Dogfooding measured the gap: tropism reports 17 of them against this repository, every one a correct
+reading of `Cargo.lock`, while `cargo tree --duplicates` finds only three duplicate sets in the graph
+that actually compiles. A lockfile is resolved once for every feature combination and every target
+platform and records neither, so it contains copies no build ever links — here, an optional terminal
+backend that is never enabled and a UEFI-only crate. Deciding otherwise needs the feature resolution
+of each dependency's own manifest, which is not in the repository. See S8 in
+[design/12-known-limitations.md](design/12-known-limitations.md).
+
 ## Language support
 
-| Language                | Manifest       | Lockfile             | Resolved-tree checks                              |
-| ----------------------- | -------------- | -------------------- | ------------------------------------------------- |
-| Go                      | `go.mod`       | `go.sum`             | **No** — `go.sum` is hashes, not a resolved graph |
-| JavaScript / TypeScript | `package.json` | `package-lock.json`  | Yes                                               |
-| Rust                    | `Cargo.toml`   | `Cargo.lock`         | Yes                                               |
-| C# / .NET               | `*.csproj`     | `packages.lock.json` | Yes, when present (it is opt-in)                  |
+| Language                | Manifest                                     | Lockfile                    | Resolved-tree checks                                    |
+| ----------------------- | -------------------------------------------- | --------------------------- | ------------------------------------------------------- |
+| Go                      | `go.mod`                                     | `go.sum`                    | **No** — hashes, not a resolved graph                   |
+| JavaScript / TypeScript | `package.json`                               | `package-lock.json`         | Yes                                                     |
+| Rust                    | `Cargo.toml`                                 | `Cargo.lock`                | Yes                                                     |
+| C# / .NET               | `*.csproj`                                   | `packages.lock.json`        | Yes, when present (it is opt-in)                        |
+| Python                  | `pyproject.toml`, `requirements.txt`         | `uv.lock`, `poetry.lock`    | Yes — but the environment is flat, so no diamonds exist |
+| Ruby                    | `Gemfile`                                    | `Gemfile.lock`              | Yes — Bundler resolves flat, so a conflict cannot occur |
+| Java                    | `pom.xml`, `build.gradle[.kts]`              | `gradle.lockfile`           | **No** — Maven has none; Gradle's carries no edges      |
+| Swift                   | `Package.swift`                              | `Package.resolved`          | **No** — a flat pin list with no edges                  |
+| C++                     | `conanfile.txt/.py`, `vcpkg.json`            | `conan.lock`                | **No** — flat pinned references, no edges               |
 
-Python, Java, C++, Swift, and Ruby are specified but not built.
+All ten target languages are built. Four of the manifests are *programs* rather than data —
+`Gemfile`, `Package.swift`, `conanfile.py`, and `build.gradle` — and tropism parses the declarative
+subset of each with a grammar rather than executing it. Anything dynamic contributes nothing:
+`gem "rails-#{variant}"` names no gem that can be known without running the file, and a package that
+does not exist is worse in a report than one that is missing from it.
 
 ## Architecture rules
 

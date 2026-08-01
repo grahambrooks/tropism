@@ -5,9 +5,17 @@
 price of never invoking a package manager, reported rather than fixed — and those merely deferred.
 Read it before planning work, and add to it rather than discovering the same gap twice.
 
-**Status:** four vertical slices are complete — Go, JavaScript/TypeScript, and Rust — plus the
-dependency ruleset. tropism is run against itself, and against a deliberately-broken demo project per
-language. The remaining seven languages and the MCP server are not built.
+**Status:** all ten target languages are built — Go, JavaScript/TypeScript, Rust, C#, Python, Ruby,
+Java, Swift, and C++ — plus the dependency ruleset. tropism is run against itself and against a
+deliberately-broken demo project per language, each asserted by
+`crates/tropism-lang/tests/demos.rs`. The MCP server and three rule kinds are not built.
+
+The last five languages needed **no trait change**, which is the first real evidence that
+`LanguageProvider` is the right shape: the first four each forced one
+(`manifest_extensions`, `known_modules`, `resolve_cross_project`, `ImportForm`).
+
+Previously: four vertical slices are complete — Go, JavaScript/TypeScript, Rust, and C# — plus the
+dependency ruleset. The remaining six languages and the MCP server are not built.
 
 Previously: two vertical slices are complete — Go, and JavaScript/TypeScript with a real resolved
 tree, so all six checks have now run. The remaining eight languages and the MCP server are not

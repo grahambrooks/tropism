@@ -157,3 +157,25 @@ the importing file; `ProjectContext` needs the project's own file list). The ord
 
 The trait will be wrong the first time. Adding the second language is what corrects it, which is why
 it comes before the remaining eight rather than after two more Go features.
+
+**Revised again, after all ten languages.** Steps 1 and 2 of the previous revision are done: the
+repo-wide graph landed with project-scoped cycles, and the ruleset is enforced on this repository.
+Step 4 — "more languages, last" — is now also done, and it answered its own question. The first four
+languages forced four trait changes; the last five forced **none**. `LanguageProvider` converged.
+
+What the five did produce is a sharper map of where the *ecosystems* differ, which is worth more than
+another trait method:
+
+- Only Cargo and npm ship a resolved tree with edges. Four of the five new ecosystems ship a flat
+  list, and Maven ships nothing.
+- Four of the ten manifests are programs. All four are now parsed with a grammar, and two of them
+  reuse a grammar already in the tree (`conanfile.py` → Python, `Gemfile` → Ruby).
+- Swift is the only ecosystem that states the import→package mapping itself, which is the one clean
+  answer to S5 anywhere in the ten.
+
+The remaining order is unchanged and short:
+
+1. **The MCP server** — the last unbuilt surface, over an analysis core now proven across ten
+   languages and nine demos.
+2. **The unimplemented rule kinds** — `layers`, `require`, `transitive`, and version constraints,
+   all currently rejected at parse time rather than silently ignored.

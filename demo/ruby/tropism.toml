@@ -1,0 +1,37 @@
+# Ruleset for the Ruby demo. Specification: design/11-dependency-rules.md
+
+schema_version = 1
+
+[modules]
+entry = "lib/shop.rb"
+client = "lib/shop/client.rb"
+store = "lib/shop/store.rb"
+
+# VIOLATED. lib/shop.rb requires the store directly instead of going through the
+# client it was given for exactly this purpose.
+[[module_rules]]
+id = "entrypoint-goes-through-the-client"
+allow_only = { from = "entry", to = ["client"] }
+severity = "error"
+reason = """
+The entrypoint composes one collaborator. Requiring the store from it means every
+consumer of this gem loads pg, whether or not they have a database.
+"""
+
+# SATISFIED. The store is the bottom layer and knows nothing above it.
+[[module_rules]]
+id = "store-is-the-bottom-layer"
+deny = { from = "store", to = ["entry", "client"] }
+severity = "error"
+reason = "Storage must not require the layers above it."
+
+# VIOLATED. store.rb calls Faraday.get to warm a cache.
+[[package_rules]]
+id = "http-stays-in-the-client"
+packages = ["faraday"]
+allowed_in = ["client"]
+severity = "error"
+reason = """
+One place makes HTTP calls. A store that reaches the network cannot be tested
+without one, and its timeouts surface to callers as database errors.
+"""

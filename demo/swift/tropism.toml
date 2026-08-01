@@ -1,0 +1,39 @@
+# Ruleset for the Swift demo. Specification: design/11-dependency-rules.md
+
+schema_version = 1
+
+[modules]
+cli = "Sources/ShopCLI/**"
+core = "Sources/ShopCore/**"
+store = "Sources/ShopStore/**"
+
+# VIOLATED. main.swift imports ShopStore, and Package.swift declares the target
+# dependency that lets it.
+[[module_rules]]
+id = "the-executable-composes-core"
+allow_only = { from = "cli", to = ["core"] }
+severity = "error"
+reason = """
+The executable is a thin shell over ShopCore. Linking the store into it means the
+command cannot run without a database, and the library stops being the seam the
+package was split along.
+"""
+
+# SATISFIED. ShopCore is the bottom module and knows nothing above it.
+[[module_rules]]
+id = "core-is-the-bottom-module"
+deny = { from = "core", to = ["cli", "store"] }
+severity = "error"
+reason = "SwiftPM rejects a target cycle outright; this rule states the direction."
+
+# VIOLATED. OrderStore.swift imports Logging.
+[[package_rules]]
+id = "logging-is-configured-once"
+packages = ["Logging"]
+allowed_in = ["core"]
+severity = "error"
+reason = """
+One module owns the logging handler so the label hierarchy and the bootstrap stay
+in one place. A second Logger in the store means two configurations and log lines
+that vanish depending on which was bootstrapped first.
+"""

@@ -1,0 +1,12 @@
+source "https://rubygems.org"
+
+ruby "3.3.0"
+
+gem "faraday", "~> 2.9"
+gem "pg", "~> 1.5"
+# PLANTED: declared and never required.
+gem "awesome_print", "~> 1.9"
+
+group :development, :test do
+  gem "rspec", "~> 3.13"
+end

@@ -1,0 +1,109 @@
+version = 1
+requires-python = ">=3.12"
+
+[[package]]
+name = "shop"
+version = "0.1.0"
+source = { editable = "." }
+dependencies = [
+    { name = "pyyaml" },
+    { name = "requests" },
+    { name = "rich" },
+]
+
+[[package]]
+name = "requests"
+version = "2.31.0"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "certifi" },
+    { name = "charset-normalizer" },
+    { name = "idna" },
+    { name = "urllib3" },
+]
+
+[[package]]
+name = "rich"
+version = "13.7.1"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "markdown-it-py" },
+    { name = "pygments" },
+]
+
+[[package]]
+name = "markdown-it-py"
+version = "3.0.0"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "mdurl" },
+]
+
+[[package]]
+name = "mdurl"
+version = "0.1.2"
+source = { registry = "https://pypi.org/simple" }
+
+[[package]]
+name = "pygments"
+version = "2.17.2"
+source = { registry = "https://pypi.org/simple" }
+
+[[package]]
+name = "pyyaml"
+version = "6.0.1"
+source = { registry = "https://pypi.org/simple" }
+
+[[package]]
+name = "certifi"
+version = "2024.2.2"
+source = { registry = "https://pypi.org/simple" }
+
+[[package]]
+name = "charset-normalizer"
+version = "3.3.2"
+source = { registry = "https://pypi.org/simple" }
+
+[[package]]
+name = "idna"
+version = "3.6"
+source = { registry = "https://pypi.org/simple" }
+
+# PLANTED: the resolution forked. Older interpreters get the 1.x line, newer ones
+# the 2.x line, so the same name is locked at two versions and the code that runs
+# differs by platform. A flat environment installs only one of them, which is why
+# this is a version conflict and never a diamond.
+[[package]]
+name = "urllib3"
+version = "1.26.18"
+source = { registry = "https://pypi.org/simple" }
+resolution-markers = [
+    "python_full_version < '3.10'",
+]
+
+[[package]]
+name = "urllib3"
+version = "2.2.1"
+source = { registry = "https://pypi.org/simple" }
+resolution-markers = [
+    "python_full_version >= '3.10'",
+]
+
+[[package]]
+name = "pytest"
+version = "8.1.1"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "iniconfig" },
+    { name = "pluggy" },
+]
+
+[[package]]
+name = "iniconfig"
+version = "2.0.0"
+source = { registry = "https://pypi.org/simple" }
+
+[[package]]
+name = "pluggy"
+version = "1.4.0"
+source = { registry = "https://pypi.org/simple" }

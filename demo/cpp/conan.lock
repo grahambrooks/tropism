@@ -1,0 +1,13 @@
+{
+    "version": "0.5",
+    "requires": [
+        "spdlog/1.13.0#a5e1c0b7e6b9d1d0f0f0f6d6a2a1b3c4%1710000000.0",
+        "nlohmann_json/3.11.3#1d0e0b1e0a0f0e0d0c0b0a0908070605%1709000000.0",
+        "fmt/10.2.1#5b7f6d5e3c1a0b9f8e7d6c5b4a392817%1708000000.0"
+    ],
+    "build_requires": [
+        "cmake/3.29.0#0f1e2d3c4b5a69788796a5b4c3d2e1f0%1707000000.0"
+    ],
+    "python_requires": [],
+    "config_requires": []
+}

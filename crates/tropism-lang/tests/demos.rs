@@ -368,6 +368,406 @@ fn dotnet_demo_has_no_unexpected_findings() {
     );
 }
 
+// --- Python -----------------------------------------------------------------
+
+/// Python permits a module cycle and fails only at import time, on whichever half
+/// happens to be imported second.
+#[test]
+fn python_demo_finds_the_module_cycle() {
+    let report = analyze("python");
+    let cycles = messages(&report, CheckId::Cycle);
+    assert_eq!(cycles.len(), 1, "got {cycles:?}");
+    assert!(cycles[0].contains("2 modules"), "got {cycles:?}");
+}
+
+#[test]
+fn python_demo_finds_the_hygiene_problems() {
+    let report = analyze("python");
+    assert!(mentions(&report, CheckId::UnusedDep, "rich"));
+    assert!(mentions(&report, CheckId::MissingDep, "httpx"));
+}
+
+/// The import→package problem in its sharpest form: `import yaml` is the `PyYAML`
+/// distribution, and comparing the two names literally produces a false unused
+/// *and* a false missing from one correct line.
+#[test]
+fn python_demo_does_not_trip_on_its_traps() {
+    let report = analyze("python");
+    for trap in ["PyYAML", "pyyaml", "yaml", "pytest", "os", "dataclasses"] {
+        for check in [CheckId::UnusedDep, CheckId::MissingDep] {
+            assert!(!mentions(&report, check, trap), "{check} tripped on {trap}");
+        }
+    }
+}
+
+/// A forked resolution locks one name at two versions, and only one of them is
+/// ever installed — a conflict, and never the diamond it superficially resembles.
+#[test]
+fn python_demo_reports_the_forked_resolution_as_a_conflict_not_a_diamond() {
+    let report = analyze("python");
+    assert!(mentions(&report, CheckId::VersionConflict, "urllib3"));
+    assert_eq!(
+        report.projects[0].checks[&CheckId::DiamondDep],
+        CheckStatus::Ran { finding_count: 0 },
+        "a flat environment installs one copy, so there is nothing to disagree over"
+    );
+}
+
+#[test]
+fn python_demo_enforces_its_rules() {
+    let messages = rule_messages(&analyze("python"));
+    assert!(
+        messages
+            .iter()
+            .any(|m| m.contains("`entry` may depend only on `api`")),
+        "got {messages:?}"
+    );
+    assert!(
+        messages
+            .iter()
+            .any(|m| m.contains("requests") && m.contains("restricted to")),
+        "got {messages:?}"
+    );
+}
+
+#[test]
+fn python_demo_has_no_unexpected_findings() {
+    assert_no_unexpected(
+        &analyze("python"),
+        &["cycle", "rich", "httpx", "urllib3", "`entry`", "requests"],
+    );
+}
+
+// --- Ruby -------------------------------------------------------------------
+
+/// `require` is idempotent, so a Ruby cycle never raises at load — it resolves to
+/// whichever file loaded first, and the other sees a half-defined constant.
+#[test]
+fn ruby_demo_finds_the_require_cycle() {
+    let report = analyze("ruby");
+    let cycles = messages(&report, CheckId::Cycle);
+    assert_eq!(cycles.len(), 1, "got {cycles:?}");
+    assert!(cycles[0].contains("2 modules"), "got {cycles:?}");
+}
+
+#[test]
+fn ruby_demo_finds_the_hygiene_problems() {
+    let report = analyze("ruby");
+    assert!(mentions(&report, CheckId::UnusedDep, "awesome_print"));
+    assert!(mentions(&report, CheckId::MissingDep, "nokogiri"));
+}
+
+/// `faraday/retry` is either a file inside `faraday` or the `faraday-retry` gem,
+/// and `shop/order` is this project's own file found through the `lib/` load path.
+#[test]
+fn ruby_demo_does_not_trip_on_its_traps() {
+    let report = analyze("ruby");
+    for trap in ["faraday-retry", "shop", "rspec", "json", "pg"] {
+        for check in [CheckId::UnusedDep, CheckId::MissingDep] {
+            assert!(!mentions(&report, check, trap), "{check} tripped on {trap}");
+        }
+    }
+}
+
+/// Bundler resolves flat and refuses to write a lockfile with two versions of one
+/// gem, so both resolved-tree checks run and correctly find nothing.
+#[test]
+fn ruby_demo_reports_the_resolved_tree_checks_as_clean_not_absent() {
+    let report = analyze("ruby");
+    for check in [CheckId::VersionConflict, CheckId::DiamondDep] {
+        assert_eq!(
+            report.projects[0].checks[&check],
+            CheckStatus::Ran { finding_count: 0 },
+            "{check}: Gemfile.lock is a resolved tree, so the check runs"
+        );
+    }
+}
+
+#[test]
+fn ruby_demo_enforces_its_rules() {
+    let messages = rule_messages(&analyze("ruby"));
+    assert!(
+        messages
+            .iter()
+            .any(|m| m.contains("`entry` may depend only on `client`")),
+        "got {messages:?}"
+    );
+    assert!(
+        messages
+            .iter()
+            .any(|m| m.contains("faraday") && m.contains("restricted to")),
+        "got {messages:?}"
+    );
+}
+
+#[test]
+fn ruby_demo_has_no_unexpected_findings() {
+    assert_no_unexpected(
+        &analyze("ruby"),
+        &["cycle", "awesome_print", "nokogiri", "`entry`", "faraday"],
+    );
+}
+
+// --- Java -------------------------------------------------------------------
+
+/// Two build tools in one demo, so both manifest parsers run end to end.
+#[test]
+fn java_demo_reads_both_maven_and_gradle() {
+    let report = analyze("java");
+    let roots: Vec<&str> = report
+        .projects
+        .iter()
+        .map(|p| p.project.root.as_str())
+        .collect();
+    assert_eq!(roots, vec!["api", "worker"]);
+}
+
+/// javac compiles mutually-dependent packages without complaint.
+#[test]
+fn java_demo_finds_the_package_cycle() {
+    let report = analyze("java");
+    let cycles = messages(&report, CheckId::Cycle);
+    assert_eq!(cycles.len(), 1, "got {cycles:?}");
+    assert!(cycles[0].contains("2 modules"), "got {cycles:?}");
+}
+
+#[test]
+fn java_demo_finds_the_hygiene_problems_in_both_build_tools() {
+    let report = analyze("java");
+    assert!(
+        mentions(&report, CheckId::UnusedDep, "commons-lang3"),
+        "pom.xml"
+    );
+    assert!(
+        mentions(&report, CheckId::UnusedDep, "jackson-databind"),
+        "build.gradle"
+    );
+    // guava's coordinate and its package share no segment beyond `com.google`.
+    assert!(mentions(
+        &report,
+        CheckId::MissingDep,
+        "com.google.guava:guava"
+    ));
+}
+
+#[test]
+fn java_demo_does_not_trip_on_its_traps() {
+    let report = analyze("java");
+    for trap in [
+        "jackson-bom", // <dependencyManagement> is a version catalogue
+        "junit",       // test scope, imported only from src/test/java
+        "postgresql",  // runtime scope: on the classpath, never imported
+        "java.util",   // platform
+        "libs.junit",  // an unresolvable version-catalog reference
+    ] {
+        for check in [CheckId::UnusedDep, CheckId::MissingDep] {
+            assert!(!mentions(&report, check, trap), "{check} tripped on {trap}");
+        }
+    }
+}
+
+/// Maven has no lockfile and `gradle.lockfile` carries no edges, so neither
+/// project can answer a resolved-tree question — and says so.
+#[test]
+fn java_demo_reports_resolved_tree_checks_as_unavailable() {
+    let report = analyze("java");
+    for project in &report.projects {
+        for check in [CheckId::VersionConflict, CheckId::DiamondDep] {
+            assert!(
+                matches!(project.checks[&check], CheckStatus::Unavailable { .. }),
+                "{}: {check}",
+                project.project.root
+            );
+        }
+    }
+}
+
+/// One rule, two build tools: the Gradle declaration and the Java import are
+/// separate findings about the same broken constraint.
+#[test]
+fn java_demo_catches_the_layering_violation_at_both_levels() {
+    let report = analyze("java");
+    let levels: Vec<&str> = report
+        .findings()
+        .filter(|f| f.check == CheckId::ModuleRule)
+        .filter_map(|f| f.details["level"].as_str())
+        .collect();
+    assert!(levels.contains(&"declared"), "build.gradle: got {levels:?}");
+    assert!(
+        levels.contains(&"imported"),
+        "Reconciler.java: got {levels:?}"
+    );
+}
+
+/// A denylist matches the code: the api never declares guava, and the rule still
+/// fires on the import.
+#[test]
+fn java_demo_denies_a_package_at_the_import() {
+    let report = analyze("java");
+    let finding = report
+        .findings()
+        .find(|f| f.check == CheckId::PackageRule)
+        .expect("expected the guava rule to fire");
+    assert_eq!(finding.details["level"], "imported");
+    assert!(finding.message.contains("com.google.guava:guava"));
+}
+
+#[test]
+fn java_demo_has_no_unexpected_findings() {
+    assert_no_unexpected(
+        &analyze("java"),
+        &[
+            "cycle",
+            "commons-lang3",
+            "jackson-databind",
+            "com.google.guava:guava",
+            "`worker`",
+        ],
+    );
+}
+
+// --- Swift ------------------------------------------------------------------
+
+#[test]
+fn swift_demo_finds_the_hygiene_problems() {
+    let report = analyze("swift");
+    assert!(mentions(&report, CheckId::UnusedDep, "swift-collections"));
+    assert!(mentions(&report, CheckId::MissingDep, "Alamofire"));
+}
+
+/// The manifest states the module→package mapping itself, so `import Logging`
+/// needs no curated table to reach `swift-log`.
+#[test]
+fn swift_demo_resolves_a_product_to_its_package_without_guessing() {
+    let report = analyze("swift");
+    for trap in ["Logging", "swift-log", "Foundation", "XCTest", "ShopCore"] {
+        for check in [CheckId::UnusedDep, CheckId::MissingDep] {
+            assert!(!mentions(&report, check, trap), "{check} tripped on {trap}");
+        }
+    }
+}
+
+/// SwiftPM rejects a cyclic target dependency outright and files inside a module
+/// do not import each other, so a Swift cycle exists only in a package that does
+/// not build — the same position as Go.
+#[test]
+fn swift_demo_has_no_cycle_to_find() {
+    let report = analyze("swift");
+    assert_eq!(
+        report.projects[0].checks[&CheckId::Cycle],
+        CheckStatus::Ran { finding_count: 0 }
+    );
+}
+
+#[test]
+fn swift_demo_reports_resolved_tree_checks_as_structurally_unavailable() {
+    let report = analyze("swift");
+    for check in [CheckId::VersionConflict, CheckId::DiamondDep] {
+        match &report.projects[0].checks[&check] {
+            CheckStatus::Unavailable { reason } => {
+                assert!(reason.contains("Package.resolved"), "{check}: {reason}")
+            }
+            other => panic!("{check}: expected unavailable, got {other:?}"),
+        }
+    }
+}
+
+#[test]
+fn swift_demo_enforces_its_rules() {
+    let messages = rule_messages(&analyze("swift"));
+    assert!(
+        messages
+            .iter()
+            .any(|m| m.contains("`cli` may depend only on `core`")),
+        "got {messages:?}"
+    );
+    assert!(
+        messages
+            .iter()
+            .any(|m| m.contains("Logging") && m.contains("restricted to")),
+        "got {messages:?}"
+    );
+}
+
+#[test]
+fn swift_demo_has_no_unexpected_findings() {
+    assert_no_unexpected(
+        &analyze("swift"),
+        &["swift-collections", "Alamofire", "`cli`", "Logging"],
+    );
+}
+
+// --- C++ --------------------------------------------------------------------
+
+/// Include guards make a circular include compile, which is exactly why it
+/// survives review: the declarations become order-dependent instead.
+#[test]
+fn cpp_demo_finds_the_include_cycle() {
+    let report = analyze("cpp");
+    let cycles = messages(&report, CheckId::Cycle);
+    assert_eq!(cycles.len(), 1, "got {cycles:?}");
+    assert!(cycles[0].contains("2 modules"), "got {cycles:?}");
+}
+
+#[test]
+fn cpp_demo_finds_the_hygiene_problems() {
+    let report = analyze("cpp");
+    assert!(mentions(&report, CheckId::UnusedDep, "nlohmann_json"));
+    assert!(mentions(&report, CheckId::MissingDep, "sqlite3"));
+}
+
+/// A translation unit including its own header is the most ordinary line in C++,
+/// and it is a self-edge only because a header and its source are one module.
+#[test]
+fn cpp_demo_does_not_trip_on_its_traps() {
+    let report = analyze("cpp");
+    for trap in ["fmt", "cmake", "gtest", "vector", "sys/stat", "CMakeDeps"] {
+        for check in [CheckId::UnusedDep, CheckId::MissingDep] {
+            assert!(!mentions(&report, check, trap), "{check} tripped on {trap}");
+        }
+    }
+}
+
+#[test]
+fn cpp_demo_reports_resolved_tree_checks_as_structurally_unavailable() {
+    let report = analyze("cpp");
+    for check in [CheckId::VersionConflict, CheckId::DiamondDep] {
+        match &report.projects[0].checks[&check] {
+            CheckStatus::Unavailable { reason } => {
+                assert!(reason.contains("conan.lock"), "{check}: {reason}")
+            }
+            other => panic!("{check}: expected unavailable, got {other:?}"),
+        }
+    }
+}
+
+#[test]
+fn cpp_demo_enforces_its_rules() {
+    let messages = rule_messages(&analyze("cpp"));
+    assert!(
+        messages
+            .iter()
+            .any(|m| m.contains("`entry` may depend only on `store`")),
+        "got {messages:?}"
+    );
+    // The store names both its header and its translation unit, so the rule
+    // reaches the code rather than reporting an unassigned path.
+    assert!(
+        messages
+            .iter()
+            .any(|m| m.contains("spdlog") && m.contains("used in `store`")),
+        "got {messages:?}"
+    );
+}
+
+#[test]
+fn cpp_demo_has_no_unexpected_findings() {
+    assert_no_unexpected(
+        &analyze("cpp"),
+        &["cycle", "nlohmann_json", "sqlite3", "`entry`", "spdlog"],
+    );
+}
+
 // --- rulesets ---------------------------------------------------------------
 
 fn rule_messages(report: &Report) -> Vec<String> {

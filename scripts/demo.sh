@@ -5,6 +5,7 @@
 #
 #   ./scripts/demo.sh            # full walkthrough
 #   ./scripts/demo.sh go         # one language: go | javascript | rust | dotnet
+#                                #               python | ruby | java | swift | cpp
 #   ./scripts/demo.sh self       # only the dogfood run
 #   ./scripts/demo.sh --tui      # end by opening the interactive browser
 #
@@ -21,9 +22,11 @@ ONLY=""
 for arg in "$@"; do
   case "$arg" in
     --tui) WITH_TUI=true ;;
-    go | javascript | rust | dotnet | self) ONLY="$arg" ;;
+    go | javascript | rust | dotnet | python | ruby | java | swift | cpp | self)
+      ONLY="$arg"
+      ;;
     *)
-      echo "usage: demo.sh [go|javascript|rust|dotnet|self] [--tui]" >&2
+      echo "usage: demo.sh [go|javascript|rust|dotnet|python|ruby|java|swift|cpp|self] [--tui]" >&2
       exit 2
       ;;
   esac
@@ -37,7 +40,15 @@ fi
 
 step() { printf '\n%s══ %s %s\n' "$B" "$1" "$R"; }
 note() { printf '%s%s%s\n' "$DIM" "$1" "$R"; }
-run() { printf '\n%s$ %s%s\n' "$CYAN" "$*" "$R"; "$@"; }
+# Every sample here is deliberately broken, so `tropism analyze` exits 1 on all of
+# them — that is the CI contract working. Under `set -e` the first one ended the
+# tour, so the status is captured rather than propagated.
+run() {
+  printf '\n%s$ %s%s\n' "$CYAN" "$*" "$R"
+  set +e
+  "$@"
+  set -e
+}
 run_status() {
   printf '\n%s$ %s%s\n' "$CYAN" "$*" "$R"
   set +e; "$@"; local code=$?; set -e
@@ -93,9 +104,63 @@ wants dotnet && {
   note "That gap is open question 1 in design/07-open-questions.md."
 }
 
+wants python && demo_language python "5. Python — where the import name is not the package name"
+wants python && {
+  note ""
+  note "\`import yaml\` is the PyYAML distribution. A tool that compares the two names"
+  note "literally reports PyYAML unused AND yaml missing: two findings, both wrong,"
+  note "about one correct line. The mapping lives in installed metadata, which a"
+  note "hermetic tool never has, so tropism carries a curated table for the top of PyPI."
+}
+
+wants ruby && demo_language ruby "6. Ruby — a manifest that is a program"
+wants ruby && {
+  note ""
+  note "The Gemfile is Ruby code evaluated by Bundler. tropism parses the declarative"
+  note "subset with the Ruby grammar and never runs it, so \`gem \"rails-#{variant}\"\`"
+  note "contributes nothing rather than a package that does not exist."
+  note ""
+  note "Both resolved-tree checks report clean rather than unavailable. Bundler"
+  note "resolves flat and refuses to write a lockfile with two versions of one gem,"
+  note "so there is genuinely nothing to find."
+}
+
+wants java && demo_language java "7. Java — two build tools, one ruleset"
+wants java && {
+  note ""
+  note "api/ is Maven and worker/ is Gradle. The layering rule is broken in both: the"
+  note "Gradle declaration and the Java import are separate findings about the same"
+  note "constraint, in two different file formats, because rules evaluate repo-wide."
+  note ""
+  note "guava's coordinate is com.google.guava:guava and its package is"
+  note "com.google.common. Nothing in either name implies the other."
+}
+
+wants swift && demo_language swift "8. Swift — the one ecosystem that answers import→package itself"
+wants swift && {
+  note ""
+  note "Every other language needs a curated table to know that \`import Logging\` is"
+  note "swift-log. Swift does not: the manifest states it, in the target that uses it."
+  note "  .product(name: \"Logging\", package: \"swift-log\")"
+  note ""
+  note "No cycle is planted, for the same reason as Go: SwiftPM rejects a cyclic"
+  note "target dependency outright."
+}
+
+wants cpp && demo_language cpp "9. C++ — a module is a component, not a file"
+wants cpp && {
+  note ""
+  note "include/shop/order.hpp and src/order.cpp are one module. Two would make a"
+  note "translation unit including its own header — the most ordinary line in C++ —"
+  note "an edge between two nodes, and every component appear in the graph twice."
+  note ""
+  note "The include cycle compiles. Include guards expand each header once; what"
+  note "breaks is the declaration order, for whoever includes invoice.hpp first."
+}
+
 # ---------------------------------------------------------------------------
 if wants self; then
-  step "5. tropism analyzing tropism"
+  step "10. tropism analyzing tropism"
 
   note "The real test. Every finding below is on this repository's own source."
   run bash -c "'$BIN' analyze '$REPO' --format json \
@@ -125,7 +190,7 @@ fi
 
 # ---------------------------------------------------------------------------
 if [[ -z "$ONLY" ]]; then
-  step "6. Output formats and the CI contract"
+  step "11. Output formats and the CI contract"
 
   note "Piping selects JSON automatically — the same serializer the MCP server uses:"
   run bash -c "'$BIN' analyze '$REPO/demo/rust' | head -20"
@@ -137,11 +202,11 @@ if [[ -z "$ONLY" ]]; then
   run_status "$BIN" analyze "$REPO/demo/nope" --format json
 
   if $WITH_TUI; then
-    step "7. The interactive browser"
+    step "12. The interactive browser"
     note "j/k or arrows to move, g/G first/last, q to quit."
     "$BIN" analyze "$REPO/demo/javascript" --format tui
   else
-    step "7. The interactive browser"
+    step "12. The interactive browser"
     note "Needs a terminal, so it is not shown here. Re-run with --tui, or:"
     printf '\n  %s%s analyze demo/javascript --format tui%s\n' "$CYAN" "$BIN" "$R"
     note ""
@@ -151,7 +216,8 @@ if [[ -z "$ONLY" ]]; then
 
   step "Summary"
   cat <<EOF
-  Languages:   Go, JavaScript/TypeScript, Rust, C#/.NET
+  Languages:   Go, JavaScript/TypeScript, Rust, C#/.NET,
+               Python, Ruby, Java, Swift, C++  — all ten
   Checks:      cycle, unused-dep, missing-dep, version-conflict, diamond-dep
   Deferred:    dependency-bloat (no crisp definition — design/07-open-questions.md)
   Rules:       module-rule, package-rule — from tropism.toml, High confidence
@@ -159,7 +225,8 @@ if [[ -z "$ONLY" ]]; then
 
   Reliability differs sharply by check, and the difference is measured:
     cycle            sound — reads only import syntax
-    version/diamond  sound where a real resolved tree exists (npm, Cargo; not Go)
+    version/diamond  sound where a real resolved tree exists — npm, Cargo, uv,
+                     poetry, Bundler; not Go, Maven, Gradle, SwiftPM, or Conan
     unused-dep       63% false positives on real JS repos (design/10-js-evaluation.md)
     module/package   sound — a violation is a line of source, not an inference
 EOF
