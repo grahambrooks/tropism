@@ -4,12 +4,16 @@
 #
 #   repos:
 #     - repo: https://github.com/grahambrooks/tropism
-#       rev: v2026.8.2
+#       rev: v2026.8.4
 #       hooks:
 #         - id: tropism
 #
-# `language: system` requires `tropism` on PATH — install it from the GitHub
-# release, or with `cargo install tropism` once the crate is published. That is
+# `language: system` requires `tropism` on PATH. One line, no admin rights:
+#
+#   curl --proto '=https' --tlsv1.2 -LsSf \
+#     https://github.com/grahambrooks/tropism/releases/latest/download/tropism-installer.sh | sh
+#
+#   irm https://github.com/grahambrooks/tropism/releases/latest/download/tropism-installer.ps1 | iex That is
 # deliberate rather than a limitation of the framework: prek's `language: rust`
 # installs with `cargo install --bins --locked`, which this repository's virtual
 # manifest refuses (D25 in design/12-known-limitations.md).

@@ -114,7 +114,7 @@ second before a commit.
 # .pre-commit-config.yaml, for pre-commit or prek
 repos:
   - repo: https://github.com/grahambrooks/tropism
-    rev: v2026.8.2   # the first release with `check`
+    rev: v2026.8.4
     hooks:
       - id: tropism          # rules, on changed files, at commit time
       - id: tropism-all      # every check, whole repository, at push time
