@@ -1972,7 +1972,7 @@ dependencies = [
 
 [[package]]
 name = "tropism"
-version = "0.0.0"
+version = "2026.8.4"
 dependencies = [
  "annotate-snippets",
  "anstream",
@@ -1989,7 +1989,7 @@ dependencies = [
 
 [[package]]
 name = "tropism-core"
-version = "0.0.0"
+version = "2026.8.4"
 dependencies = [
  "anyhow",
  "blake3",
@@ -2005,7 +2005,7 @@ dependencies = [
 
 [[package]]
 name = "tropism-lang"
-version = "0.0.0"
+version = "2026.8.4"
 dependencies = [
  "anyhow",
  "camino",
@@ -2028,7 +2028,7 @@ dependencies = [
 
 [[package]]
 name = "tropism-mcp"
-version = "0.0.0"
+version = "2026.8.4"
 dependencies = [
  "tropism-core",
 ]

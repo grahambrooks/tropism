@@ -11,7 +11,7 @@ resolver = "3"
 # `dist` is tag-driven and reads the version from here, and a committed version is
 # also what `tropism --version`, every installer, and every registry report. Bump
 # it with `make release`, never by hand. See design/13-build-and-release.md.
-version = "0.0.0"
+version = "2026.8.4"
 edition = "2024"
 license = "MIT OR Apache-2.0"
 repository = "https://github.com/grahambrooks/tropism"
