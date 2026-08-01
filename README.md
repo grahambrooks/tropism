@@ -29,6 +29,19 @@ note: tropism.toml: The API layer talks to the domain and nothing else. A contro
 
 **`tropism` is an anagram of `imports`.**
 
+```diff
+@@ the same seven letters, rearranged @@
+
+- i m p o r t s
+- 1 2 3 4 5 6 7
+
++ 6 5 4 3 1 7 2
++ t r o p i s m
+```
+
+Nothing added, nothing left over. `6 5 4 3` is **port** read backwards, which is the whole trick:
+`imports` is `i·m·port·s`, and `tropism` is `trop·i·s·m`.
+
 A tropism is directed growth in response to a stimulus — a plant turning toward light is
 phototropism, roots turning downward is geotropism. A dependency graph is directed growth too: every
 import is an edge pointing somewhere, and the shape a codebase grows into is the sum of them.
