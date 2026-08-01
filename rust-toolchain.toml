@@ -1,0 +1,20 @@
+# The toolchain every build uses, explicitly.
+#
+# Added after a release failed on exactly one of six runners: the
+# `aarch64-apple-darwin` image shipped rustc 1.96.0 while this workspace declares
+# `rust-version = "1.97"`, so cargo refused before compiling anything. The other
+# five runners happened to be current.
+#
+# That is the cost of an MSRV policy of "tracks latest stable" — any builder image
+# lagging by one release stops building — and the fix is to stop depending on what
+# a runner happens to have. rustup reads this file and installs the named toolchain
+# on demand, so CI, a release build, and a developer's laptop all compile with the
+# same compiler.
+#
+# Keep `channel` in step with `rust-version` in Cargo.toml. The msrv job in ci.yml
+# pins the same number a third time, deliberately: it is what proves the declared
+# floor is real rather than aspirational.
+
+[toolchain]
+channel = "1.97"
+components = ["rustfmt", "clippy"]

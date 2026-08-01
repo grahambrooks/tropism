@@ -93,7 +93,12 @@ release: release-guard check
 	# Cargo.lock records the workspace members' own versions, so it moves too.
 	cargo update --workspace --offline
 	git add Cargo.toml Cargo.lock
-	git commit --quiet -m 'Release $(VERSION)'
+	# Nothing to commit when re-cutting a version whose build failed: the bump
+	# already landed and only the tag needs replacing. Committing nothing is not
+	# an error, so do not let `git commit` make it one.
+	@git diff --cached --quiet \
+		&& echo 'version already at $(VERSION); tagging the existing commit' \
+		|| git commit --quiet -m 'Release $(VERSION)'
 	git tag -a '$(TAG)' -m 'tropism $(VERSION)'
 	git push --quiet origin main
 	git push --quiet origin '$(TAG)'
