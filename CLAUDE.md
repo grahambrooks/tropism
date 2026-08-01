@@ -4,11 +4,20 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Overview
 
-tropism is a Rust tool that analyzes a codebase for module and dependency problems. It ships as two
-surfaces over the same analysis:
+tropism is a Rust tool that enforces a team's architecture rules — and analyzes module and dependency
+problems — across ten languages, without invoking a package manager or building anything.
 
-- a **CLI**, for humans and scripts
-- an **MCP server**, so coding agents can query the analysis directly
+> **One ruleset, enforced at commit time and over the whole repository, across ten languages, with
+> no build and no install.**
+
+Two scopes over one analysis and one ruleset:
+
+- **`tropism check <files>`** — a change, at commit time, through a pre-commit hook. *Not yet built;
+  it is the next build.* See [design/14-incremental-checking.md](design/14-incremental-checking.md).
+- **`tropism analyze`** — the whole repository, in CI or by hand. Built.
+
+A third surface, an **MCP server** for coding agents, is specified and deliberately last — see
+"Dependency rules" below for why it moved.
 
 ## What it detects
 
@@ -124,11 +133,28 @@ prevent. **Never widen an exclusion to make the gate pass.**
 Rule findings are the only ones besides `cycle` that earn `High` confidence, and they default to
 `error` severity because the team asserted them.
 
-This is the strongest part of the product and the recommended next build. A rule violation is the
-*presence* of a forbidden import or declaration, which is a fact about a line of source — unlike the
-unused-dependency check, which must prove a negative and measured 63% false positives on real
-JavaScript. It is also the one thing no native tool can do: `go mod tidy` cannot know an
-architecture it was never told about.
+**This is the product.** A rule violation is the *presence* of a forbidden import or declaration,
+which is a fact about a line of source — unlike the unused-dependency check, which must prove a
+negative and measured 63% false positives on real JavaScript. It is also the one thing no native
+tool can do: `go mod tidy` cannot know an architecture it was never told about.
+
+The thesis, arrived at by elimination and each elimination measured:
+
+> **One ruleset, enforced at commit time and over the whole repository, across ten languages, with
+> no build and no install.**
+
+Two scopes, one ruleset: `tropism check <files>` on a change and `tropism analyze` on everything.
+Protect that symmetry — a rule only one scope can evaluate would be worse than no rule, because it
+would make the hook a liar. The advisory checks (cycle, hygiene, the resolved tree) belong to the
+whole-repository run, where a human reads the output before acting; only what is safe to enforce
+automatically runs at commit time.
+
+**The next build is `tropism check [FILES...]`**, specified in
+[design/14-incremental-checking.md](design/14-incremental-checking.md), followed by the release
+pipeline. Until both exist nobody outside this repository can run tropism at all. The MCP server was
+once the recommended next build and is now last: its flagship query needs a resolved tree, and four
+of the ten ecosystems have no lockfile edges — see the revision at the end of
+[design/09-product-review.md](design/09-product-review.md).
 
 ## Build and release
 
@@ -267,7 +293,8 @@ each have a provider, a demo under `demo/`, and assertions in `crates/tropism-la
 No trait change was needed for any of them, which is the first real evidence that
 `LanguageProvider` is the right shape.
 
-Not built: the unimplemented rule kinds above, and the MCP server.
+Not built, in priority order: `tropism check [FILES...]` (the next build), the release pipeline, a
+baseline for whole-repository runs, the unimplemented rule kinds above, and the MCP server.
 
 **Before extending the checks, read [design/10-js-evaluation.md](design/10-js-evaluation.md).**
 Manifest hygiene (`unused-dep` / `missing-dep`) measured a **63% false-positive rate** on real

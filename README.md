@@ -187,9 +187,12 @@ Documented deliberately and in one place:
 **[design/12-known-limitations.md](design/12-known-limitations.md)**.
 
 It separates limitations that are *structural* — consequences of never running a package manager,
-which get reported rather than fixed — from those merely *deferred*. The most significant deferred
-one is that cycle detection currently runs per project, so a cycle spanning two packages in a
-monorepo is invisible to it.
+which get reported rather than fixed — from those merely *deferred*.
+
+The one to read is **S8**: a lockfile is resolved once for every feature combination and every
+target platform and records neither, so `version-conflict` and `diamond-dep` describe the lockfile
+rather than the build. The most significant *deferred* gap is that `tropism check` does not exist,
+so the rules can only be enforced over a whole repository and not over a change.
 
 ## Design
 
@@ -209,13 +212,26 @@ building contradicted it.
 | [10-js-evaluation.md](design/10-js-evaluation.md)           | Ten real JS repositories, and what they proved          |
 | [11-dependency-rules.md](design/11-dependency-rules.md)     | The ruleset                                             |
 | [12-known-limitations.md](design/12-known-limitations.md)   | Everything that does not work, and why                  |
+| [13-build-and-release.md](design/13-build-and-release.md)   | CI, CalVer, binaries, crates.io                         |
+| [14-incremental-checking.md](design/14-incremental-checking.md) | **The product**, and the next thing to build        |
 
-Two of those are worth reading even if you never touch the code.
+Three of those are worth reading even if you never touch the code.
 [09-product-review.md](design/09-product-review.md) concludes that tropism cannot compete with
 `go mod tidy` on detection, because `go mod tidy` finds the same problems *and fixes them*.
 [10-js-evaluation.md](design/10-js-evaluation.md) then measures which checks survive contact with
-real repositories. The rules feature exists because those two documents said the generic checks
-were the weak part.
+real repositories — 63% false positives for manifest hygiene. The rules feature exists because those
+two documents said the generic checks were the weak part, and
+[14-incremental-checking.md](design/14-incremental-checking.md) is where that lands: one ruleset,
+enforced at commit time and over the whole repository, across ten languages, with no build and no
+install.
+
+That framing is what is left after three claims were eliminated on evidence — "finds dependency
+problems" (the incumbents do it better and fix it), "manifest hygiene is the value" (63% false
+positives), and "the MCP server is the product" (its flagship query needs a resolved tree, and four
+of the ten ecosystems have none). The reversal worth knowing: the hermetic constraint that makes the
+weakest check unreliable is exactly what makes the strongest one deployable. ArchUnit needs a
+compiled classpath, NDepend a built solution, `dependency-cruiser` a `node_modules`. tropism needs a
+directory, which is why it can run in the second before a commit.
 
 ## Development
 

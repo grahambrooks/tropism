@@ -120,11 +120,46 @@ formats stay buildable without the heaviest dependency in the workspace.
 
 ## MCP server
 
+**Status: last in the build order, and deliberately smaller than first specified.**
+[09-product-review.md](09-product-review.md) once made this surface the product. Its own gate —
+"validate that `tropism_package_path` is answerable" — failed once all ten languages existed: four
+ecosystems have no lockfile edges at all, so the flagship query is dead in four of ten supported
+languages. The revision is recorded there; the tool list below is what survives it.
+
 The consumer is an agent with a limited context window. That single fact drives the design:
 **an MCP tool that returns the full report on a large monorepo is useless**, because it will blow the
 context it was supposed to inform. Tools are therefore narrow, filtered, and paginated by default.
 
-Proposed tools:
+### The three tools worth shipping
+
+| Tool              | Purpose                                                                 |
+| ----------------- | ----------------------------------------------------------------------- |
+| `tropism_summary` | Counts per check per project, plus which checks could not run. Cheap.   |
+| `tropism_check`   | The rules, evaluated against a file list. The same call the hook makes. |
+| `tropism_rules`   | The active ruleset, each rule satisfied/violated/stale, with `reason`.  |
+
+`tropism_check` is the one to build first, and it is not in the original list because the subcommand
+it wraps did not exist yet. It is the same question the pre-commit hook asks — "does this change
+break a rule?" — and asking it *before* writing an import is strictly more useful to an agent than
+being told afterwards. It also costs almost nothing once
+[14-incremental-checking.md](14-incremental-checking.md) is built, because it is a thin adapter over
+`tropism check` rather than a second implementation.
+
+`tropism_rules` is worth keeping but is worth less than it looks: `tropism.toml` is a small TOML file
+with the reasons written in it, and an agent can simply read it. What the tool adds over the file is
+evaluation — *satisfied, violated, or stale* — which the file cannot state about itself.
+
+### Deferred, with reasons
+
+| Tool                   | Why it waits                                                                                                                    |
+| ---------------------- | -------------------------------------------------------------------------------------------------------------------------------- |
+| `tropism_package_path` | Needs a resolved tree. Unavailable in Go, Java, Swift, and C++; misleading even in Cargo, where a path may run through a feature no build compiles (S8). |
+| `tropism_findings`     | Two of six checks measured 63% false positives. Handing those to an agent is worse than handing them to a human, who reads before acting. |
+| `tropism_explain`      | Only worth building once there is a finding stream worth explaining.                                                            |
+| `tropism_module_deps`  | Genuinely useful and genuinely unbuilt; no evidence yet that an agent wants it.                                                 |
+
+The full surface as originally proposed, kept because the reasoning behind each entry is still
+sound and the deferral is about sequencing rather than merit:
 
 | Tool                   | Purpose                                                        |
 | ---------------------- | -------------------------------------------------------------- |
@@ -151,14 +186,18 @@ Design rules for these tools:
 - **Analysis is cached per scan root** within a server session, so `summary` followed by three
   `findings` calls does not re-analyze the tree four times. Invalidate on file mtime change.
 
-`tropism_package_path` deserves emphasis: "why is this package here?" is the question an agent most
-often needs answered when acting on a dependency finding, and it is exactly the question the
-resolved tree can answer precisely.
+`tropism_package_path` was written up here as the flagship: "why is this package here?" is the
+question an agent most often needs answered when acting on a dependency finding, and it is exactly
+the question a resolved tree answers precisely. **That reasoning was sound and the premise was
+wrong** — six of the ten ecosystems cannot supply the tree, so the query cannot be the flagship of a
+ten-language tool. It is deferred rather than dropped: for a repository that is purely npm or purely
+Cargo it remains the best question on this list.
 
-`tropism_rules` deserves more. Every other tool here reports what an agent already did; this one lets
-it ask **before** acting — "may this module depend on that one?", "is this package approved?" — and
-each rule carries the team's `reason`, so the answer explains itself. That is the first capability in
-the product that is genuinely better as an agent interface than as a CLI.
+`tropism_rules` was described here as "the first capability genuinely better as an agent interface
+than as a CLI", on the grounds that it lets an agent ask **before** acting. The instinct was right
+and the surface was wrong: what an agent wants before acting is not the rule list but the *verdict*
+on a specific change, which is `tropism_check`. Asking "may this module depend on that one?" is one
+`tropism check` call over the file about to be written.
 
 ## Configuration
 

@@ -173,9 +173,36 @@ another trait method:
 - Swift is the only ecosystem that states the import→package mapping itself, which is the one clean
   answer to S5 anywhere in the ten.
 
-The remaining order is unchanged and short:
+**Revised once more, and this time the order changes.** The previous revision put the MCP server
+next, on the strength of [09-product-review.md](09-product-review.md)'s "make the MCP server the
+product". That review set a gate on its own recommendation — validate that
+`tropism_package_path` is answerable before committing — and building the remaining five languages
+answered it: **no**. The query needs a resolved tree with edges, and four of the ten ecosystems have
+none at all. Details in [09-product-review.md](09-product-review.md), "Revised after ten languages".
 
-1. **The MCP server** — the last unbuilt surface, over an analysis core now proven across ten
-   languages and nine demos.
-2. **The unimplemented rule kinds** — `layers`, `require`, `transitive`, and version constraints,
+The thesis that survives all the evidence is narrower and better:
+
+> **One ruleset, enforced at commit time and over the whole repository, across ten languages, with
+> no build and no install.**
+
+Everything tropism does well points there, and it is the only claim with no competitor. The order
+follows from it:
+
+1. **`tropism check [FILES...]`** — [14-incremental-checking.md](14-incremental-checking.md). The
+   file-list form first; `--staged` and `--since` are sugar over it and can be dropped without loss.
+   This is the whole differentiator: sound checks, scoped to a change, in well under a second,
+   needing nothing installed. It also gives ratcheting on an already-violating codebase for free,
+   which is what makes the rules feature adoptable outside greenfield.
+2. **The release pipeline** — [13-build-and-release.md](13-build-and-release.md). Both a hook and an
+   MCP server need an installable binary; nothing reaches a user without it. Note the ordering
+   constraint in D25: `language: rust` in a hook framework wants the repository root to be an
+   installable package.
+3. **A baseline for whole-repository runs** — D8. Once `check` exists the ratchet covers the commit
+   path, and the gap left is the CI job that checks everything. That is where a baseline earns its
+   place, and not before.
+4. **The unimplemented rule kinds** — `layers`, `require`, `transitive`, and version constraints,
    all currently rejected at parse time rather than silently ignored.
+5. **MCP, scoped down** — three tools rather than seven. Last, not first: see
+   [05-interfaces.md](05-interfaces.md).
+
+What moved *out* of the plan: more languages (all ten are built), and MCP-first (the gate failed).

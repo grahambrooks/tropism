@@ -1,10 +1,44 @@
 # 14 — Incremental checking and the pre-commit hook
 
-Checking only what changed, against the rules, in the moment the developer is about to commit it.
+**This is the product.** Everything else in `design/` is either how it works or evidence for why it
+is the part worth building. Read this document before planning any work.
 
-This is the strongest differentiator in the product, and it falls out of properties tropism already
-has rather than requiring new ones. It also resolves the adoption problem that
-[12-known-limitations.md](12-known-limitations.md) records as D8.
+> **One ruleset, enforced at commit time and over the whole repository, across ten languages, with no
+> build and no install.**
+
+Checking only what changed, against the rules, in the moment the developer is about to commit it —
+and checking everything, against the same rules, in CI. Two scopes, one ruleset. The differentiator
+falls out of properties tropism already has rather than requiring new ones, and it resolves the
+adoption problem [12-known-limitations.md](12-known-limitations.md) records as D8.
+
+It reached this position by elimination, which is worth knowing because each elimination was
+measured rather than argued:
+
+- **Detection lost.** `go mod tidy` and its equivalents find the same problems, for free, already
+  installed, and *fix* them ([09-product-review.md](09-product-review.md)).
+- **Manifest hygiene lost.** 63% false positives on ten real repositories
+  ([10-js-evaluation.md](10-js-evaluation.md)). It cannot gate anything.
+- **MCP-first lost.** Its flagship query needs a resolved tree, and four of ten ecosystems have no
+  lockfile edges at all (09, "Revised after ten languages").
+- **Rules won.** A violation is the *presence* of an import — a fact about a line of source, in the
+  same soundness class as cycle detection — and no native tool can enforce an architecture nobody
+  told it about.
+
+## The two scopes are one feature
+
+`tropism check` at commit time and `tropism analyze` over the whole repository evaluate **the same
+ruleset**, so what CI blocks is what the hook already blocked. Protect that symmetry: a rule only one
+scope can evaluate would be worse than no rule, because it would make the hook a liar.
+
+| Scope           | Command                | Runs                    | Answers                                             |
+| --------------- | ---------------------- | ----------------------- | --------------------------------------------------- |
+| The change      | `tropism check <files>` | Rules only              | "does this commit introduce a violation?"           |
+| The repository  | `tropism analyze`      | Every check             | "what is true of this codebase right now?"          |
+
+They differ in scope and in which checks are sound enough to *block*, never in what the rules mean.
+The whole-repository run is where the advisory checks belong — cycles, hygiene, the resolved tree —
+because a human reads that output before acting on it. The commit-time run carries only what is safe
+to enforce automatically.
 
 ---
 
@@ -236,7 +270,8 @@ Exit codes are unchanged: `0` clean, `1` violations at or above `--fail-on`, `2`
 
 ## Where this sits in the plan
 
-Ahead of the MCP server, and ahead of more languages.
+**First.** More languages are done, and MCP-first failed its own gate; the build order in
+[07-open-questions.md](07-open-questions.md) now opens with `tropism check`.
 
 [09-product-review.md](09-product-review.md) concluded that tropism cannot compete on detection
 because native tooling already detects and *fixes*. The pre-commit hook is not a detection claim: it
@@ -246,3 +281,19 @@ workflow every day", which is the thing the project has never had.
 
 It depends on the release pipeline ([13-build-and-release.md](13-build-and-release.md)) — a hook
 needs an installable binary — so those two ship together or not at all.
+
+The order, and the reason for each position:
+
+1. **`tropism check [FILES...]`** — the file-list form. Everything else here is sugar over it, and it
+   is the form every hook framework already speaks.
+2. **The release pipeline** — no user has any of this until a binary exists.
+3. **A baseline for whole-repository runs** (D8) — only once `check` covers the commit path, because
+   incremental scope is a better ratchet than a baseline file and removes the urgency for one.
+4. **The remaining rule kinds** — `layers`, `require`, `transitive`. More expressive rules are worth
+   more once rules are enforced at the moment code is written than before.
+5. **MCP, scoped to three tools** — `tropism_check` is a thin adapter over step 1, so this gets
+   cheaper by waiting rather than more expensive.
+
+A local prek hook already runs `tropism analyze` on this repository ("What *is* wired up", above).
+That is the whole-repository scope standing in for the incremental one until step 1 exists — useful
+today, and not the shape this document argues for.

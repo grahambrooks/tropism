@@ -3,6 +3,12 @@
 Written after completing the Go vertical slice, 2026-07-31. Everything below is grounded in what
 building and running it actually produced, not in what the design documents predicted.
 
+> **Partly superseded — read [the revision at the end](#revised-after-ten-languages--2026-08-01)
+> first.** This review is kept as written, because its value is the record of what was believed with
+> one language built and because most of it held up. One recommendation did not: "make the MCP server
+> the product" set itself a gate, and building the other nine languages failed that gate. The
+> surviving thesis is one ruleset enforced at commit time and over the whole repository.
+
 **Verdict: continue, but not on the current thesis.** The six checks are the weakest part of the
 product, and the Go slice demonstrated that clearly. What is genuinely defensible is narrower and
 was never stated as the goal: a hermetic, uniform, agent-queryable dependency map of a polyglot
@@ -210,3 +216,99 @@ problem anyone has, given that `go mod tidy` and its equivalents are free, alrea
 fix rather than report. The evidence from five real repositories — zero findings — suggests it is
 not. The hermetic, uniform, agent-facing framing survives that evidence. The original framing does
 not.
+
+---
+
+# Revised after ten languages — 2026-08-01
+
+This review was written from the Go slice alone. Three of its recommendations were followed and one
+was not, because building the rest of the languages answered the gate it set on itself.
+
+## What it got right
+
+**Re-scope away from detection.** The kill criterion was run: ten real JavaScript repositories,
+recorded in [10-js-evaluation.md](10-js-evaluation.md). Manifest hygiene measured 63% false
+positives. The detection thesis for `unused-dep` is dead, and it stays dead — the check is capped at
+Medium confidence, defaulted off, and must never gate CI.
+
+**Do TypeScript or Python next, not more Go.** Done, and both taught what was predicted: npm gave the
+first genuinely resolved tree, and Python forced the import→package problem into the open.
+
+**Cut what does not earn its place.** `dependency-bloat` is still deferred, and correctly.
+
+## What it got wrong: "make the MCP server the product"
+
+This review's own gate:
+
+> But first check that the best MCP question is answerable. `tropism_package_path` — "why is this
+> package in my tree?" — needs a resolved tree. […] Validate this before committing to the MCP-first
+> plan, or the flagship interface ships with its flagship query unavailable.
+
+Ten languages later, that validation has an answer, and it is no.
+
+| Can `tropism_package_path` be answered? | Languages                                     | Count |
+| --------------------------------------- | --------------------------------------------- | ----- |
+| Yes                                     | JavaScript, TypeScript, Rust, Python, Ruby    | 5     |
+| Only when an opt-in file exists         | C#                                            | 1     |
+| **Never** — no lockfile edges anywhere  | Go, Java, Swift, C++                          | 4     |
+
+The flagship query is dead in four of ten supported languages and conditional in a fifth. This is
+structural (S3), not a gap to close: Maven has no lockfile at all, and `go.sum`, `gradle.lockfile`,
+`Package.resolved`, and `conan.lock` record versions with no edges.
+
+And S8 damages it further *where it does work*. Ask "why is `thiserror 1.0.69` in my tree?" of this
+repository and the honest answer is "through an optional `ratatui` backend that is never enabled".
+A path through a feature nobody compiles is a confidently wrong answer to the question the tool was
+chosen for.
+
+Two other things moved under the recommendation while it sat unbuilt:
+
+- **`tropism_rules` was billed as the first capability better as an agent interface than as a CLI** —
+  ask before acting, with the team's `reason` attached. But the ruleset is a 111-line TOML file with
+  the reasons written in it. An agent does not need a protocol to read that; it needs to open the
+  file. Most of that tool's value is already delivered by something that exists.
+- **Two of six checks are now known to be unreliable.** An MCP surface that hands an agent 63%-false
+  findings is worse than a CLI that does, because the agent acts on them without a human reading
+  them first.
+
+## The thesis that survives
+
+Not "a hermetic, uniform, agent-queryable dependency map" — that was the right correction from the
+wrong evidence. Narrower and stronger:
+
+> **One ruleset, enforced at commit time and over the whole repository, across ten languages, with no
+> build and no install.**
+
+Every piece of evidence points here.
+
+- **Rule violations are sound.** A violation is the *presence* of an import — a fact about a line of
+  source, the same soundness class as cycle detection, and the opposite of the absence-proving that
+  sank `unused-dep`.
+- **The hermetic constraint stops being a handicap and becomes the moat.** This is the reversal worth
+  stating plainly, because [14-incremental-checking.md](14-incremental-checking.md) is built on it:
+  the property that makes the weakest check unreliable is exactly what makes the strongest one
+  deployable. ArchUnit needs a compiled classpath. NDepend needs a built solution.
+  `dependency-cruiser` needs `node_modules`. A hook that needs a build gets bypassed; tropism needs a
+  directory.
+- **No native tool can enforce an architecture it was never told about.** `go mod tidy` finds and
+  fixes unused dependencies better than tropism ever will. It cannot know that the api layer must not
+  reach into storage, because nobody told it, and there is nowhere to tell it.
+- **Cross-language is unmatched.** One hook and one ruleset for a repository with a Go backend, a
+  TypeScript frontend, and a .NET service. Nothing else offers this at all — and after ten languages
+  it is a claim about behaviour rather than intent.
+
+The two surfaces are one product, not two: `tropism check` at commit time and `tropism analyze` over
+the whole repository enforce **the same ruleset**, so what CI blocks is what the hook already
+blocked. That symmetry is the thing to protect. A rule that only one of them can evaluate would be
+worse than no rule.
+
+## Is it still worth continuing?
+
+Yes, and with a clearer target than at any point before. The original framing is dead, the
+MCP-first framing failed its own gate, and what is left is a feature nobody else can ship —
+substantially built, needing `tropism check` and a release pipeline to reach anyone.
+
+The honest risk is no longer technical. It is that the differentiator only pays off once someone
+installs it, and neither the binary nor the hook entry point exists yet. That is the whole of the
+remaining work, and it is the shortest path this project has ever had from "tool that exists" to
+"tool in someone's workflow every day".

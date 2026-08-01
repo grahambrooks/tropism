@@ -5,10 +5,53 @@
 price of never invoking a package manager, reported rather than fixed — and those merely deferred.
 Read it before planning work, and add to it rather than discovering the same gap twice.
 
+## What tropism is for
+
+One sentence, arrived at by elimination and each elimination measured:
+
+> **One ruleset, enforced at commit time and over the whole repository, across ten languages, with no
+> build and no install.**
+
+**[14-incremental-checking.md](14-incremental-checking.md) is the document to read first.** It is the
+product; the rest of this directory is how it works or evidence for why it is the part worth
+building. [07-open-questions.md](07-open-questions.md) carries the build order that follows from it,
+and it opens with `tropism check`.
+
+Three claims were eliminated to get here, and none of them on taste:
+
+| Claim                              | Killed by                                                                        |
+| ---------------------------------- | -------------------------------------------------------------------------------- |
+| "finds dependency problems"        | `go mod tidy` finds the same things, free, installed, and fixes them (09)        |
+| "manifest hygiene is the value"    | 63% false positives across ten real repositories (10)                            |
+| "the MCP server is the product"    | its flagship query needs a resolved tree; four of ten ecosystems have none (09)  |
+
+What survived is the rules feature, in two scopes that share one ruleset: `tropism check` on a change
+and `tropism analyze` on everything. A rule violation is the *presence* of a forbidden import — a
+fact about a line of source, the same soundness class as cycle detection, and the opposite of the
+absence-proving that sank the hygiene checks. And the hermetic constraint reverses sign here: the
+property that makes `unused-dep` unreliable is exactly what makes a pre-commit hook deployable, since
+ArchUnit needs a compiled classpath and tropism needs a directory.
+
+[11-dependency-rules.md](11-dependency-rules.md) specifies that ruleset — implemented, and enforced
+on this repository via [`tropism.toml`](../tropism.toml) at commit time and in CI.
+
+These documents define what tropism should be before it is built. They exist so that implementation
+work can start anywhere without re-deriving the same decisions, and so that a decision that turns
+out to be wrong can be found and changed in one place.
+
+Where the build has already contradicted a document, the document has been corrected rather than
+annotated — see the `LanguageProvider` trait's location in
+[01-architecture.md](01-architecture.md).
+
 **Status:** all ten target languages are built — Go, JavaScript/TypeScript, Rust, C#, Python, Ruby,
 Java, Swift, and C++ — plus the dependency ruleset. tropism is run against itself and against a
 deliberately-broken demo project per language, each asserted by
-`crates/tropism-lang/tests/demos.rs`. The MCP server and three rule kinds are not built.
+`crates/tropism-lang/tests/demos.rs`, and at commit time through a prek hook.
+
+**The gap between here and a usable product is two things:** `tropism check [FILES...]`
+([14](14-incremental-checking.md)) and the release pipeline ([13](13-build-and-release.md)). Neither
+is large. Until both exist nobody outside this repository can run tropism at all, which makes them
+the only work that matters. Also unbuilt, and further down: three rule kinds, and the MCP server.
 
 The last five languages needed **no trait change**, which is the first real evidence that
 `LanguageProvider` is the right shape: the first four each forced one
@@ -20,24 +63,6 @@ dependency ruleset. The remaining six languages and the MCP server are not built
 Previously: two vertical slices are complete — Go, and JavaScript/TypeScript with a real resolved
 tree, so all six checks have now run. The remaining eight languages and the MCP server are not
 built, and everything about them here is still intent rather than a description of behaviour.
-
-**Read [09-product-review.md](09-product-review.md) and [10-js-evaluation.md](10-js-evaluation.md)
-before planning further work.** Both slices contradicted parts of the plan below. In particular,
-manifest hygiene measured a 63% false-positive rate on real JavaScript repositories and should not
-ship on by default, while cycle detection proved sound and is the strongest remaining claim.
-
-[11-dependency-rules.md](11-dependency-rules.md) specifies the team-authored ruleset — now
-implemented, and enforced on this repository via [`tropism.toml`](../tropism.toml). It detects the presence
-of a forbidden edge rather than the absence of a use, which places it in the same soundness class as
-cycle detection, and no native tool can enforce an architecture it was never told about.
-
-These documents define what tropism should be before it is built. They exist so that implementation
-work can start anywhere without re-deriving the same decisions, and so that a decision that turns
-out to be wrong can be found and changed in one place.
-
-Where the build has already contradicted a document, the document has been corrected rather than
-annotated — see the `LanguageProvider` trait's location in
-[01-architecture.md](01-architecture.md).
 
 ## Reading order
 
@@ -51,9 +76,12 @@ annotated — see the `LanguageProvider` trait's location in
 | [06-testing.md](06-testing.md)                       | How correctness is established for a tool with no oracle |
 | [07-open-questions.md](07-open-questions.md)         | Decisions deferred, and what they block                  |
 | [08-crates.md](08-crates.md)                         | Verified dependency choices, and the gaps with no answer |
-| [09-product-review.md](09-product-review.md)         | Is this worth building? Evidence from the Go slice       |
+| [09-product-review.md](09-product-review.md)         | Is this worth building? Evidence, and two dead theses    |
 | [10-js-evaluation.md](10-js-evaluation.md)           | The kill-criterion run on ten real JS/TS repositories    |
 | [11-dependency-rules.md](11-dependency-rules.md)     | Team-defined architecture and package policy rules       |
+| [12-known-limitations.md](12-known-limitations.md)   | Everything that does not work, structural or deferred    |
+| [13-build-and-release.md](13-build-and-release.md)   | CI, CalVer, binaries, crates.io                          |
+| [14-incremental-checking.md](14-incremental-checking.md) | **The product.** Commit-time and whole-repo checking  |
 
 ## Design principles
 
