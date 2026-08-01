@@ -1,0 +1,24 @@
+crates/tropism/src/render/testdata.rs
+  s_c00712d345767e::t_19c9b0b509d218 15-16,21-27
+  s_c00712d345767e::t_544431ef1e2fc1 28
+crates/tropism/src/render/tui.rs
+  s_c00712d345767e::t_19c9b0b509d218 394,478-480
+crates/tropism/src/render/snapshots/tropism__render__tui__tests__renders_a_finding_detail.snap
+  s_c00712d345767e::t_0de8f75ace71e3 5
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.19",
+  "base_commit_sha": "92caa8dd04a92b799d924280a75aff6468ffeeea",
+  "prompts": {},
+  "sessions": {
+    "s_c00712d345767e": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "67ffe3c3-fe44-413d-b7bb-3239cf952460",
+        "model": "claude-opus-5"
+      },
+      "human_author": "Graham Brooks <graham@grahambrooks.com>"
+    }
+  }
+}
