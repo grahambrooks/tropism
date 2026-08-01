@@ -1,0 +1,38 @@
+prek.toml
+  s_c00712d345767e::t_759b836a57dfc7 5,8,13,15,18-19,26-27,29,32-33,37-71,77-83
+  s_c00712d345767e::t_2422fd2e4ee6b3 72-76
+  s_c00712d345767e::t_3d38d44bc2c733 2-4
+  s_c00712d345767e::t_7b955484c62dbb 6-7
+  s_c00712d345767e::t_e4c614021deaaa 9-12
+  s_c00712d345767e::t_90fbe440454d4a 14
+  s_c00712d345767e::t_cbe0674365f4e8 16-17
+  s_c00712d345767e::t_e7097beb43e394 20-25
+  s_c00712d345767e::t_d1e553f1ea0be5 28
+  s_c00712d345767e::t_b5a57347e43671 30-31
+  s_c00712d345767e::t_d5dff224395973 34-36
+  s_c00712d345767e::t_a1a346635d0450 1
+CLAUDE.md
+  s_c00712d345767e::t_6f47332cb20e80 218-220
+  s_c00712d345767e::t_5f2c1c2358a79b 229-239
+design/14-incremental-checking.md
+  s_c00712d345767e::t_4585c9d8b6f781 123-126,130-150
+  s_c00712d345767e::t_a07bdaf018fa57 151
+README.md
+  s_c00712d345767e::t_444b9e761f26f1 232-252
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.19",
+  "base_commit_sha": "8a5f4c54d01af08e4a33a6729e78cfcf2f9ef786",
+  "prompts": {},
+  "sessions": {
+    "s_c00712d345767e": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "67ffe3c3-fe44-413d-b7bb-3239cf952460",
+        "model": "claude-opus-5"
+      },
+      "human_author": "Graham Brooks <graham@grahambrooks.com>"
+    }
+  }
+}
