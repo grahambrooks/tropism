@@ -56,16 +56,27 @@ Pronounced *TROH-pizm*.
 
 ## Quick start
 
+Download a binary from [releases](https://github.com/grahambrooks/tropism/releases) — Linux (gnu and
+musl, x86-64 and arm64), macOS (Intel and Apple silicon), and Windows. Every release carries
+`SHA256SUMS` and build provenance attestation, so a downloaded binary traces back to the workflow run
+and commit that produced it.
+
+```sh
+tropism check                        # the rules, over everything
+tropism check src/api/user.ts        # the rules, scoped to a change
+tropism analyze /path/to/repo        # every check
+```
+
+Or build it:
+
 ```sh
 cargo build --release
 ./target/release/tropism analyze /path/to/repo
 ```
 
-There are no published binaries or crates yet. The release process — GitHub Actions, CalVer,
-binary downloads, and crates.io publishing — is specified in
-[design/13-build-and-release.md](design/13-build-and-release.md) but not built. Once it is,
-`cargo install tropism` will be the whole story: the crate, the binary, and the command are all the
-same name.
+Not on crates.io yet — publishing is wired up but deliberately manual, since a version there can be
+yanked but never reused. When it happens, `cargo install tropism` is the whole story: the crate, the
+binary, and the command are all the same name.
 
 Or take the guided tour, which runs against deliberately-broken sample projects in `demo/`:
 
@@ -74,6 +85,37 @@ Or take the guided tour, which runs against deliberately-broken sample projects 
 ./scripts/demo.sh dotnet       # one language: go | javascript | rust | dotnet
                                #               python | ruby | java | swift | cpp
 ./scripts/demo.sh --tui        # end in the interactive browser
+```
+
+
+## Pre-commit hook
+
+The differentiator, and the reason the hermetic design matters: **the check needs no build, no
+install of your project, and no network.** ArchUnit needs a compiled classpath, NDepend a built
+solution, `dependency-cruiser` a `node_modules`. tropism needs a directory, so it can run in the
+second before a commit.
+
+```yaml
+# .pre-commit-config.yaml, for pre-commit or prek
+repos:
+  - repo: https://github.com/grahambrooks/tropism
+    rev: v2026.8.1
+    hooks:
+      - id: tropism          # rules, on changed files, at commit time
+      - id: tropism-all      # every check, whole repository, at push time
+```
+
+`tropism check` reports only violations that **the changed files introduce** — a violation is an edge
+between two modules, and it belongs to the file at the source end. So a repository with two hundred
+existing violations passes every commit that does not add a two-hundred-and-first. That is a ratchet
+with no baseline file to maintain and nothing to regenerate after a refactor, and it is what makes
+the rules feature adoptable on a codebase that already breaks them.
+
+The backlog is counted, never hidden:
+
+```
+checked 6 changed file(s) against 4 rule(s) — 1 violation(s)
+  12 pre-existing violation(s) elsewhere are not shown; run `tropism check` for the whole repository
 ```
 
 ## What it checks
@@ -164,6 +206,11 @@ tropism analyze .                    # diagnostics on a terminal, JSON when pipe
 tropism analyze . --format json      # the machine contract
 tropism analyze . --format tui       # interactive browser (terminal only)
 tropism analyze . --fail-on error    # CI gate
+
+tropism check                        # rules only, whole repository
+tropism check src/a.rs src/b.ts      # rules only, scoped to these files
+tropism check --staged               # ...to what is staged
+tropism check --since origin/main    # ...to what a branch introduced
 ```
 
 Exit codes are the CI contract: `0` ran clean, `1` findings at or above `--fail-on`, `2` could not

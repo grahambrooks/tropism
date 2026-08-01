@@ -436,6 +436,15 @@ impl Ruleset {
         self.module_rules.is_empty() && self.package_rules.is_empty()
     }
 
+    /// How many rules this ruleset carries.
+    ///
+    /// Reported by `tropism check`: "checked 6 file(s) against 4 rule(s)" is the
+    /// sentence that tells a developer the hook did something, and the same
+    /// sentence reading "0 rule(s)" is the one that tells them it did not.
+    pub fn rule_count(&self) -> usize {
+        self.module_rules.len() + self.package_rules.len()
+    }
+
     /// Evaluates every rule, returning findings plus the ids of rules that matched
     /// nothing.
     pub fn evaluate(

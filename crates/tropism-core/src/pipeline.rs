@@ -25,6 +25,14 @@ pub struct Options {
     /// Explicit ruleset path. `None` discovers `tropism.toml` at the scan root.
     pub rules_path: Option<Utf8PathBuf>,
     pub use_rules: bool,
+    /// Evaluate only the rules, skipping every inferred check.
+    ///
+    /// What `tropism check` runs, and the division
+    /// `design/10-js-evaluation.md` argues for: the sound checks gate, the
+    /// advisory ones inform. It also skips lockfile parsing, which on a large
+    /// `package-lock.json` is the single most expensive read in the run and
+    /// cannot affect a rule.
+    pub rules_only: bool,
 }
 
 impl Default for Options {
@@ -33,8 +41,139 @@ impl Default for Options {
             respect_ignore: true,
             rules_path: None,
             use_rules: true,
+            rules_only: false,
         }
     }
+}
+
+/// What a `check` run is scoped to.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum CheckScope {
+    /// Every file. What CI runs, and what `tropism check` with no arguments does.
+    Repository,
+    /// Only violations attributable to these files, relative to the scan root.
+    Files(Vec<Utf8PathBuf>),
+}
+
+/// The result of a scoped rule check.
+///
+/// `suppressed` is the count this type exists for. A ratchet that silently
+/// conceals the backlog is how a codebase ends up with two hundred violations
+/// nobody remembers agreeing to, so the number is always carried even though the
+/// findings themselves are not.
+pub struct CheckOutcome {
+    pub report: Report,
+    pub scope: CheckScope,
+    /// Files the scope named that tropism actually knows how to read.
+    pub checked_files: usize,
+    pub rules_evaluated: usize,
+    /// Violations elsewhere in the repository, not attributable to this change.
+    pub suppressed: usize,
+    /// Set when a file list named the ruleset itself, which widens the scope to
+    /// the whole repository — editing a rule can invalidate anything.
+    pub widened_by_ruleset_change: bool,
+}
+
+/// Evaluates the ruleset, optionally scoped to a set of changed files.
+///
+/// The scoping rule is the one `design/14-incremental-checking.md` argues for:
+/// **a violation is reported when the *source* end of its edge is a changed
+/// file.** A rule violation is an edge between two modules, and an edge has two
+/// ends; if `api/user.ts` gains an import of `data/db`, the violation is
+/// attributable to `api/user.ts`. If `data/db.ts` changed and something in `api`
+/// already imported it, the edge is not new and is not this commit's fault.
+///
+/// That asymmetry is what makes the ratchet work: a repository with two hundred
+/// existing violations passes every commit that does not add a two-hundred-and-
+/// first, with no baseline file to maintain and nothing to regenerate after a
+/// refactor.
+pub fn check(
+    scan_root: &Utf8Path,
+    providers: &[&dyn LanguageProvider],
+    options: &Options,
+    scope: &CheckScope,
+) -> Result<CheckOutcome, DiscoveryError> {
+    let rules_only = Options {
+        respect_ignore: options.respect_ignore,
+        rules_path: options.rules_path.clone(),
+        use_rules: options.use_rules,
+        rules_only: true,
+    };
+    let mut report = analyze(scan_root, providers, &rules_only)?;
+
+    let rules_evaluated = match &options.rules_path {
+        Some(path) => std::fs::read_to_string(path)
+            .ok()
+            .and_then(|text| crate::rules::Ruleset::parse(path.clone(), &text).ok()),
+        None => crate::rules::Ruleset::discover(scan_root).ok().flatten(),
+    }
+    .map_or(0, |ruleset| ruleset.rule_count());
+
+    // Editing the ruleset can invalidate the whole repository, so a change to it
+    // is not something an incremental scope can honestly narrow. Open question 3
+    // in design/14, decided here.
+    let ruleset_file = options
+        .rules_path
+        .clone()
+        .unwrap_or_else(|| Utf8PathBuf::from(crate::rules::RULESET_FILE));
+    let widened = matches!(scope, CheckScope::Files(files) if files.iter().any(|file| {
+        file == &ruleset_file || file.file_name() == Some(crate::rules::RULESET_FILE)
+    }));
+
+    let (checked_files, suppressed) = match scope {
+        CheckScope::Repository => (count_source_files(&report), 0),
+        CheckScope::Files(_) if widened => (count_source_files(&report), 0),
+        CheckScope::Files(files) => {
+            let wanted: BTreeSet<&Utf8Path> = files.iter().map(Utf8PathBuf::as_path).collect();
+            let mut suppressed = 0;
+            for project in &mut report.projects {
+                project.findings.retain(|finding| {
+                    // The first piece of evidence is the source end of the edge;
+                    // `Ruleset::module_finding` puts it there deliberately.
+                    let attributed = finding
+                        .evidence
+                        .first()
+                        .is_some_and(|evidence| wanted.contains(evidence.file.as_path()));
+                    if !attributed {
+                        suppressed += 1;
+                    }
+                    attributed
+                });
+            }
+            (files.len(), suppressed)
+        }
+    };
+
+    // The per-check counts described a repository-wide run; after filtering they
+    // would overstate. Restating them keeps `CheckStatus` honest.
+    for project in &mut report.projects {
+        let counts: BTreeMap<CheckId, usize> =
+            project
+                .findings
+                .iter()
+                .fold(BTreeMap::new(), |mut acc, finding| {
+                    *acc.entry(finding.check).or_default() += 1;
+                    acc
+                });
+        for check in [CheckId::ModuleRule, CheckId::PackageRule] {
+            if let Some(CheckStatus::Ran { finding_count }) = project.checks.get_mut(&check) {
+                *finding_count = counts.get(&check).copied().unwrap_or(0);
+            }
+        }
+    }
+
+    Ok(CheckOutcome {
+        report,
+        scope: scope.clone(),
+        checked_files,
+        rules_evaluated,
+        suppressed,
+        widened_by_ruleset_change: widened,
+    })
+}
+
+fn count_source_files(report: &Report) -> usize {
+    report.projects.iter().map(|p| p.source_file_count).sum()
 }
 
 /// The shared inputs every project's analysis needs, gathered once.
@@ -188,8 +327,11 @@ pub fn analyze(
     resolve_cross_project_edges(&mut rule_input, &indexes, providers);
 
     // Cycles that span projects are invisible to the per-project graphs above, and
-    // in a monorepo they are the ones that matter most.
-    add_project_cycles(&mut report, &rule_input);
+    // in a monorepo they are the ones that matter most. Not a rule, so a
+    // rules-only run skips it like every other inferred check.
+    if !options.rules_only {
+        add_project_cycles(&mut report, &rule_input);
+    }
 
     apply_rules(scan_root, &mut report, &rule_input, options);
     report.finalize();
@@ -512,15 +654,19 @@ fn analyze_project(
     let manifest_text = std::fs::read_to_string(scan_root.join(manifest_path))?;
     let manifest = provider.parse_manifest(manifest_path, &manifest_text)?;
 
-    let resolved_tree = match &project.lockfile {
-        Some(lockfile) => {
+    // Skipped entirely for a rules-only run. A lockfile cannot affect a rule, and
+    // on a large `package-lock.json` reading and parsing it is the single most
+    // expensive thing in the pass.
+    let resolved_tree = match (&project.lockfile, pass.options.rules_only) {
+        (Some(lockfile), false) => {
             let text = std::fs::read_to_string(scan_root.join(lockfile))?;
             provider.parse_lockfile(lockfile, &text)?
         }
-        None => None,
+        _ => None,
     };
 
     let files = source_files(project, provider, pass);
+    let file_count = files.len();
 
     let mut imports = Vec::new();
     let mut skipped = Vec::new();
@@ -689,10 +835,27 @@ fn analyze_project(
         sibling_packages: provided.to_vec(),
     };
 
-    let (checks, findings) = analysis::run_all(&context);
     let mut project_report = ProjectReport::new(project.clone());
-    project_report.checks = checks;
-    project_report.findings = findings;
+    project_report.source_file_count = file_count;
+    if pass.options.rules_only {
+        // Say that they did not run rather than omitting them. A consumer that
+        // sees no `cycle` entry at all has to guess whether the check was clean,
+        // absent, or forgotten — which is the exact ambiguity `CheckStatus`
+        // exists to remove.
+        for check in CheckId::ANALYSIS {
+            project_report.checks.insert(
+                check,
+                CheckStatus::unavailable(
+                    "not run: `tropism check` evaluates rules only, because they are the \
+                     checks sound enough to block a commit; use `tropism analyze` for the rest",
+                ),
+            );
+        }
+    } else {
+        let (checks, findings) = analysis::run_all(&context);
+        project_report.checks = checks;
+        project_report.findings = findings;
+    }
     project_report.finalize();
 
     Ok((project_report, skipped, rule_input, index))

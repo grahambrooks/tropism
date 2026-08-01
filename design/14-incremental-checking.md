@@ -152,14 +152,48 @@ in [12-known-limitations.md](12-known-limitations.md).
 Note the useful consequence of prek's `--locked`: it installs the exact versions from `Cargo.lock`,
 which is why that file is committed ([.gitignore](../.gitignore) says so explicitly).
 
-### Not shipped yet, and why
+### Shipped
 
-`.pre-commit-hooks.yaml` is still deliberately absent. The hook's `entry` is `tropism check`, and
-that subcommand does not exist — D24 in [12-known-limitations.md](12-known-limitations.md). Shipping
-a hooks file whose entry point is missing would advertise something broken to every repository that
-consumed it.
+All three, in the order this section used to predict: `tropism check [FILES...]`, then binaries, then
+`.pre-commit-hooks.yaml`.
 
-The order is therefore: `tropism check [FILES...]`, then binaries, then the hooks file.
+The hooks file defines two hooks, because the two scopes answer different questions and only one is
+fast enough for every commit:
+
+| Hook          | Entry                                         | Stage      |
+| ------------- | --------------------------------------------- | ---------- |
+| `tropism`     | `tropism check --format text` on changed files | pre-commit |
+| `tropism-all` | `tropism analyze --fail-on error`              | pre-push   |
+
+Consumed from another repository with `repo: https://github.com/grahambrooks/tropism`. It is
+`language: system`, so `tropism` must be on PATH — from a release binary. prek's `language: rust`
+remains blocked by D25.
+
+**Two deviations from the design above, both deliberate.**
+
+`--staged` and `--since` invoke `git` rather than reading the index with `gix`. The argument for
+`gix` was that a checkout with no git binary still works — but such a checkout also has no staged
+files and no refs to diff against, so the case the dependency would buy does not exist. The
+invocation is confined to two functions in the CLI, happens only when the corresponding flag is
+passed, and keeps `tropism-core` knowing nothing about version control, which is what lets it analyze
+a directory that is not a repository at all.
+
+`--since` uses the three-dot form, comparing against the merge base rather than the tip. Open
+question 4 warned that the wrong base ref produces a huge changed set; two dots is exactly that
+mistake, reporting everything that landed on `main` in the meantime as part of the branch.
+
+### What is *not* incremental yet
+
+Only the **scope** is incremental, not the parsing. `check` walks and parses the whole tree, then
+attributes findings to the changed files. The result is identical to what a parse-incremental
+implementation would produce; the cost is not.
+
+That is an honest gap rather than a hidden one. What it already buys: rules only, so the six inferred
+checks are skipped, and lockfile parsing — the single most expensive read on a large
+`package-lock.json` — is skipped with them. What it does not buy is the win this document opens by
+describing, where the expensive stage shrinks to the changed set. Recorded as D36 in
+[12-known-limitations.md](12-known-limitations.md); the "passes that are still needed" table below is
+the design for closing it.
 
 ### What *is* wired up: a local hook on this repository
 
@@ -261,10 +295,14 @@ Exit codes are unchanged: `0` clean, `1` violations at or above `--fail-on`, `2`
 2. **Renames and deletions.** A file that moved between modules can create a violation without its
    contents changing. Checking the source end catches the new path, so this may already work — needs
    a test rather than a decision.
-3. **What about a changed `tropism.toml`?** Editing the ruleset can invalidate the whole repository,
-   so a change to it should probably force a full run rather than an incremental one.
-4. **Merge commits and rebases.** `--since` against the wrong base can produce a huge changed set.
-   Document the base-ref choice rather than guessing it.
+3. ~~**What about a changed `tropism.toml`?**~~ **Decided: it widens the scope to the whole
+   repository.** Editing a rule can invalidate anything, so an incremental scope cannot honestly
+   narrow it. `CheckOutcome::widened_by_ruleset_change` records that it happened and the summary line
+   says so, because a run that examined everything must not be reported as one that examined a
+   change.
+4. ~~**Merge commits and rebases.**~~ **Decided: three-dot, against the merge base.** `--since main`
+   diffs `main...HEAD`, so a long-lived branch reports what it introduced rather than everything that
+   landed on `main` while it was open.
 
 ---
 

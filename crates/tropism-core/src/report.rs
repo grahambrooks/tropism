@@ -245,6 +245,14 @@ pub struct ProjectReport {
     pub project: Project,
     pub checks: BTreeMap<CheckId, CheckStatus>,
     pub findings: Vec<Finding>,
+    /// Source files this project contributed to the analysis.
+    ///
+    /// Additive, and consumers may ignore it. It exists so `tropism check` can say
+    /// how much it looked at: "checked 6 file(s)" and "checked 1,204 file(s)" are
+    /// different claims, and a run that examined a handful must not read like one
+    /// that examined the repository.
+    #[serde(default)]
+    pub source_file_count: usize,
 }
 
 impl ProjectReport {
@@ -253,6 +261,7 @@ impl ProjectReport {
             project,
             checks: BTreeMap::new(),
             findings: Vec::new(),
+            source_file_count: 0,
         }
     }
 

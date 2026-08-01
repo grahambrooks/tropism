@@ -11,6 +11,7 @@ use std::ops::Range;
 use annotate_snippets::{AnnotationKind, Group, Level, Renderer, Snippet};
 use anstyle::{AnsiColor, Style};
 use camino::Utf8Path;
+use tropism_core::pipeline::{CheckOutcome, CheckScope};
 use tropism_core::report::{CheckStatus, Finding, Report, Severity};
 
 /// Styles for the report chrome. Held in a struct rather than as constants so tests
@@ -50,6 +51,87 @@ impl Palette {
 /// Renders a whole report with colour.
 pub fn render(report: &Report) -> String {
     render_with(report, true)
+}
+
+/// Renders a `check` run.
+///
+/// Deliberately terser than [`render`]: the reader is being interrupted mid-commit,
+/// so the diagnostics come first and everything else is one line. The check-status
+/// block is omitted because a rules-only run has nothing interesting to say there —
+/// what it must not omit is the *scope*, since a run that examined six files must
+/// never read like one that examined the repository.
+pub fn render_check(outcome: &CheckOutcome) -> String {
+    render_check_with(outcome, true)
+}
+
+pub fn render_check_with(outcome: &CheckOutcome, styled: bool) -> String {
+    let renderer = if styled {
+        Renderer::styled()
+    } else {
+        Renderer::plain()
+    };
+    let palette = if styled {
+        Palette::styled()
+    } else {
+        Palette::plain()
+    };
+    let mut out = String::new();
+
+    for finding in outcome.report.findings() {
+        out.push_str(&render_finding(
+            finding,
+            &outcome.report.scan_root,
+            &renderer,
+        ));
+        out.push('\n');
+    }
+
+    let violations = outcome.report.findings().count();
+    let (bold, dim, good, warn) = (palette.bold, palette.dim, palette.good, palette.warn);
+    let style = if violations == 0 { good } else { warn };
+
+    // A widened run examined everything, whatever the scope asked for, and saying
+    // "changed" there would misreport what was looked at.
+    let scope = match &outcome.scope {
+        CheckScope::Files(_) if !outcome.widened_by_ruleset_change => {
+            format!("{} changed file(s)", outcome.checked_files)
+        }
+        _ => format!("{} file(s)", outcome.checked_files),
+    };
+    let _ = writeln!(
+        out,
+        "{bold}checked{bold:#} {scope} against {} rule(s) — {style}{violations} violation(s){style:#}",
+        outcome.rules_evaluated
+    );
+
+    // A ruleset with no rules blocks nothing, and a hook that blocks nothing is
+    // worse than no hook: it is a hook everyone believes is working.
+    if outcome.rules_evaluated == 0 {
+        let _ = writeln!(
+            out,
+            "  {warn}no rules were evaluated — nothing here can fail{warn:#}"
+        );
+    }
+
+    if outcome.widened_by_ruleset_change {
+        let _ = writeln!(
+            out,
+            "  {dim}the ruleset itself changed, so the whole repository was checked{dim:#}"
+        );
+    }
+
+    // Counted, never hidden. A ratchet that conceals the backlog is how a codebase
+    // ends up with two hundred violations nobody remembers agreeing to.
+    if outcome.suppressed > 0 {
+        let _ = writeln!(
+            out,
+            "  {dim}{} pre-existing violation(s) elsewhere are not shown; \
+             run `tropism check` for the whole repository{dim:#}",
+            outcome.suppressed
+        );
+    }
+
+    out
 }
 
 /// Renders a whole report, optionally without any ANSI styling.
@@ -276,6 +358,77 @@ mod tests {
     #[test]
     fn renders_findings_in_the_rustc_diagnostic_style() {
         insta::assert_snapshot!(render_with(&sample_report(), false));
+    }
+
+    fn outcome(scope: CheckScope, suppressed: usize, rules: usize) -> CheckOutcome {
+        let mut report = sample_report();
+        // The shared fixture carries a cycle, which a rules-only run never
+        // produces. Emptied so these assertions are about the summary line.
+        for project in &mut report.projects {
+            project.findings.clear();
+        }
+        CheckOutcome {
+            report,
+            scope,
+            checked_files: 6,
+            rules_evaluated: rules,
+            suppressed,
+            widened_by_ruleset_change: false,
+        }
+    }
+
+    /// A run that examined six files must never read like one that examined the
+    /// repository — the distinction is the whole basis of the ratchet.
+    #[test]
+    fn the_summary_states_the_scope_that_was_checked() {
+        let scoped = render_check_with(&outcome(CheckScope::Files(vec![]), 0, 4), false);
+        assert!(
+            scoped.contains("checked 6 changed file(s) against 4 rule(s)"),
+            "{scoped}"
+        );
+
+        let whole = render_check_with(&outcome(CheckScope::Repository, 0, 4), false);
+        assert!(
+            whole.contains("checked 6 file(s) against 4 rule(s)"),
+            "{whole}"
+        );
+        assert!(!whole.contains("changed"), "{whole}");
+    }
+
+    /// Counted, never hidden. A ratchet that conceals the backlog is how a codebase
+    /// ends up with violations nobody remembers agreeing to.
+    #[test]
+    fn pre_existing_violations_are_counted_in_the_summary() {
+        let rendered = render_check_with(&outcome(CheckScope::Files(vec![]), 12, 4), false);
+        assert!(
+            rendered.contains("12 pre-existing violation(s)"),
+            "{rendered}"
+        );
+
+        let clean = render_check_with(&outcome(CheckScope::Files(vec![]), 0, 4), false);
+        assert!(!clean.contains("pre-existing"), "{clean}");
+    }
+
+    /// A hook that blocks nothing is worse than no hook: it is a hook everyone
+    /// believes is working.
+    #[test]
+    fn a_ruleset_with_no_rules_says_so() {
+        let rendered = render_check_with(&outcome(CheckScope::Repository, 0, 0), false);
+        assert!(rendered.contains("no rules were evaluated"), "{rendered}");
+    }
+
+    /// A widened run examined everything, so calling those files "changed" would
+    /// misreport what was looked at.
+    #[test]
+    fn a_widened_run_does_not_call_the_repository_a_change() {
+        let mut widened = outcome(CheckScope::Files(vec![]), 0, 4);
+        widened.widened_by_ruleset_change = true;
+        let rendered = render_check_with(&widened, false);
+        assert!(rendered.contains("checked 6 file(s)"), "{rendered}");
+        assert!(
+            rendered.contains("the ruleset itself changed"),
+            "{rendered}"
+        );
     }
 
     /// Principle 5: same input, same bytes out.

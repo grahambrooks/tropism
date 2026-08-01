@@ -1,0 +1,44 @@
+# Hook definitions for pre-commit and prek.
+#
+# Consume from another repository with:
+#
+#   repos:
+#     - repo: https://github.com/grahambrooks/tropism
+#       rev: v2026.8.1
+#       hooks:
+#         - id: tropism
+#
+# `language: system` requires `tropism` on PATH — install it from the GitHub
+# release, or with `cargo install tropism` once the crate is published. That is
+# deliberate rather than a limitation of the framework: prek's `language: rust`
+# installs with `cargo install --bins --locked`, which this repository's virtual
+# manifest refuses (D25 in design/12-known-limitations.md).
+
+- id: tropism
+  name: tropism (architecture rules)
+  description: >-
+    Check changed files against the team's architecture and package rules.
+    Needs no build, no install of the analyzed project, and no network.
+  entry: tropism check --format text
+  language: system
+  # `pass_filenames` is left at its default, so the changed files become the scope.
+  # That is the entire point of the hook.
+  #
+  # One regex rather than `types_or`, because the two are ANDed and the ruleset is
+  # not source in any of these languages: a `tropism.toml`-only change has to
+  # trigger a run, and tropism then widens it to the whole repository by itself,
+  # since editing a rule can invalidate anything. Expressed with `types_or` the
+  # hook would silently skip exactly the change most able to break the build.
+  files: >-
+    \.(rs|go|js|mjs|cjs|ts|tsx|py|pyi|rb|java|swift|cpp|cc|cxx|hpp|hh|hxx|h|cs|csproj)$|(^|/)tropism\.toml$
+
+- id: tropism-all
+  name: tropism (whole repository)
+  description: >-
+    Every check over the whole tree, not only the rules. Slower, and includes the
+    advisory checks — appropriate for a pre-push hook or a manual stage rather
+    than for every commit.
+  entry: tropism analyze --format text --fail-on error
+  language: system
+  pass_filenames: false
+  always_run: true

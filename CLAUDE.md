@@ -12,9 +12,9 @@ problems — across ten languages, without invoking a package manager or buildin
 
 Two scopes over one analysis and one ruleset:
 
-- **`tropism check <files>`** — a change, at commit time, through a pre-commit hook. *Not yet built;
-  it is the next build.* See [design/14-incremental-checking.md](design/14-incremental-checking.md).
-- **`tropism analyze`** — the whole repository, in CI or by hand. Built.
+- **`tropism check <files>`** — a change, at commit time, through a pre-commit hook. Rules only,
+  scoped to the files given. See [design/14-incremental-checking.md](design/14-incremental-checking.md).
+- **`tropism analyze`** — the whole repository, in CI or by hand. Every check.
 
 A third surface, an **MCP server** for coding agents, is specified and deliberately last — see
 "Dependency rules" below for why it moved.
@@ -149,12 +149,16 @@ would make the hook a liar. The advisory checks (cycle, hygiene, the resolved tr
 whole-repository run, where a human reads the output before acting; only what is safe to enforce
 automatically runs at commit time.
 
-**The next build is `tropism check [FILES...]`**, specified in
-[design/14-incremental-checking.md](design/14-incremental-checking.md), followed by the release
-pipeline. Until both exist nobody outside this repository can run tropism at all. The MCP server was
-once the recommended next build and is now last: its flagship query needs a resolved tree, and four
-of the ten ecosystems have no lockfile edges — see the revision at the end of
+`tropism check` and the release pipeline are both built, so the hook is real and binaries ship. The
+MCP server was once the recommended next build and is now last: its flagship query needs a resolved
+tree, and four of the ten ecosystems have no lockfile edges — see the revision at the end of
 [design/09-product-review.md](design/09-product-review.md).
+
+**Scoping is the part to understand before changing `check`.** A violation is an edge, an edge has
+two ends, and the violation belongs to the file at the *source* end. If `api/user.ts` gains an import
+of `data/db`, that is attributable to `api/user.ts`; if `data/db.ts` changed and something in `api`
+already imported it, the edge is not new and is not this commit's fault. That asymmetry is the whole
+ratchet, and `crates/tropism-lang/tests/check.rs` pins it from both directions.
 
 ## Build and release
 
@@ -241,9 +245,11 @@ cargo build -p tropism --no-default-features # must still build without ratatui
 ./scripts/demo.sh self                       # tropism analyzing tropism
 ./scripts/demo.sh --tui                      # ...ending in the interactive browser
 ./target/debug/tropism analyze .                # dogfood directly
+./target/debug/tropism check src/a.rs           # rules only, scoped to a change
 
-prek install                                 # wire the pre-commit hook (prek.toml)
-prek run tropism -a                          # run that hook without committing
+prek install                                 # wire the hooks (prek.toml)
+prek run tropism -a                          # the commit-time hook, without committing
+prek run tropism-all --hook-stage pre-push -a   # the whole-repository one
 ```
 
 Output formats: `--format auto` (default; diagnostics on a tty, JSON when piped), `text`, `json`,
@@ -293,8 +299,14 @@ each have a provider, a demo under `demo/`, and assertions in `crates/tropism-la
 No trait change was needed for any of them, which is the first real evidence that
 `LanguageProvider` is the right shape.
 
-Not built, in priority order: `tropism check [FILES...]` (the next build), the release pipeline, a
-baseline for whole-repository runs, the unimplemented rule kinds above, and the MCP server.
+`tropism check [FILES...]` is built, with `--staged` and `--since <ref>`, and `.pre-commit-hooks.yaml`
+ships so other repositories can consume the hook. The release pipeline cuts CalVer binaries for six
+targets on every green push to main, with checksums and provenance; crates.io publishing is wired but
+deliberately manual.
+
+Not built, in priority order: parse-level incrementality for `check` (D36 — it scopes but still
+parses the whole tree), a baseline for whole-repository runs, the unimplemented rule kinds above, and
+the MCP server.
 
 **Before extending the checks, read [design/10-js-evaluation.md](design/10-js-evaluation.md).**
 Manifest hygiene (`unused-dep` / `missing-dep`) measured a **63% false-positive rate** on real

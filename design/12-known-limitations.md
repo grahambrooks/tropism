@@ -210,15 +210,19 @@ ad-hoc runs against a repository with no `tropism.toml`; it is not built.
 **Remaining:** the CLI still accepts only one path argument, so `tropism analyze crates/a crates/b`
 exits 2.
 
-### D24. `tropism check` and `--check <id>` are specified but not implemented
+### D24. ~~`tropism check`~~ — RESOLVED; `--check <id>` is still not implemented
 
-[05-interfaces.md](05-interfaces.md) specifies a rules-only `tropism check` subcommand and a `--check`
-filter. Neither exists; `--help` offers only `--format`, `--fail-on`, `--no-ignore`, `--rules`, and
-`--no-rules`.
+`tropism check [FILES...]` is built, with `--staged` and `--since <ref>`. It runs the rules only and
+scopes findings to the files it was given, which is the division
+[10-js-evaluation.md](10-js-evaluation.md) argues for: the sound checks gate, the advisory ones
+inform. `.pre-commit-hooks.yaml` ships alongside it. See
+[14-incremental-checking.md](14-incremental-checking.md).
 
-**Cost:** no fast, high-signal subset for a pre-commit hook, and no way to gate on rules alone while
-leaving the noisier checks advisory — which is the division
-[10-js-evaluation.md](10-js-evaluation.md) argues for.
+**Still missing:** the `--check <id>` filter, for running one named check. Low value now that the
+rules/inferred split is a subcommand rather than a flag, which is what the filter was mostly wanted
+for.
+
+**Also still open:** the run is scoped but not parse-incremental — D36.
 
 ### D25. The workspace root is a virtual manifest, so the repo is not `cargo install`-able
 
@@ -313,6 +317,7 @@ Never implemented; reports `Unavailable` with that reason. Deferred in
 | D33 | Swift    | a target with a custom `path:` is not found                                     | the file falls back to its directory as the module — less precise, never wrong                                                                                            |
 | D34 | C++      | include-path roots are a fixed list                                             | a project using an unconventional root (`headers/`, `api/`) gets component names that no `#include` matches, so its internal edges are lost                               |
 | D35 | C++      | `#include MACRO` and generated headers are invisible                            | a computed include names nothing readable and is skipped                                                                                                                  |
+| D36 | all      | `tropism check` scopes but does not parse incrementally                         | it walks and parses the whole tree, then attributes findings to the changed files. The *result* is what a parse-incremental implementation would produce; the cost is not. See design/14, "What is not incremental yet" |
 
 ---
 
@@ -333,7 +338,8 @@ the product question.
 1. **Incremental checking and the pre-commit hook**
    ([14-incremental-checking.md](14-incremental-checking.md)) — the strongest differentiator, and it
    resolves D8 as a side effect. Ships with the release pipeline, since a hook needs a binary.
-2. **D24** — `tropism check` and `--check <id>`, which the hook is built on.
+2. ~~**D24**~~ — done. `tropism check` ships, and the hook is built on it. **D36** is what remains:
+   making the run parse-incremental rather than merely scoped.
 3. **D2** — lockfile discovery upward, which turns several misleading `Unavailable` reasons into
    real answers.
 4. **D10** — merge the two overlapping resolved-tree checks.
