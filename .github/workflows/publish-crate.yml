@@ -1,0 +1,66 @@
+# crates.io publishing, kept separate from the release pipeline on purpose.
+#
+# `dist` owns .github/workflows/release.yml and regenerates it, so anything added
+# there by hand is lost on the next `dist generate`. This lives in its own file
+# for that reason, and because it should not be continuous regardless:
+#
+# **A crates.io version can be yanked but never deleted and never reused.**
+# Publishing on every commit permanently burns a version per commit. Binaries are
+# replaceable; this is not. So it is workflow_dispatch only, and stays that way.
+#
+# Since adopting dist the version is committed rather than injected, so this reads
+# it straight from Cargo.toml — there is nothing to compute and nothing to pass in.
+
+name: publish-crate
+
+on:
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: Run `cargo publish --dry-run` and stop
+        type: boolean
+        default: true
+
+concurrency:
+  group: publish-crate
+  cancel-in-progress: false
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  publish:
+    runs-on: ubuntu-24.04
+    environment: crates-io
+    steps:
+      - uses: actions/checkout@v7
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+
+      - id: version
+        run: |
+          set -euo pipefail
+          VERSION=$(grep -m1 '^version = ' Cargo.toml | cut -d'"' -f2)
+          echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
+          echo "::notice::Cargo.toml declares ${VERSION}"
+
+      # The workspace publishes bottom-up: tropism depends on tropism-lang, which
+      # depends on tropism-core. crates.io rejects a package whose path dependencies
+      # are not already published, so the order is not cosmetic.
+      - name: Publish
+        run: |
+          set -euo pipefail
+          FLAGS=""
+          if [[ "${{ inputs.dry_run }}" == "true" ]]; then
+            FLAGS="--dry-run"
+            echo "::notice::dry run — nothing will be published"
+          fi
+          for crate in tropism-core tropism-lang tropism; do
+            if cargo info "${crate}@${{ steps.version.outputs.version }}" >/dev/null 2>&1; then
+              echo "::notice::${crate} ${{ steps.version.outputs.version }} is already published; skipping"
+              continue
+            fi
+            cargo publish -p "${crate}" ${FLAGS}
+          done
+        env:
+          CARGO_REGISTRY_TOKEN: ${{ secrets.CARGO_REGISTRY_TOKEN }}

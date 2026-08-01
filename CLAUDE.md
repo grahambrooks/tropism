@@ -162,17 +162,39 @@ ratchet, and `crates/tropism-lang/tests/check.rs` pins it from both directions.
 
 ## Build and release
 
-Specified in [design/13-build-and-release.md](design/13-build-and-release.md) and **not
-implemented** — no `.github/workflows/` exist yet, deliberately, because continuous release and
-crates.io publishing both take actions that cannot be undone.
+Releases are cut by **`make release`** and built by **`dist` (cargo-dist)**. Never bump the version
+by hand: the Makefile computes CalVer from the tag count, writes it to `Cargo.toml`, refreshes
+`Cargo.lock`, commits, tags, and pushes. The **tag** is what starts the release.
 
-Two things to know before touching it:
+```sh
+make release-dry     # what it would do
+make release         # do it — runs `make check` first and refuses a dirty tree
+```
 
-- **The name is settled.** `tropism`, `tropism-core`, `tropism-lang`, and `tropism-mcp` were all
-  free on crates.io as of 2026-07-31, so the crate, the binary, and the command are all `tropism`.
-  Re-verify before the first publish — nothing reserves a name.
-- **tropism is not a pure-Rust binary.** Every tree-sitter grammar compiles C, so cross-compilation
-  needs a cross C toolchain and each target should be built on a native runner.
+Two things to know before touching any of it:
+
+- **`dist` owns `.github/workflows/release.yml` and regenerates it.** Anything hand-added there is
+  lost on the next `dist generate`. Config lives in `dist-workspace.toml`; crates.io publishing
+  lives in its own `publish-crate.yml` for exactly this reason, and stays manual because a
+  crates.io version can be yanked but never reused.
+- **The version is committed, not injected.** That reverses the original design, deliberately —
+  [design/15-dist-evaluation.md](design/15-dist-evaluation.md) records the evaluation and why
+  adoption overruled it. The short version: judged on maintainer ergonomics the old pipeline won
+  because it already existed; judged on *user* ergonomics, which is what decides adoption, a
+  one-line installer that needs no admin was never close.
+
+**tropism is not a pure-Rust binary.** Every tree-sitter grammar compiles C, so cross-compilation
+needs a cross C toolchain and each target is built on a native runner. dist 0.32 can cross-compile
+via zigbuild/xwin; that is untested here and the native-runner matrix is deliberate.
+
+**The name is settled, but re-verify before the first crates.io publish.** `tropism`,
+`tropism-core`, `tropism-lang`, and `tropism-mcp` were all free as of 2026-07-31, so the crate, the
+binary, and the command are all `tropism`. Nothing reserves a name, and nothing has been published
+yet — `publish-crate.yml` has never run.
+
+The highest-value distribution work remaining is **code signing**, not more channels: an unsigned
+`.exe` trips SmartScreen and cannot be allowlisted by publisher in AppLocker or WDAC. SignPath
+Foundation is free for qualifying open source.
 
 ## Cycle scopes
 

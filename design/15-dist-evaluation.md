@@ -1,6 +1,7 @@
 # 15 — Evaluating `dist` (cargo-dist) against the hand-written release pipeline
 
-**Status: evaluated on a branch, not adopted.** Everything here was run, not read about.
+**Status: evaluated, then ADOPTED.** See "Adopted" at the end for what changed and why the
+recommendation below was overruled. Everything here was run, not read about.
 `dist` 0.32.0 (released 2026-05-21), evaluated 2026-08-01 against the pipeline in
 [13-build-and-release.md](13-build-and-release.md), which has cut three releases.
 
@@ -138,3 +139,55 @@ generates are strictly better than maintaining them by hand, and `allow-dirty` c
 **Keep from this branch regardless:** `repository`/`homepage` in `[workspace.package]`, and the
 `[profile.dist]`-style thin-LTO idea — a 36% size reduction is worth having whoever builds the
 archive.
+
+---
+
+## Adopted — 2026-08-01
+
+The recommendation above was "not yet". It was overruled, and correctly:
+
+> Driving user adoption — particularly in corporate environments — is more important than the
+> original design.
+
+That reframes the trade. The evaluation weighed dist against a release pipeline that *worked*, and
+concluded that replacing working infrastructure was not worth installers obtainable another way.
+But "works" was measured from the maintainer's side. From a corporate Windows user's side the old
+pipeline produced a `.zip` they had to find, unpack, and put on PATH by hand — and every one of
+those steps is a place adoption stops. A one-line PowerShell installer that needs no admin is not a
+convenience; it is the difference between being tried and not being tried.
+
+### What changed on adoption
+
+- **`dist` owns `.github/workflows/release.yml`.** The hand-written pipeline is deleted, and
+  `allow-dirty` and `dispatch-releases` are gone with it.
+- **Releases are tag-driven, and the version is committed.** This is the conflict the evaluation
+  identified, resolved in dist's favour. `version = "0.0.0"` with release-time injection is gone.
+- **`make release` owns the bump.** The injection model existed to avoid a push loop and
+  release-bump noise; a Makefile target that computes CalVer, bumps, commits, tags, and pushes costs
+  one commit per release and removes the reason anyone needed to know the steps. See
+  [13-build-and-release.md](13-build-and-release.md).
+- **Provenance is preserved.** The evaluation flagged that dist's workflow drops the build
+  attestation the hand-written one emitted. `github-attestations = true` restores it, so nothing
+  was traded away.
+- **crates.io publishing moved to its own workflow.** dist regenerates `release.yml`, so anything
+  hand-added there is lost on the next `dist generate`. `publish-crate.yml` is separate and stays
+  `workflow_dispatch`-only, because a crates.io version can be yanked but never reused.
+
+### What the evaluation got right, and still holds
+
+Both of the reasons for "not yet" survive adoption — they were never arguments against dist, only
+against its priority:
+
+1. **Signing is still the binding constraint** on corporate Windows. An unsigned `.exe` trips
+   SmartScreen and cannot be allowlisted by publisher in AppLocker or WDAC. dist does not solve
+   that; [SignPath Foundation](https://signpath.io/solutions/open-source-community) does, free, for
+   projects that qualify — and tropism does. **This is now the highest-value distribution work
+   remaining.**
+2. **PyPI is still the best channel for the hook**, and dist does not generate it. `language: python`
+   puts the binary in a venv the team's already-approved Python creates: no admin, no PATH, no Mark
+   of the Web, and it inherits an AppLocker exception that already exists. A maturin job, still
+   worth doing.
+
+The lesson worth keeping: the evaluation compared dist against the pipeline on *maintainer*
+ergonomics, where the pipeline scored well because it already existed. Judged on *user* ergonomics,
+which is what decides adoption, it was never close.

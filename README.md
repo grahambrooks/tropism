@@ -56,10 +56,27 @@ Pronounced *TROH-pizm*.
 
 ## Quick start
 
-Download a binary from [releases](https://github.com/grahambrooks/tropism/releases) — Linux (gnu and
-musl, x86-64 and arm64), macOS (Intel and Apple silicon), and Windows. Every release carries
-`SHA256SUMS` and build provenance attestation, so a downloaded binary traces back to the workflow run
-and commit that produced it.
+One line, no admin rights, no Rust toolchain:
+
+```sh
+# macOS / Linux
+curl --proto '=https' --tlsv1.2 -LsSf https://github.com/grahambrooks/tropism/releases/latest/download/tropism-installer.sh | sh
+```
+
+```powershell
+# Windows
+powershell -ExecutionPolicy Bypass -c "irm https://github.com/grahambrooks/tropism/releases/latest/download/tropism-installer.ps1 | iex"
+```
+
+**The Windows installer never asks for elevation.** It installs under your profile and adds that
+directory to your *user* PATH (`HKEY_CURRENT_USER\Environment`), so it works on a locked-down
+corporate workstation where you are not a local administrator. Set `TROPISM_INSTALL_DIR` to put it
+somewhere else.
+
+Or take the archive for your platform from [releases](https://github.com/grahambrooks/tropism/releases)
+— Linux (gnu and musl, x86-64 and arm64), macOS (Intel and Apple silicon), and Windows. Every
+release carries `sha256.sum` and GitHub build-provenance attestation, so a downloaded binary traces
+back to the workflow run and commit that produced it.
 
 ```sh
 tropism check                        # the rules, over everything
@@ -75,8 +92,7 @@ cargo build --release
 ```
 
 Not on crates.io yet — publishing is wired up but deliberately manual, since a version there can be
-yanked but never reused. When it happens, `cargo install tropism` is the whole story: the crate, the
-binary, and the command are all the same name.
+yanked but never reused.
 
 Or take the guided tour, which runs against deliberately-broken sample projects in `demo/`:
 
@@ -86,7 +102,6 @@ Or take the guided tour, which runs against deliberately-broken sample projects 
                                #               python | ruby | java | swift | cpp
 ./scripts/demo.sh --tui        # end in the interactive browser
 ```
-
 
 ## Pre-commit hook
 

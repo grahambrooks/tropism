@@ -15,15 +15,12 @@ targets = ["x86_64-unknown-linux-gnu", "x86_64-unknown-linux-musl", "aarch64-unk
 npm-package = "tropism"
 # Path that installers should place binaries in
 install-path = "CARGO_HOME"
-# Releases are triggered by hand rather than by a tag push, so this evaluation
-# cannot race the hand-written pipeline in release.yml.
-dispatch-releases = true
-# dist claims .github/workflows/release.yml exclusively and regenerates it. This
-# evaluation keeps the hand-written pipeline there and dist's copy beside it as
-# release-dist.yml, so `allow-dirty` stops dist rewriting the wrong file. Adopting
-# dist for real means deleting the hand-written one and dropping this key.
-allow-dirty = ["ci"]
 # Which actions to run on pull requests
 pr-run-mode = "plan"
 # Whether to install an updater program
 install-updater = false
+# Build provenance, so a downloaded binary traces back to the workflow run and
+# commit that produced it. The hand-written pipeline emitted this via
+# actions/attest-build-provenance; dropping it on adoption would have been a
+# regression, so it is turned on here instead.
+github-attestations = true

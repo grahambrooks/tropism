@@ -1,5 +1,13 @@
 # 13 — Build and release
 
+> **Superseded in part, 2026-08-01: the pipeline described below has been replaced by `dist`
+> (cargo-dist), and the version is now committed rather than injected.** The reasoning for CalVer,
+> for continuous release, and for what a release must contain all still hold and are unchanged. What
+> changed is who builds it and how a release is started: `make release` bumps, commits, tags, and
+> pushes; the tag triggers `dist`. See [15-dist-evaluation.md](15-dist-evaluation.md) for the
+> evaluation and the adoption decision, and note that the "version is injected, never committed"
+> design below is the one thing that did not survive it.
+
 GitHub Actions, continuous release, CalVer versioning, binary downloads, and crates.io publishing.
 
 A dependency analyzer's own supply chain should model the practices it advocates, so this document

@@ -6,8 +6,11 @@ exclude = ["demo"]
 resolver = "3"
 
 [workspace.package]
-# The repository never claims a version; the release workflow injects the CalVer
-# one and does not commit it back. See design/13-build-and-release.md.
+# CalVer, committed rather than injected. It used to be permanently 0.0.0 with the
+# version computed and injected at release time, which avoided a push loop — but
+# `dist` is tag-driven and reads the version from here, and a committed version is
+# also what `tropism --version`, every installer, and every registry report. Bump
+# it with `make release`, never by hand. See design/13-build-and-release.md.
 version = "0.0.0"
 edition = "2024"
 license = "MIT OR Apache-2.0"
