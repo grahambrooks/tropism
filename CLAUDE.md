@@ -215,6 +215,9 @@ cargo build -p tropism --no-default-features # must still build without ratatui
 ./scripts/demo.sh self                       # tropism analyzing tropism
 ./scripts/demo.sh --tui                      # ...ending in the interactive browser
 ./target/debug/tropism analyze .                # dogfood directly
+
+prek install                                 # wire the pre-commit hook (prek.toml)
+prek run tropism -a                          # run that hook without committing
 ```
 
 Output formats: `--format auto` (default; diagnostics on a tty, JSON when piped), `text`, `json`,
@@ -223,6 +226,17 @@ Output formats: `--format auto` (default; diagnostics on a tty, JSON when piped)
 Snapshot tests use `insta`. A failing snapshot writes a `.snap.new` beside the original; review the
 diff before accepting. The TUI is snapshot-tested through `ratatui`'s `TestBackend`, so it needs no
 terminal; both renderers share one fixture report (`render/testdata.rs`) so they cannot drift.
+**A snapshot must never contain an absolute path** — the scan root is substituted with
+`STABLE_SCAN_ROOT` for exactly that reason, after a committed snapshot holding one developer's home
+directory failed CI on all three operating systems.
+
+**The pre-commit hook runs the same gate as CI.** [prek.toml](prek.toml) carries a `repo: local`
+hook running `tropism analyze . --format text --fail-on error`. Two things not to change without
+reading [design/14-incremental-checking.md](design/14-incremental-checking.md): it must stay
+`--format text`, because prek captures stdout and `auto` would emit JSON at the moment a developer
+needs the rule's `reason`; and it must never gate on `unused-dep`. It runs the whole repository
+because `tropism check <files>` is not built (D24) — that, not a faster whole-repo run, is the fix
+when this becomes slow.
 
 ## Current state
 

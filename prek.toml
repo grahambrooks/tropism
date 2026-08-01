@@ -1,0 +1,83 @@
+# Configuration file for `prek`, a git hook framework written in Rust.
+# See https://prek.j178.dev for more information.
+#:schema https://www.schemastore.org/prek.json
+
+[[repos]]
+repo = "https://github.com/pre-commit/pre-commit-hooks"
+rev = "v6.0.0"
+hooks = [
+  { id = "trailing-whitespace" },
+  { id = "end-of-file-fixer" },
+  { id = "check-yaml" },
+  { id = "check-added-large-files" }
+]
+
+[[repos]]
+repo = "https://github.com/gitleaks/gitleaks"
+rev = "v8.30.1"
+hooks = [
+  {
+    id = "gitleaks",
+    name = "Detect hardcoded secrets",
+    description = "Detect hardcoded secrets using Gitleaks",
+    entry = "gitleaks git --pre-commit --redact --staged --verbose",
+    language = "golang",
+    pass_filenames = false
+  }
+]
+
+[[repos]]
+repo = "https://github.com/betterleaks/betterleaks"
+rev = "v1.5.0"
+hooks = [
+  {
+    id = "betterleaks",
+    name = "Detect secrets",
+    entry = "betterleaks git --pre-commit --redact --staged --verbose"
+  }
+]
+
+# tropism analyzing tropism, at the moment of commit.
+#
+# This is the same gate the `dogfood` job runs in CI, so a commit that would fail
+# there fails here first — which is the whole point of running it at commit time
+# rather than after a push.
+#
+# Three things about the shape of this hook, each deliberate:
+#
+# `language = "system"` rather than prek's `language = "rust"`. prek installs a
+# Rust hook with `cargo install --bins --locked`, and this repository's root is a
+# virtual manifest, which cargo refuses. That is D25 in
+# design/12-known-limitations.md, and it is why the hook runs `cargo run` against
+# the local workspace instead of installing a binary.
+#
+# `pass_filenames = false` and a whole-repository `analyze`. The right hook is
+# `tropism check <files>` — rules only, scoped to what changed — specified in
+# design/14-incremental-checking.md and not yet built (D24). Until it is, this
+# runs everything over the whole tree. That is affordable here at ~0.6s, and it
+# will not stay affordable on a large repository; the incremental path is the fix,
+# not a faster whole-repo run.
+#
+# `--fail-on error` blocks on rule violations and missing dependencies, and lets
+# warnings through. Cycles are warnings, so they inform without blocking. This
+# must never be lowered to gate on `unused-dep`, which measured 63% false
+# positives on real repositories — a hook that cries wolf is disabled permanently
+# by the first developer it blocks wrongly.
+[[repos]]
+repo = "local"
+hooks = [
+  {
+    id = "tropism",
+    name = "tropism: architecture rules, cycles, and manifest hygiene",
+    # `--format text` explicitly, not `auto`. prek captures stdout, so `auto` sees a
+    # non-tty and emits JSON — unreadable at the moment a developer is blocked. The
+    # diagnostics render the ruleset's `reason` verbatim, which is exactly what is
+    # wanted then: not that a constraint was broken, but why it exists.
+    entry = "cargo run --quiet -p tropism -- analyze . --format text --fail-on error",
+    language = "system",
+    pass_filenames = false,
+    # Source in any supported language, any manifest or lockfile tropism reads, and
+    # the ruleset itself — editing tropism.toml can invalidate the whole repository.
+    files = "(\\.(rs|go|js|mjs|cjs|ts|tsx|py|pyi|rb|java|swift|cpp|cc|cxx|hpp|hh|hxx|h|cs)$|(^|/)(tropism\\.toml|Cargo\\.toml|Cargo\\.lock|go\\.mod|go\\.sum|package\\.json|package-lock\\.json|pyproject\\.toml|requirements\\.txt|uv\\.lock|poetry\\.lock|Gemfile|Gemfile\\.lock|pom\\.xml|build\\.gradle(\\.kts)?|gradle\\.lockfile|Package\\.swift|Package\\.resolved|conanfile\\.(txt|py)|vcpkg\\.json|conan\\.lock)$|\\.csproj$)"
+  }
+]

@@ -120,13 +120,34 @@ which is why that file is committed ([.gitignore](../.gitignore) says so explici
 
 ### Not shipped yet, and why
 
-`.pre-commit-hooks.yaml` is deliberately absent. The hook's `entry` is `tropism check`, and that
-subcommand does not exist — D24 in [12-known-limitations.md](12-known-limitations.md). Shipping a
-hooks file whose entry point is missing would advertise something broken, and shipping one that ran
-`tropism analyze` over the whole repository instead would be the slow hook this document opens by
-warning against.
+`.pre-commit-hooks.yaml` is still deliberately absent. The hook's `entry` is `tropism check`, and
+that subcommand does not exist — D24 in [12-known-limitations.md](12-known-limitations.md). Shipping
+a hooks file whose entry point is missing would advertise something broken to every repository that
+consumed it.
 
 The order is therefore: `tropism check [FILES...]`, then binaries, then the hooks file.
+
+### What *is* wired up: a local hook on this repository
+
+[`prek.toml`](../prek.toml) carries a `repo: local` hook that runs
+`tropism analyze . --format text --fail-on error` over the whole tree. It is the same gate the CI
+`dogfood` job applies, so a commit that would fail there fails at commit time instead.
+
+Three deviations from the design above, each with a reason worth keeping in view:
+
+- **`language: system`, not prek's `language: rust`.** The `rust` integration installs with
+  `cargo install --bins --locked`, which refuses this repository's virtual manifest (D25). The hook
+  runs `cargo run` against the local workspace instead. That is fine for a repo whose developers
+  necessarily have cargo, and it is not a distributable arrangement.
+- **Whole repository, not changed files.** This is the slow hook this document warns against,
+  accepted knowingly because at ~0.6 s here the warning has no teeth yet. It will acquire teeth on a
+  large repository, and the fix is `tropism check`, not a faster whole-repo run.
+- **`--format text` explicitly.** prek captures stdout, so `--format auto` sees a non-tty and emits
+  JSON. The whole value at commit time is the ruleset's `reason` rendered in a diagnostic, and JSON
+  destroys it.
+
+The hook was verified in both directions: it passes on a clean tree, and blocks with readable
+diagnostics when a rule is violated.
 
 ---
 

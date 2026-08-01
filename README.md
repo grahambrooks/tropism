@@ -229,4 +229,25 @@ tropism analyzes itself in CI: `crates/tropism-lang/tests/demos.rs` asserts it r
 source beyond genuine `Cargo.lock` duplicates, and that it satisfies its own ruleset. That test has
 caught four false-positive classes that no fixture would have.
 
+### The pre-commit hook
+
+It also analyzes itself at commit time, through [prek](https://github.com/j178/prek) — a
+pre-commit-compatible hook runner that is a single Rust binary with no Python runtime.
+
+```sh
+brew install prek     # or: cargo install prek
+prek install          # write the git hook shim
+prek run tropism -a   # run just this hook over everything, without committing
+```
+
+The hook is the same gate CI applies, `--fail-on error`, so a commit that would fail there fails
+here first. It blocks on rule violations and missing dependencies and lets warnings through, and it
+**never** gates on `unused-dep` — a check with 63% false positives would get the hook disabled
+permanently by the first developer it blocked wrongly.
+
+This is not yet the hook the design wants. `tropism check <files>` — rules only, scoped to what
+changed, which gives ratcheting on an already-violating codebase for free — is specified in
+[design/14-incremental-checking.md](design/14-incremental-checking.md) and not built. Until it is,
+the hook runs the whole repository, which costs ~0.6s here and would not stay affordable elsewhere.
+
 See [CLAUDE.md](CLAUDE.md) for layout and the language semantics that cost real debugging.
