@@ -1,0 +1,81 @@
+{
+  "skill_set": "tropism user skills",
+  "evals": [
+    {
+      "id": 0,
+      "skill": "authoring-architecture-rules",
+      "name": "author-ruleset-from-scratch",
+      "prompt": "I've got this Rust workspace at /Users/graham/dev/projects/tropism-skills-workspace/iteration-1/sandbox/eval-0 and I want to stop people wiring things together in ways we'll regret. There's a core crate and two binaries on top of it. Can you set up whatever config is needed so the build fails if someone crosses a line they shouldn't? Don't just copy a template, look at what's actually in there.",
+      "expected_output": "A tropism.toml grounded in the real crate layout, with reasons written per rule, verified by running tropism",
+      "assertions": [
+        "Ran tropism against the repository before proposing any rules (evidence of reading the actual layout, not a template)",
+        "Module globs correspond to directories that actually exist in the workspace (crates/tropism-core, crates/tropism, crates/tropism-mcp)",
+        "Wrote a tropism.toml that parses \u2014 running tropism does not produce a ruleset parse error",
+        "Every rule has a non-empty reason explaining the consequence, not just restating the rule",
+        "Verified the ruleset does something: ran tropism after writing it and reported the result",
+        "Did not use exclude to suppress findings"
+      ]
+    },
+    {
+      "id": 1,
+      "skill": "authoring-architecture-rules",
+      "name": "repair-broken-ruleset",
+      "prompt": "our tropism.toml is throwing an error and i cant work out why. we added a layers rule for our api/domain/store setup because thats how the docs described it. also a couple of rules apparently 'matched no dependency' which sounds bad? repo is /Users/graham/dev/projects/tropism-skills-workspace/iteration-1/sandbox/eval-1",
+      "expected_output": "Identifies that layers is rejected because unimplemented, rewrites as deny/allow_only, and explains stale rules mean broken globs rather than success",
+      "assertions": [
+        "Correctly identified that `layers` is rejected because it is specified but not implemented, quoting or paraphrasing the parse error",
+        "Replaced the layers rule with working equivalents (deny and/or allow_only) rather than deleting the intent",
+        "Explained that 'matched no dependency' means the glob is wrong or a directory was renamed \u2014 NOT that the rule passed",
+        "Diagnosed the actual cause of the stale rules in this repo: the module globs (src/api, src/domain, src/store) match nothing in a crates/ layout",
+        "Fixed the globs to match the real layout rather than deleting the stale rules",
+        "Verified the fix by re-running tropism"
+      ]
+    },
+    {
+      "id": 2,
+      "skill": "tropism-in-the-loop",
+      "name": "act-on-findings-correctly",
+      "prompt": "Working in /Users/graham/dev/projects/tropism-skills-workspace/iteration-1/sandbox/eval-2. I'm about to add a caching layer in crates/tropism-core and I want to use ratatui's helpers for it since it's already a workspace dependency. Before I write it \u2014 is that going to be a problem? Also, does tropism flag any unused dependencies I should strip out while I'm in here?",
+      "expected_output": "Checks the ruleset before writing, catches the tui-stays-in-the-cli rule, and refuses to strip unused-dep hits without verification",
+      "assertions": [
+        "Checked the ruleset BEFORE writing code, rather than proposing the change and checking after",
+        "Identified that adding ratatui to tropism-core violates the tui-stays-in-the-cli package rule",
+        "Surfaced the rule's reason (core stays renderer-agnostic) rather than only the rule id",
+        "Proposed an approach consistent with the boundary rather than suggesting the rule be changed or bypassed",
+        "Did NOT recommend removing dependencies on the basis of unused-dep alone",
+        "Explained that unused-dep is unreliable (false-positive rate) or that it reported nothing here"
+      ]
+    },
+    {
+      "id": 3,
+      "skill": "reporting-tropism-issues",
+      "name": "triage-before-filing",
+      "prompt": "tropism keeps telling me version-conflict on thiserror in my rust project but cargo tree shows only one copy actually being built. and separately it says unused-dep for a package I definitely use (it's called from a script in package.json). I want to raise these upstream \u2014 can you write them up? project is at /Users/graham/dev/projects/tropism-skills-workspace/iteration-1/sandbox/eval-3",
+      "expected_output": "Classifies the first as S8 and the second as S1, files only what is worth filing, with verbatim evidence and a minimal repro",
+      "assertions": [
+        "Classified the version-conflict report as S8 (lockfile is feature- and target-agnostic) rather than treating it as a defect",
+        "Classified the unused-dep report as S1 (structural, cannot be proven offline) and noted the package.json script channel is a known invisible usage",
+        "Did not file the S1 case as a straightforward bug, or explicitly flagged it as known-structural if filed",
+        "Included verbatim tropism output rather than a paraphrase in any report text produced",
+        "Stated the tropism version",
+        "Recommended or produced a minimal reproduction"
+      ]
+    },
+    {
+      "id": 4,
+      "skill": "authoring-architecture-rules",
+      "name": "author-ruleset-neutral-repo",
+      "prompt": "We keep having arguments in code review about what's allowed to call what in our Python service at <sandbox> \u2014 I want it enforced automatically instead. Can you set that up? We use tropism.",
+      "expected_output": "A ruleset grounded in the neutral fixture's real layering, catching both planted violations",
+      "assertions": [
+        "Read the actual code to find the boundaries rather than applying a generic template",
+        "Caught the api -> store violation that the source comment flags",
+        "Caught the domain making network calls via httpx",
+        "Avoided the unimplemented `layers` rule kind",
+        "Every rule carries a reason naming a consequence",
+        "Proved the passing rules are not vacuous (probed them, or checked for stale-rule findings)",
+        "Warned against gating on unused-dep (pydantic/pytest are advisory)"
+      ]
+    }
+  ]
+}
