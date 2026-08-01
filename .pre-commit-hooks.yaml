@@ -4,7 +4,7 @@
 #
 #   repos:
 #     - repo: https://github.com/grahambrooks/tropism
-#       rev: v2026.8.1
+#       rev: v2026.8.2
 #       hooks:
 #         - id: tropism
 #
