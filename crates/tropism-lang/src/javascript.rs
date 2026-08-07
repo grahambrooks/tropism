@@ -252,39 +252,13 @@ fn resolve_relative(specifier: &str, from: &Utf8Path, ctx: &ProjectContext<'_>) 
     let base = from.parent().unwrap_or(Utf8Path::new(""));
     let joined = normalize(&base.join(specifier));
 
-    // An exact hit, once extensions are stripped from both sides.
-    let stripped = strip_module_extension(Utf8Path::new(&joined));
-    for candidate in ctx.source_files {
-        if strip_module_extension(candidate) == stripped {
-            return ImportTarget::Internal(stripped);
-        }
-    }
-
-    for extension in RESOLUTION_EXTENSIONS {
-        let candidate = format!("{joined}.{extension}");
-        if ctx
-            .source_files
-            .iter()
-            .any(|file| file.as_str() == candidate)
-        {
-            return ImportTarget::Internal(strip_module_extension(Utf8Path::new(&candidate)));
-        }
-    }
-
-    for extension in RESOLUTION_EXTENSIONS {
-        let candidate = format!("{joined}/index.{extension}");
-        if ctx
-            .source_files
-            .iter()
-            .any(|file| file.as_str() == candidate)
-        {
-            return ImportTarget::Internal(strip_module_extension(Utf8Path::new(&candidate)));
-        }
+    if let Some(module) = lookup_module(&joined, ctx) {
+        return ImportTarget::Internal(module);
     }
 
     // A relative import is internal by definition even when it points at something
     // tropism does not parse — a stylesheet, a JSON fixture, an asset.
-    ImportTarget::Internal(stripped)
+    ImportTarget::Internal(strip_module_extension(Utf8Path::new(&joined)))
 }
 
 /// `compilerOptions.paths` from a `tsconfig.json`, resolved against `baseUrl` and
@@ -433,34 +407,61 @@ fn resolve_alias(specifier: &str, ctx: &ProjectContext<'_>) -> Option<ImportTarg
     None
 }
 
-/// The file a scan-root-relative path names, trying Node's extension and
-/// directory-index candidates. Shared by alias and relative resolution.
-fn resolve_file(joined: &str, ctx: &ProjectContext<'_>) -> Option<ImportTarget> {
+/// The project's source files, indexed for membership rather than scanned.
+///
+/// D39. Resolution used to walk `ctx.source_files` on every import — up to three
+/// times, and once per candidate extension — which is O(files) per import and
+/// quadratic over a project. It bites JavaScript hardest of the ten because
+/// relative imports are the *common* case here, not the exception: measured at 10
+/// imports per file, 500 files took 0.06 s, 1,000 took 0.20 s, 2,000 took 0.74 s
+/// and 3,000 took 1.64 s.
+fn source_index<'a>(ctx: &'a ProjectContext<'_>) -> &'a std::collections::BTreeSet<String> {
+    ctx.local_modules(|| {
+        ctx.source_files
+            .iter()
+            .map(|file| file.as_str().to_owned())
+            .collect()
+    })
+}
+
+/// The module a scan-root-relative path names, or `None`.
+///
+/// Node's resolution order, preserved exactly: an exact hit once extensions are
+/// stripped from both sides, then every extension as a file, then every extension
+/// as a directory index. The two loops stay separate because `a.tsx` must beat
+/// `a/index.ts`.
+fn lookup_module(joined: &str, ctx: &ProjectContext<'_>) -> Option<String> {
+    let index = source_index(ctx);
     let stripped = strip_module_extension(Utf8Path::new(joined));
-    if ctx
-        .source_files
+
+    // "does any source file strip to `stripped`" — answered by probing the
+    // suffixes a file can carry rather than by stripping every file in turn.
+    // Every source extension is in `RESOLUTION_EXTENSIONS`, so this is exact.
+    if RESOLUTION_EXTENSIONS
         .iter()
-        .any(|file| strip_module_extension(file) == stripped)
+        .any(|extension| index.contains(&format!("{stripped}.{extension}")))
     {
-        return Some(ImportTarget::Internal(stripped));
+        return Some(stripped);
+    }
+
+    for extension in RESOLUTION_EXTENSIONS {
+        let candidate = format!("{joined}.{extension}");
+        if index.contains(&candidate) {
+            return Some(strip_module_extension(Utf8Path::new(&candidate)));
+        }
     }
     for extension in RESOLUTION_EXTENSIONS {
-        for candidate in [
-            format!("{joined}.{extension}"),
-            format!("{joined}/index.{extension}"),
-        ] {
-            if ctx
-                .source_files
-                .iter()
-                .any(|file| file.as_str() == candidate)
-            {
-                return Some(ImportTarget::Internal(strip_module_extension(
-                    Utf8Path::new(&candidate),
-                )));
-            }
+        let candidate = format!("{joined}/index.{extension}");
+        if index.contains(&candidate) {
+            return Some(strip_module_extension(Utf8Path::new(&candidate)));
         }
     }
     None
+}
+
+/// The file a scan-root-relative path names. Shared by alias resolution.
+fn resolve_file(joined: &str, ctx: &ProjectContext<'_>) -> Option<ImportTarget> {
+    lookup_module(joined, ctx).map(ImportTarget::Internal)
 }
 
 /// Lexical path normalization. No filesystem access, so it works on paths that do
@@ -843,6 +844,63 @@ pub fn version_spread(resolved: &[ResolvedDep]) -> BTreeMap<&str, Vec<&str>> {
 
 #[cfg(test)]
 mod tests {
+
+    /// D39 preserved Node's resolution order: a file must beat a directory index,
+    /// across *all* extensions rather than per extension. If the two loops in
+    /// `lookup_module` were ever merged, `a/index.ts` would win here.
+    #[test]
+    fn a_file_beats_a_directory_index_at_a_later_extension() {
+        let files = vec![
+            Utf8PathBuf::from("src/a/index.ts"),
+            Utf8PathBuf::from("src/a.tsx"),
+        ];
+        let project = Project {
+            root: Utf8PathBuf::new(),
+            language: Language::JavaScript,
+            manifests: vec![],
+            lockfile: None,
+        };
+        let known = Default::default();
+        let ctx = ProjectContext {
+            project: &project,
+            package_name: None,
+            declared: &[],
+            sibling_packages: &[],
+            known_modules: &known,
+            source_files: &files,
+            local_modules: Default::default(),
+            path_aliases: &[],
+        };
+        assert_eq!(lookup_module("src/a", &ctx), Some("src/a".to_owned()));
+    }
+
+    /// The indexed lookup must still find a `.d.ts`, whose stripped form is not the
+    /// path minus one extension.
+    #[test]
+    fn a_declaration_file_is_still_found() {
+        let files = vec![Utf8PathBuf::from("types/api.d.ts")];
+        let project = Project {
+            root: Utf8PathBuf::new(),
+            language: Language::JavaScript,
+            manifests: vec![],
+            lockfile: None,
+        };
+        let known = Default::default();
+        let ctx = ProjectContext {
+            project: &project,
+            package_name: None,
+            declared: &[],
+            sibling_packages: &[],
+            known_modules: &known,
+            source_files: &files,
+            local_modules: Default::default(),
+            path_aliases: &[],
+        };
+        assert_eq!(
+            lookup_module("types/api", &ctx),
+            Some("types/api".to_owned())
+        );
+    }
 
     /// tsconfig is JSONC. `tsc --init` emits a file full of comments, so a strict
     /// parse fails on the majority of real configs.

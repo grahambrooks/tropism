@@ -381,8 +381,18 @@ it instead of saying "no lockfile found" (D2).
 3,000-file run from 19.5 s to 19.5 s, which is what revealed D39 — Rust import resolution rebuilt the
 project's module set on *every* import, quadratically. Fixing that took the same run to 0.11 s, and
 only then was `rayon` worth anything (0.30 s serial → 0.08 s). A comment in `ProjectContext` had
-claimed the memoization existed for years; it did not. If a provider derives a set from
-`source_files` inside `resolve_import`, it has this bug — the other nine were not audited.
+claimed the memoization existed for years; it did not.
+
+The audit that followed found the same shape — O(project) work per import — in **JavaScript**
+(scanning `source_files` per relative import), **Python/Java/C#** (`longest_prefix` walking every
+module), and **C++** (a suffix `find` over every module). All fixed; see D39 for the table. Go, Ruby
+and Swift were already `contains` on a set. **Nothing guards against reintroducing this**, so when
+touching `resolve_import`, check that per-import work is bounded by the *import*, not by the project.
+
+Two rules for benchmarking it. Verify output is byte-identical before claiming a speedup — a speed
+fix must not change an answer. And benchmark on an *acyclic* fixture: a synthetic repo whose imports
+wrap modulo n is one giant SCC, and the cycle analyzer's cost over it will masquerade as a
+resolution problem.
 
 Not built, in priority order: a baseline for whole-repository runs (D8, designed in
 design/17-baselines.md), the unimplemented rule kinds above, an `undeclared-sibling` check (D38 —

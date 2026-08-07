@@ -18,6 +18,8 @@
 //! `app.main`; treating `src` as a package segment would make every import in a
 //! src-layout project unresolvable.
 
+use std::collections::BTreeSet;
+
 use camino::Utf8Path;
 use tropism_core::graph::ModuleId;
 use tropism_core::model::{DeclaredDep, DepKind, Language, Manifest, Provenance, ResolvedDep};
@@ -367,9 +369,7 @@ impl LanguageProvider for PythonProvider {
         // 1. A module this project defines. Checked before the standard library
         //    because Python resolves it that way too: a local `types.py` really does
         //    shadow `types`, and pretending otherwise hides the resulting import.
-        if let Some(module) =
-            longest_dotted_prefix(raw, ctx.known_modules.iter().map(String::as_str))
-        {
+        if let Some(module) = longest_prefix_in(raw, ctx.known_modules) {
             return ImportTarget::Internal(module);
         }
 
@@ -421,7 +421,7 @@ impl LanguageProvider for PythonProvider {
         import: &Import,
         target: &ProjectContext<'_>,
     ) -> Option<String> {
-        longest_dotted_prefix(&import.raw, target.known_modules.iter().map(String::as_str))
+        longest_prefix_in(&import.raw, target.known_modules)
     }
 
     fn is_stdlib(&self, module: &str) -> bool {
@@ -461,23 +461,22 @@ fn normalize(name: &str) -> String {
     out
 }
 
-/// Whether `prefix` is a dotted-segment prefix of `module`.
-fn is_dotted_prefix(module: &str, prefix: &str) -> bool {
-    module == prefix
-        || (module.len() > prefix.len()
-            && module.starts_with(prefix)
-            && module.as_bytes()[prefix.len()] == b'.')
-}
-
-fn longest_dotted_prefix<'a>(
-    module: &str,
-    candidates: impl Iterator<Item = &'a str>,
-) -> Option<String> {
-    candidates
-        // "." is the root package of a flat project and is a prefix of nothing.
-        .filter(|candidate| *candidate != "." && is_dotted_prefix(module, candidate))
-        .max_by_key(|candidate| candidate.len())
-        .map(str::to_owned)
+/// The longest `module` in `modules` that is a dotted prefix of `name`.
+///
+/// D39. A dotted prefix is the whole name or a leading run of its dot-separated
+/// segments. Equivalent to filtering every module that way and taking the longest,
+/// but probing the input's own prefixes from longest to shortest instead —
+/// O(segments x log n) rather than O(modules), per import. The scan was quadratic
+/// over a project and only visible above about a thousand files.
+fn longest_prefix_in(name: &str, modules: &BTreeSet<String>) -> Option<String> {
+    let mut candidate = name;
+    loop {
+        // "." is a project's root package and is a prefix of nothing.
+        if candidate != "." && modules.contains(candidate) {
+            return Some(candidate.to_owned());
+        }
+        candidate = &candidate[..candidate.rfind('.')?];
+    }
 }
 
 /// The dotted module name for a source file.
@@ -984,6 +983,32 @@ fn push_text(node: tree_sitter::Node<'_>, source: &[u8], line: u32, out: &mut Ve
 
 #[cfg(test)]
 mod tests {
+
+    /// D39 replaced a scan of every module with prefix probes. The contract is
+    /// unchanged: the *longest* dotted prefix wins, and a partial segment is not a
+    /// prefix at all.
+    #[test]
+    fn the_longest_dotted_prefix_wins_and_partial_segments_do_not_match() {
+        let modules: BTreeSet<String> = ["com", "com.shop", "com.shopping"]
+            .into_iter()
+            .map(str::to_owned)
+            .collect();
+
+        assert_eq!(
+            longest_prefix_in("com.shop.orders.Item", &modules),
+            Some("com.shop".to_owned())
+        );
+        assert_eq!(
+            longest_prefix_in("com.other", &modules),
+            Some("com".to_owned())
+        );
+        // `com.shopp` must not match `com.shop` — segment boundaries matter.
+        assert_eq!(
+            longest_prefix_in("com.shopp", &modules),
+            Some("com".to_owned())
+        );
+        assert_eq!(longest_prefix_in("org.example", &modules), None);
+    }
     use super::*;
     use camino::Utf8PathBuf;
     use std::collections::BTreeSet;

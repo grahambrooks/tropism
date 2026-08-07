@@ -23,6 +23,8 @@
 //! `build.gradle` is a program, like Ruby's `Gemfile`: the declarative subset is
 //! read and dynamic constructs contribute nothing.
 
+use std::collections::BTreeSet;
+
 use camino::Utf8Path;
 use tropism_core::graph::ModuleId;
 use tropism_core::model::{DeclaredDep, DepKind, Language, Manifest, Provenance, ResolvedDep};
@@ -216,8 +218,7 @@ impl LanguageProvider for JavaProvider {
 
         // 1. A package this project declares. Longest prefix wins, since
         //    `com.example.api.internal` may belong to the `com.example.api` module.
-        if let Some(module) = longest_prefix(package, ctx.known_modules.iter().map(String::as_str))
-        {
+        if let Some(module) = longest_prefix_in(package, ctx.known_modules) {
             return ImportTarget::Internal(module);
         }
 
@@ -262,7 +263,7 @@ impl LanguageProvider for JavaProvider {
         import: &Import,
         target: &ProjectContext<'_>,
     ) -> Option<String> {
-        longest_prefix(&import.raw, target.known_modules.iter().map(String::as_str))
+        longest_prefix_in(&import.raw, target.known_modules)
     }
 
     fn is_stdlib(&self, module: &str) -> bool {
@@ -294,11 +295,21 @@ fn is_dotted_prefix(package: &str, prefix: &str) -> bool {
             && package.as_bytes()[prefix.len()] == b'.')
 }
 
-fn longest_prefix<'a>(package: &str, candidates: impl Iterator<Item = &'a str>) -> Option<String> {
-    candidates
-        .filter(|candidate| is_dotted_prefix(package, candidate))
-        .max_by_key(|candidate| candidate.len())
-        .map(str::to_owned)
+/// The longest `module` in `modules` that is a dotted prefix of `name`.
+///
+/// D39. Equivalent to filtering every module by [`is_dotted_prefix`] and taking the
+/// longest, but probing the input's own prefixes from longest to shortest instead —
+/// O(segments x log n) rather than O(modules), per import. The scan was quadratic
+/// over a project and only visible above about a thousand files.
+fn longest_prefix_in(name: &str, modules: &BTreeSet<String>) -> Option<String> {
+    let mut candidate = name;
+    loop {
+        // "." is a project's root package and is a prefix of nothing.
+        if candidate != "." && modules.contains(candidate) {
+            return Some(candidate.to_owned());
+        }
+        candidate = &candidate[..candidate.rfind('.')?];
+    }
 }
 
 /// The `package` statement, which is the first non-comment statement in the file.
@@ -708,6 +719,32 @@ fn trim_last_segment(name: &str) -> &str {
 
 #[cfg(test)]
 mod tests {
+
+    /// D39 replaced a scan of every module with prefix probes. The contract is
+    /// unchanged: the *longest* dotted prefix wins, and a partial segment is not a
+    /// prefix at all.
+    #[test]
+    fn the_longest_dotted_prefix_wins_and_partial_segments_do_not_match() {
+        let modules: BTreeSet<String> = ["com", "com.shop", "com.shopping"]
+            .into_iter()
+            .map(str::to_owned)
+            .collect();
+
+        assert_eq!(
+            longest_prefix_in("com.shop.orders.Item", &modules),
+            Some("com.shop".to_owned())
+        );
+        assert_eq!(
+            longest_prefix_in("com.other", &modules),
+            Some("com".to_owned())
+        );
+        // `com.shopp` must not match `com.shop` — segment boundaries matter.
+        assert_eq!(
+            longest_prefix_in("com.shopp", &modules),
+            Some("com".to_owned())
+        );
+        assert_eq!(longest_prefix_in("org.example", &modules), None);
+    }
 
     #[test]
     fn an_aggregator_pom_declares_its_modules() {

@@ -19,6 +19,8 @@
 //! graph. Neither carries edges, so neither can answer a diamond question — the
 //! same position as `go.sum`, `gradle.lockfile`, and `Package.resolved`.
 
+use std::collections::BTreeSet;
+
 use camino::Utf8Path;
 use tropism_core::graph::ModuleId;
 use tropism_core::model::{DeclaredDep, DepKind, Language, Manifest, Provenance, ResolvedDep};
@@ -229,12 +231,8 @@ impl LanguageProvider for CppProvider {
         if ctx.known_modules.contains(component) {
             return ImportTarget::Internal(component.to_owned());
         }
-        if let Some(module) = ctx
-            .known_modules
-            .iter()
-            .find(|module| module.ends_with(&format!("/{component}")))
-        {
-            return ImportTarget::Internal(module.clone());
+        if let Some(module) = component_ending_in(component, ctx) {
+            return ImportTarget::Internal(module);
         }
 
         if self.is_stdlib(raw) {
@@ -288,6 +286,44 @@ fn is_standard_header(header: &str) -> bool {
 
 fn first_segment(header: &str) -> &str {
     header.split('/').next().unwrap_or(header)
+}
+
+/// The last `/`-separated segment of a component name.
+fn last_segment(component: &str) -> &str {
+    component.rsplit('/').next().unwrap_or(component)
+}
+
+/// Components indexed by their final segment, as `"m0001\u{1f}app/m0001"`.
+///
+/// D39. The lookup below is a *suffix* match, so it cannot probe prefixes the way
+/// the dotted languages do. But every module ending in `/{component}` necessarily
+/// ends in the same final segment, so grouping by that segment turns a scan of
+/// every module into a range query over a handful.
+///
+/// Measured on an acyclic 10-include-per-file fixture before this: 500 files 0.06 s,
+/// 1,000 0.19 s, 2,000 0.56 s — quadratic, and the last of the D39 family.
+fn component_index<'a>(ctx: &'a ProjectContext<'_>) -> &'a BTreeSet<String> {
+    ctx.local_modules(|| {
+        ctx.known_modules
+            .iter()
+            .map(|module| format!("{}\u{1f}{module}", last_segment(module)))
+            .collect()
+    })
+}
+
+/// The first known component ending in `/{component}`.
+///
+/// Iteration order matches the old full scan: every candidate shares the queried
+/// final segment, so ordering within the group is by module name either way.
+fn component_ending_in(component: &str, ctx: &ProjectContext<'_>) -> Option<String> {
+    let key = format!("{}\u{1f}", last_segment(component));
+    let suffix = format!("/{component}");
+    component_index(ctx)
+        .range(key.clone()..)
+        .take_while(|entry| entry.starts_with(&key))
+        .map(|entry| &entry[key.len()..])
+        .find(|module| module.ends_with(&suffix))
+        .map(str::to_owned)
 }
 
 fn strip_extension(path: &str) -> &str {
@@ -644,6 +680,38 @@ fn collect_includes(node: tree_sitter::Node<'_>, source: &[u8], out: &mut Vec<Im
 
 #[cfg(test)]
 mod tests {
+
+    /// D39 turned a scan of every component into a range query grouped by final
+    /// segment. A component only matches on a whole-segment suffix.
+    #[test]
+    fn a_component_matches_only_on_a_whole_segment_suffix() {
+        let project = Project {
+            root: Utf8PathBuf::new(),
+            language: Language::Cpp,
+            manifests: vec![],
+            lockfile: None,
+        };
+        let known: BTreeSet<String> = ["vendor/app/order", "app/xorder", "other/thing"]
+            .into_iter()
+            .map(str::to_owned)
+            .collect();
+        let ctx = ProjectContext {
+            project: &project,
+            package_name: None,
+            declared: &[],
+            sibling_packages: &[],
+            known_modules: &known,
+            source_files: &[],
+            local_modules: Default::default(),
+            path_aliases: &[],
+        };
+        assert_eq!(
+            component_ending_in("app/order", &ctx),
+            Some("vendor/app/order".to_owned())
+        );
+        // `app/xorder` ends with `order` but not with `/app/order`.
+        assert_eq!(component_ending_in("app/nothing", &ctx), None);
+    }
     use super::*;
     use camino::Utf8PathBuf;
     use std::collections::BTreeSet;

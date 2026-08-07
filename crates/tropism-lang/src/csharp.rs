@@ -141,9 +141,7 @@ impl LanguageProvider for CSharpProvider {
 
         // 1. A namespace this project declares. Longest prefix wins, because
         //    `using MyApp.Services.Impl` may refer to the `MyApp.Services` module.
-        if let Some(module) =
-            longest_prefix(namespace, ctx.known_modules.iter().map(String::as_str))
-        {
+        if let Some(module) = longest_prefix_in(namespace, ctx.known_modules) {
             return ImportTarget::Internal(module);
         }
 
@@ -189,7 +187,7 @@ impl LanguageProvider for CSharpProvider {
         import: &Import,
         target: &ProjectContext<'_>,
     ) -> Option<String> {
-        longest_prefix(&import.raw, target.known_modules.iter().map(String::as_str))
+        longest_prefix_in(&import.raw, target.known_modules)
     }
 
     fn is_stdlib(&self, module: &str) -> bool {
@@ -219,6 +217,23 @@ fn is_namespace_prefix(namespace: &str, prefix: &str) -> bool {
         return false;
     }
     namespace.len() == prefix.len() || namespace.as_bytes()[prefix.len()] == b'.'
+}
+
+/// The longest `namespace` in `modules` that is a dotted prefix of `name`.
+///
+/// D39. Equivalent to filtering every module by [`is_dotted_prefix`] and taking the
+/// longest, but probing the input's own prefixes from longest to shortest instead —
+/// O(segments x log n) rather than O(modules), per import. The scan was quadratic
+/// over a project and only visible above about a thousand files.
+fn longest_prefix_in(name: &str, modules: &BTreeSet<String>) -> Option<String> {
+    let mut candidate = name;
+    loop {
+        // "." is a project's root package and is a prefix of nothing.
+        if candidate != "." && modules.contains(candidate) {
+            return Some(candidate.to_owned());
+        }
+        candidate = &candidate[..candidate.rfind('.')?];
+    }
 }
 
 fn longest_prefix<'a>(
@@ -500,6 +515,32 @@ fn using_namespace(raw: &str) -> Option<String> {
 
 #[cfg(test)]
 mod tests {
+
+    /// D39 replaced a scan of every module with prefix probes. The contract is
+    /// unchanged: the *longest* dotted prefix wins, and a partial segment is not a
+    /// prefix at all.
+    #[test]
+    fn the_longest_dotted_prefix_wins_and_partial_segments_do_not_match() {
+        let modules: BTreeSet<String> = ["com", "com.shop", "com.shopping"]
+            .into_iter()
+            .map(str::to_owned)
+            .collect();
+
+        assert_eq!(
+            longest_prefix_in("com.shop.orders.Item", &modules),
+            Some("com.shop".to_owned())
+        );
+        assert_eq!(
+            longest_prefix_in("com.other", &modules),
+            Some("com".to_owned())
+        );
+        // `com.shopp` must not match `com.shop` — segment boundaries matter.
+        assert_eq!(
+            longest_prefix_in("com.shopp", &modules),
+            Some("com".to_owned())
+        );
+        assert_eq!(longest_prefix_in("org.example", &modules), None);
+    }
     use super::*;
     use camino::Utf8PathBuf;
     use tropism_core::model::Project;

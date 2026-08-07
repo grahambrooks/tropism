@@ -268,8 +268,31 @@ was not the cost. And `ProjectContext::known_modules` already carried a doc comm
 uses it to avoid recomputing its module set per import", which was simply not true. A comment
 asserting a performance property is not a test of one.
 
-**Not audited:** the other nine providers were not checked for the same shape. Any provider deriving
-a set from `source_files` inside `resolve_import` has this bug.
+**Audited, and it was systemic.** Rust was the only provider deriving a set from `source_files`, but
+the same *shape* — O(project) work per import — appeared in three more forms. All are fixed, and
+every fix was verified to leave output byte-identical before claiming a speedup.
+
+| Provider | The scan | Fix | 2,000 files |
+| --- | --- | --- | --- |
+| Rust | rebuilt the module set per import | memoize in `local_modules` | 8.73 s → 0.08 s |
+| JavaScript | walked `source_files` per import, once per candidate extension | index the file set once | 0.74 s → 0.16 s |
+| Python, Java, C# | `longest_prefix` walked every module per import | probe the input's own dotted prefixes, longest first — O(segments x log n) | 0.34 s → 0.19 s (Python) |
+| C++ | `find` over every module, matching a path *suffix* | group by final segment; range query | 0.56 s → 0.09 s |
+
+C++ is the interesting one: a suffix match cannot probe prefixes, but any module ending in
+`/{component}` necessarily ends in the same final segment, so grouping by that segment makes the
+query a range scan over a handful.
+
+**A measurement trap worth knowing about.** The first JavaScript and Python fixtures wrapped their
+imports modulo *n*, which makes the whole project one giant strongly-connected component. Those runs
+stayed superlinear after the fix, and the residue was the cycle analyzer building evidence over a
+3,000-node SCC — an artifact of the fixture, not a shape real code has. Acyclic fixtures are linear
+(JavaScript 0.08 s at 3,000 files; Python 0.05 s at 2,000). Benchmark on an acyclic graph unless the
+cycle is the thing being measured.
+
+**Still not covered:** Go, Ruby, and Swift resolve through `contains` on a set already, so they never
+had the shape. Nothing guards against reintroducing it — a per-provider scaling test would, and does
+not exist.
 
 ### D26. ~~No `LICENSE` file~~ — RESOLVED
 
