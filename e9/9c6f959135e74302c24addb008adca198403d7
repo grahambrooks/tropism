@@ -1,0 +1,175 @@
+skills/tropism-in-the-loop/SKILL.md
+  s_3111171e960687::t_b855281d1771d6 120-154
+crates/tropism-lang/tests/fixtures/workspaces/rustlib/Cargo.toml
+  s_3111171e960687::t_650ab33d7d43bd 1-3
+crates/tropism-lang/src/rust.rs
+  s_3111171e960687::t_12b8c65e239adb 57-85
+  s_3111171e960687::t_e511b54e2e02d7 17
+  s_3111171e960687::t_36a6ec388a95d4 627-656
+crates/tropism-core/src/report.rs
+  s_3111171e960687::t_29f13093b0209e 256-262,272,280-281
+  s_3111171e960687::t_aee75c50d82900 289-326
+crates/tropism-lang/tests/fixtures/workspaces/jsapp/src/index.js
+  s_3111171e960687::t_650ab33d7d43bd 1-2
+skills/evals/evals.json
+  s_3111171e960687::t_bc75dbb0fa9625 13,28,38,53,68,79-108
+crates/tropism-lang/tests/fixtures/workspaces/serviceA/packages/web/package.json
+  s_3111171e960687::t_650ab33d7d43bd 1
+crates/tropism-lang/tests/fixtures/workspaces-configured/tropism.toml
+  s_3111171e960687::t_f02d2f7bdfb4a0 1-8
+crates/tropism-lang/tests/fixtures/workspaces/boundary.toml
+  s_3111171e960687::t_650ab33d7d43bd 1-9
+crates/tropism-lang/tests/fixtures/workspaces-configured/svc/alpha/pkg/main.py
+  s_3111171e960687::t_f02d2f7bdfb4a0 1-2
+crates/tropism-core/src/workspace.rs
+  s_3111171e960687::t_7b1a93cb36c0b5 1-468
+crates/tropism-lang/tests/fixtures/workspaces/serviceA/packages/web/src/index.js
+  s_3111171e960687::t_650ab33d7d43bd 1-4
+crates/tropism-core/src/pipeline.rs
+  s_3111171e960687::t_d1a5410dce6f1f 741
+  s_3111171e960687::t_97b7bd8ae373d8 580-585,598-604
+  s_3111171e960687::t_12eebb28bedbe1 650-654,656
+  s_3111171e960687::t_00354ee2a37ab1 668,675
+  s_3111171e960687::t_41621fc14b0f27 925-931
+  s_3111171e960687::t_db97b51899f362 261,469-470,524
+  s_3111171e960687::t_5a6d0a616714e7 195-203
+  s_3111171e960687::t_927ddbc974261c 677-679,692-693,699
+  s_3111171e960687::t_90dbf818ea75c6 980-985
+  s_3111171e960687::t_4e799ef786f1e2 404-407
+  s_3111171e960687::t_affac48b13df58 180-194,204-260,262-270,455-468,471-500
+  s_3111171e960687::t_5e53ae27d7ad43 1063
+  s_3111171e960687::t_65b32819450c3d 22
+  s_3111171e960687::t_7b61b18f7feb08 271-283,290-403,408-454
+  s_3111171e960687::t_4d9b7b2a72a0c4 1164
+  s_3111171e960687::t_6deb47f407141b 1228-1233
+  s_3111171e960687::t_e9ac3ef8db2d6b 284-289
+  s_3111171e960687::t_3197ed3b002a71 1258,1263
+  s_3111171e960687::t_f2aba720e368b6 1288-1307,1315-1321,1325-1326,1328-1329,1331,1333-1336,1338-1341
+  s_3111171e960687::t_d1ad5e0a221ca8 536-579,586-597,605-606,613-616
+  s_3111171e960687::t_a9538b59f453fc 1308-1314,1322-1324,1327,1330,1332,1337
+  s_3111171e960687::t_1dca50db601177 501-523,525-535
+  s_3111171e960687::t_86dceabe2508aa 676
+crates/tropism-lang/tests/fixtures/workspaces/toolsB/packages/kit/package.json
+  s_3111171e960687::t_650ab33d7d43bd 1
+crates/tropism-lang/tests/fixtures/workspaces-configured/svc/alpha/pyproject.toml
+  s_3111171e960687::t_f02d2f7bdfb4a0 1-3
+crates/tropism-lang/tests/fixtures/workspaces-configured/svc/beta/pyproject.toml
+  s_3111171e960687::t_f02d2f7bdfb4a0 1-3
+crates/tropism-lang/tests/fixtures/workspaces/jsapp/package.json
+  s_3111171e960687::t_650ab33d7d43bd 1
+crates/tropism/src/main.rs
+  s_3111171e960687::t_ff51b314f87d52 45-110
+  s_3111171e960687::t_7225b2d3452302 219,225,251,257
+  s_3111171e960687::t_37174025379bf6 201-218,220-224,226-250,252-256,258-261,263
+crates/tropism-lang/tests/fixtures/workspaces/serviceA/package.json
+  s_3111171e960687::t_650ab33d7d43bd 1
+CLAUDE.md
+  s_3111171e960687::t_62f3b84250ffc5 210-236
+  s_3111171e960687::t_c8f0aeed0060e9 133-135
+  s_3111171e960687::t_622f9734a6f6dd 369-374,376-378
+  s_3111171e960687::t_88b7934c9cde61 309-310
+crates/tropism-lang/tests/fixtures/workspaces/toolsB/package.json
+  s_3111171e960687::t_650ab33d7d43bd 1
+skills/authoring-architecture-rules/references/rule-reference.md
+  s_3111171e960687::t_cc09910a9b2817 140-169
+  s_3111171e960687::t_44b7ca98cf8d80 255
+  s_3111171e960687::t_7f71e44bc722a8 11-12,23
+  s_3111171e960687::t_624023a656603e 47-91
+crates/tropism-lang/src/javascript.rs
+  s_3111171e960687::t_36a6ec388a95d4 648-715
+  s_3111171e960687::t_e511b54e2e02d7 15
+  s_3111171e960687::t_db97b51899f362 401-405
+  s_3111171e960687::t_cafa822fb12dc4 100-115
+  s_3111171e960687::t_d94f83a40d4a2b 391-400,406-447
+crates/tropism-lang/tests/fixtures/workspaces/serviceA/packages/ui/src/index.js
+  s_3111171e960687::t_650ab33d7d43bd 1
+crates/tropism-lang/tests/fixtures/workspaces/toolsB/packages/kit/src/index.js
+  s_3111171e960687::t_650ab33d7d43bd 1
+crates/tropism/src/render/text.rs
+  s_3111171e960687::t_14b17b0f94b522 14,16
+  s_3111171e960687::t_e43502d29a7900 57-87,93-122,127-210
+  s_3111171e960687::t_db97b51899f362 88-92,123-126,353-356,385-392
+  s_3111171e960687::t_88921d22f02d43 351-352,357-384,393-404
+crates/tropism/src/render/testdata.rs
+  s_3111171e960687::t_a973d02e1eb525 66-73
+  s_3111171e960687::t_e0229e89fd4b22 4-7,12-13
+design/12-known-limitations.md
+  s_3111171e960687::t_91184a56777dd3 326-327
+  s_3111171e960687::t_cbb98554f1383b 281-302
+crates/tropism-lang/tests/fixtures/workspaces-configured/other/gamma/pyproject.toml
+  s_3111171e960687::t_f02d2f7bdfb4a0 1-3
+crates/tropism-lang/tests/fixtures/workspaces/rustlib/src/lib.rs
+  s_3111171e960687::t_650ab33d7d43bd 1
+crates/tropism-lang/tests/fixtures/workspaces/serviceA/packages/ui/package.json
+  s_3111171e960687::t_650ab33d7d43bd 1
+crates/tropism-lang/tests/workspaces.rs
+  s_3111171e960687::t_bc007ca827a9d3 1-288,290-312
+  s_3111171e960687::t_db97b51899f362 289
+skills/reporting-tropism-issues/references/known-limitations.md
+  s_3111171e960687::t_4389f1490b7736 44
+  s_3111171e960687::t_b759da29f0d746 62-65
+design/11-dependency-rules.md
+  s_3111171e960687::t_75e7ea7860f7ef 375-378
+  s_3111171e960687::t_c86c7aa52d5a14 346-357
+  s_3111171e960687::t_c163b32f2a473e 247-266
+crates/tropism-core/src/lib.rs
+  s_3111171e960687::t_63555dc3f7a655 15
+  s_3111171e960687::t_cbefe0c39824c5 23,25
+crates/tropism-lang/src/go.rs
+  s_3111171e960687::t_eb2b01793a2c57 101-113
+  s_3111171e960687::t_36a6ec388a95d4 466-487
+  s_3111171e960687::t_e511b54e2e02d7 12
+  s_3111171e960687::t_5952f6ea412544 315-356
+skills/authoring-architecture-rules/SKILL.md
+  s_3111171e960687::t_6f31cf050f8aa9 172-189
+  s_3111171e960687::t_52b41ef5c67594 39-55
+design/07-open-questions.md
+  s_3111171e960687::t_6dc4cd3c910b68 28-81
+crates/tropism-core/src/rules.rs
+  s_3111171e960687::t_73c38696436bcd 271
+  s_3111171e960687::t_1638e5371c56a7 80-81
+  s_3111171e960687::t_2950f63e0e043e 365-378,382-383,387-390
+  s_3111171e960687::t_d9d988118ddf02 454,467-488
+  s_3111171e960687::t_d7911d64475c4c 608-613
+  s_3111171e960687::t_c01dfceaf7c4fc 209-217
+  s_3111171e960687::t_f9d22882d55eb0 311-319
+  s_3111171e960687::t_c3701d9c02c093 1147
+  s_3111171e960687::t_3af8cbc079236f 750-753
+  s_3111171e960687::t_105d4aed2ff5db 531-532
+  s_3111171e960687::t_43a288330af966 489,826-839,919,936,946,956,967,1013,1024,1043,1065
+  s_3111171e960687::t_1b74e86bdebaa7 785-787
+  s_3111171e960687::t_45388c834c9fec 98-111
+  s_3111171e960687::t_0d06ee5dbb9e74 133-135
+  s_3111171e960687::t_db97b51899f362 614,616,985-986,994-995,1002-1003
+  s_3111171e960687::t_5cedca84e03add 547-568
+  s_3111171e960687::t_475b4c5f3f65c4 490,825
+skills/reporting-tropism-issues/SKILL.md
+  s_3111171e960687::t_b29fb370536dd4 69-87
+crates/tropism-lang/src/java.rs
+  s_3111171e960687::t_8dab4b0b9f8130 343-366,374-413
+  s_3111171e960687::t_e511b54e2e02d7 30
+  s_3111171e960687::t_2b8f46dd3d5192 127-146
+  s_3111171e960687::t_080d80c8a37a3c 367-373
+  s_3111171e960687::t_36a6ec388a95d4 711-747
+crates/tropism-core/src/provider.rs
+  s_3111171e960687::t_ddf901e0e67604 23-24,29-34
+  s_3111171e960687::t_404c7f76997b59 141-166
+crates/tropism/src/render/snapshots/tropism__render__text__tests__renders_findings_in_the_rustc_diagnostic_style.snap
+  s_3111171e960687::t_1abb533b131d01 23-25
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.21",
+  "base_commit_sha": "e99c6f959135e74302c24addb008adca198403d7",
+  "prompts": {},
+  "sessions": {
+    "s_3111171e960687": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "8dbcbda8-4623-438b-a805-7c8f1634b75d",
+        "model": "claude-opus-5"
+      },
+      "human_author": "Graham Brooks <graham@grahambrooks.com>"
+    }
+  }
+}
