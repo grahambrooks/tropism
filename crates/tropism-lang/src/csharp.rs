@@ -735,6 +735,8 @@ mod tests {
             sibling_packages: &sibling_names,
             known_modules: &known,
             source_files: &[],
+            local_modules: Default::default(),
+            path_aliases: &[],
         };
         CSharpProvider.resolve_import(
             &Import::statement(namespace, 1),

@@ -795,6 +795,8 @@ let package = Package(
             sibling_packages: &[],
             known_modules: &known,
             source_files: &[],
+            local_modules: Default::default(),
+            path_aliases: &[],
         };
         SwiftProvider.resolve_import(
             &Import::statement(raw, 1),

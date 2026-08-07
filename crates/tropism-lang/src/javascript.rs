@@ -11,7 +11,9 @@ use std::collections::BTreeMap;
 use camino::Utf8Path;
 use tropism_core::graph::ModuleId;
 use tropism_core::model::{DeclaredDep, DepKind, Language, Manifest, Provenance, ResolvedDep};
-use tropism_core::provider::{Import, ImportTarget, LanguageProvider, ProjectContext, VersionOps};
+use tropism_core::provider::{
+    Import, ImportTarget, LanguageProvider, PathAlias, ProjectContext, VersionOps,
+};
 use tropism_core::workspace::WorkspaceDecl;
 
 pub struct JavaScriptProvider;
@@ -103,6 +105,14 @@ impl LanguageProvider for JavaScriptProvider {
         &["pnpm-workspace.yaml", "pnpm-workspace.yml"]
     }
 
+    fn resolution_config_files(&self) -> &'static [&'static str] {
+        &["tsconfig.json", "jsconfig.json"]
+    }
+
+    fn parse_path_aliases(&self, path: &Utf8Path, text: &str) -> Vec<PathAlias> {
+        parse_tsconfig_paths(path, text)
+    }
+
     fn workspace_members(&self, path: &Utf8Path, text: &str) -> Option<WorkspaceDecl> {
         match path.file_name() {
             Some("package.json") => parse_npm_workspaces(text),
@@ -169,12 +179,24 @@ impl LanguageProvider for JavaScriptProvider {
             return ImportTarget::Stdlib;
         }
 
-        // A bare specifier that looks like a build-tool alias rather than a package.
-        // `@/components` and `~/lib` are tsconfig `paths` or bundler aliases; tropism
-        // does not read tsconfig, so guessing here would invent missing dependencies.
+        // A `tsconfig.json` alias, if the project declares one that matches. Checked
+        // before the package interpretation because an alias wins in the real
+        // resolver too, and a project may legitimately alias a bare name.
+        if let Some(target) = resolve_alias(specifier, ctx) {
+            return target;
+        }
+
+        // A bare specifier that *looks* like an alias but matched none. tropism now
+        // reads `tsconfig.json`, so this is no longer "we never looked" — it is
+        // either an alias declared in an `extends` base config, which is not read
+        // (see `parse_tsconfig_paths`), or a bundler alias in a config tropism does
+        // not know. Guessing would invent a missing dependency on `@`.
         if specifier.starts_with("@/") || specifier.starts_with('~') {
             return ImportTarget::Unresolved {
-                reason: format!("`{specifier}` looks like a path alias, not a package"),
+                reason: format!(
+                    "`{specifier}` looks like a path alias, and no tsconfig `paths` entry \
+                     in this project matches it"
+                ),
             };
         }
 
@@ -263,6 +285,182 @@ fn resolve_relative(specifier: &str, from: &Utf8Path, ctx: &ProjectContext<'_>) 
     // A relative import is internal by definition even when it points at something
     // tropism does not parse — a stylesheet, a JSON fixture, an asset.
     ImportTarget::Internal(stripped)
+}
+
+/// `compilerOptions.paths` from a `tsconfig.json`, resolved against `baseUrl` and
+/// the config file's own directory so every target is scan-root relative.
+///
+/// `extends` is deliberately not followed. It would mean reading another file the
+/// provider was not handed — and a base config is frequently a package in
+/// `node_modules`, which is exactly what tropism must not need installed. A project
+/// whose aliases live only in a base config keeps the behaviour it had before this
+/// existed: alias-shaped specifiers stay [`ImportTarget::Unresolved`], which is
+/// visible in the resolution rate rather than silently wrong.
+fn parse_tsconfig_paths(path: &Utf8Path, text: &str) -> Vec<PathAlias> {
+    let Ok(root) = serde_json::from_str::<serde_json::Value>(&strip_jsonc(text)) else {
+        return Vec::new();
+    };
+    let options = root.get("compilerOptions");
+    let Some(paths) = options
+        .and_then(|o| o.get("paths"))
+        .and_then(|p| p.as_object())
+    else {
+        return Vec::new();
+    };
+
+    // `baseUrl` is relative to the config file; targets are relative to `baseUrl`.
+    let dir = path.parent().unwrap_or(Utf8Path::new(""));
+    let base = options
+        .and_then(|o| o.get("baseUrl"))
+        .and_then(serde_json::Value::as_str)
+        .unwrap_or(".");
+    let root_dir = normalize(&dir.join(base));
+
+    let mut aliases: Vec<PathAlias> = paths
+        .iter()
+        .filter_map(|(pattern, targets)| {
+            let targets: Vec<String> = targets
+                .as_array()?
+                .iter()
+                .filter_map(serde_json::Value::as_str)
+                .map(|target| {
+                    if root_dir.is_empty() {
+                        target.trim_start_matches("./").to_owned()
+                    } else {
+                        normalize(&Utf8Path::new(&root_dir).join(target))
+                    }
+                })
+                .collect();
+            (!targets.is_empty()).then(|| PathAlias {
+                pattern: pattern.clone(),
+                targets,
+            })
+        })
+        .collect();
+
+    // Longest literal prefix first, which is how TypeScript picks between
+    // overlapping patterns: `@app/util` must beat `@app/*`.
+    aliases.sort_by_key(|alias| std::cmp::Reverse(alias.specificity()));
+    aliases
+}
+
+/// Strips comments and trailing commas so `serde_json` can read a `tsconfig.json`.
+///
+/// tsconfig is JSONC, not JSON: `tsc --init` emits a file full of comments, so a
+/// strict parse fails on the majority of real configs. Quoted strings are tracked
+/// so a `//` inside a path is not mistaken for a comment.
+fn strip_jsonc(text: &str) -> String {
+    let mut out = String::with_capacity(text.len());
+    let mut chars = text.chars().peekable();
+    let mut in_string = false;
+    let mut escaped = false;
+
+    while let Some(c) = chars.next() {
+        if in_string {
+            out.push(c);
+            match c {
+                _ if escaped => escaped = false,
+                '\\' => escaped = true,
+                '"' => in_string = false,
+                _ => {}
+            }
+            continue;
+        }
+        match c {
+            '"' => {
+                in_string = true;
+                out.push(c);
+            }
+            '/' if chars.peek() == Some(&'/') => {
+                for c in chars.by_ref() {
+                    if c == '\n' {
+                        out.push('\n');
+                        break;
+                    }
+                }
+            }
+            '/' if chars.peek() == Some(&'*') => {
+                chars.next();
+                let mut prev = '\0';
+                for c in chars.by_ref() {
+                    if prev == '*' && c == '/' {
+                        break;
+                    }
+                    prev = c;
+                }
+            }
+            _ => out.push(c),
+        }
+    }
+
+    // Trailing commas, which JSONC allows and `serde_json` rejects.
+    let mut cleaned = String::with_capacity(out.len());
+    let mut pending: Option<usize> = None;
+    for c in out.chars() {
+        if c == ',' {
+            pending = Some(cleaned.len());
+            cleaned.push(c);
+        } else if c.is_whitespace() {
+            cleaned.push(c);
+        } else {
+            if (c == '}' || c == ']')
+                && let Some(at) = pending
+            {
+                cleaned.replace_range(at..=at, " ");
+            }
+            pending = None;
+            cleaned.push(c);
+        }
+    }
+    cleaned
+}
+
+/// Resolves a specifier through the project's path aliases.
+///
+/// Returns `None` when no alias matches, so the caller can fall through to the
+/// package interpretation rather than inventing an internal module.
+fn resolve_alias(specifier: &str, ctx: &ProjectContext<'_>) -> Option<ImportTarget> {
+    for alias in ctx.path_aliases {
+        let Some(candidates) = alias.expand(specifier) else {
+            continue;
+        };
+        for candidate in candidates {
+            if let Some(target) = resolve_file(&candidate, ctx) {
+                return Some(target);
+            }
+        }
+    }
+    None
+}
+
+/// The file a scan-root-relative path names, trying Node's extension and
+/// directory-index candidates. Shared by alias and relative resolution.
+fn resolve_file(joined: &str, ctx: &ProjectContext<'_>) -> Option<ImportTarget> {
+    let stripped = strip_module_extension(Utf8Path::new(joined));
+    if ctx
+        .source_files
+        .iter()
+        .any(|file| strip_module_extension(file) == stripped)
+    {
+        return Some(ImportTarget::Internal(stripped));
+    }
+    for extension in RESOLUTION_EXTENSIONS {
+        for candidate in [
+            format!("{joined}.{extension}"),
+            format!("{joined}/index.{extension}"),
+        ] {
+            if ctx
+                .source_files
+                .iter()
+                .any(|file| file.as_str() == candidate)
+            {
+                return Some(ImportTarget::Internal(strip_module_extension(
+                    Utf8Path::new(&candidate),
+                )));
+            }
+        }
+    }
+    None
 }
 
 /// Lexical path normalization. No filesystem access, so it works on paths that do
@@ -646,6 +844,77 @@ pub fn version_spread(resolved: &[ResolvedDep]) -> BTreeMap<&str, Vec<&str>> {
 #[cfg(test)]
 mod tests {
 
+    /// tsconfig is JSONC. `tsc --init` emits a file full of comments, so a strict
+    /// parse fails on the majority of real configs.
+    #[test]
+    fn tsconfig_comments_and_trailing_commas_are_tolerated() {
+        let aliases = parse_tsconfig_paths(
+            Utf8Path::new("tsconfig.json"),
+            r#"{
+              // a line comment
+              "compilerOptions": {
+                /* and a block one */
+                "baseUrl": ".",
+                "paths": { "@/*": ["src/*"], }
+              },
+            }"#,
+        );
+        assert_eq!(aliases.len(), 1);
+        assert_eq!(aliases[0].targets, vec!["src/*"]);
+    }
+
+    /// A `//` inside a string is a path, not a comment.
+    #[test]
+    fn a_url_inside_a_string_survives_comment_stripping() {
+        let stripped = strip_jsonc(r#"{"a": "https://example.com/x"}"#);
+        assert!(stripped.contains("https://example.com/x"), "{stripped}");
+    }
+
+    /// TypeScript resolves the longest literal prefix first, so an exact alias must
+    /// beat a wildcard that also matches.
+    #[test]
+    fn a_more_specific_alias_is_tried_first() {
+        let aliases = parse_tsconfig_paths(
+            Utf8Path::new("tsconfig.json"),
+            r#"{"compilerOptions":{"paths":{"@app/*":["src/lib/*"],"@app/util":["src/lib/util.ts"]}}}"#,
+        );
+        assert_eq!(aliases[0].pattern, "@app/util");
+    }
+
+    /// `baseUrl` is relative to the config file, and the config file is relative to
+    /// the scan root — so a nested project's targets must carry both.
+    #[test]
+    fn base_url_is_resolved_against_the_config_files_own_directory() {
+        let aliases = parse_tsconfig_paths(
+            Utf8Path::new("packages/web/tsconfig.json"),
+            r#"{"compilerOptions":{"baseUrl":"./src","paths":{"@/*":["*"]}}}"#,
+        );
+        assert_eq!(aliases[0].targets, vec!["packages/web/src/*"]);
+    }
+
+    #[test]
+    fn a_config_without_paths_declares_no_aliases() {
+        assert!(
+            parse_tsconfig_paths(
+                Utf8Path::new("tsconfig.json"),
+                r#"{"compilerOptions":{"strict":true}}"#,
+            )
+            .is_empty()
+        );
+    }
+
+    /// A wildcard must not match a specifier that is only the literal prefix, or
+    /// `@/` would swallow `@`.
+    #[test]
+    fn a_wildcard_requires_something_to_substitute() {
+        let alias = PathAlias {
+            pattern: "@/*".to_owned(),
+            targets: vec!["src/*".to_owned()],
+        };
+        assert_eq!(alias.expand("@/a/b"), Some(vec!["src/a/b".to_owned()]));
+        assert_eq!(alias.expand("other"), None);
+    }
+
     #[test]
     fn npm_workspaces_accepts_both_the_array_and_the_object_form() {
         let array = JavaScriptProvider
@@ -940,6 +1209,8 @@ mod tests {
             sibling_packages: &[],
             known_modules: &std::collections::BTreeSet::new(),
             source_files: &source_files,
+            local_modules: Default::default(),
+            path_aliases: &[],
         };
         let import = Import::statement(specifier.to_owned(), 1).type_only(false);
         JavaScriptProvider.resolve_import(&import, Utf8Path::new(from), &ctx)

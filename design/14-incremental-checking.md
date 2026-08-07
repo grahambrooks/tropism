@@ -245,6 +245,14 @@ Only *parsing* is incremental. Two things must still be known globally, and both
 The expensive stage — tree-sitter parsing every source file — shrinks to the changed set. That is the
 win, and it is a large one: parsing dominates the 1.3 s Prometheus figure.
 
+**Built, and the four global passes stayed global.** Every provider's `module_id_for_file` turned out
+to be a line scan — a `namespace` or `package` declaration, or pure path arithmetic — so option (1)
+below was not merely the starting point, it was already the implementation. No cheap-scan pass and no
+cache were needed.
+
+Measured: a scoped check went from 0.37 s to 0.02 s on a 107-file repository, and runs in 0.05 s on
+3,000 files. Before, scoping a check to one file cost exactly what analyzing everything cost.
+
 ### The case that needs care
 
 Resolving an internal import needs to know which file defines the target module, and for C# that
@@ -282,6 +290,23 @@ checked 6 changed file(s) against 4 rules — 1 violation
 **Count, do not hide, the pre-existing violations.** If a full run would report twelve and the
 changed files account for one, say so. A ratchet that silently conceals the backlog is how a
 codebase ends up with two hundred violations nobody remembers agreeing to.
+
+**Revised by D36, which put this in direct conflict with the speed claim.** Counting the backlog
+means *finding* it, which means parsing every file — precisely the cost parse-incrementality
+removes. The two cannot both hold in one run.
+
+Resolved by making the absence representable instead of picking a winner. `CheckOutcome::suppressed`
+is `Option<usize>`: a scoped run reports `None` and the summary says so in words —
+
+```
+checked 1 changed file(s) against 3 rule(s) — 0 violation(s)
+  pre-existing violations elsewhere were not counted — only the changed files were
+  parsed; run `tropism check` for the whole repository
+```
+
+— while `tropism check` with no arguments, which is what CI and the pre-push hook run, still counts
+it exactly. `None` is not zero, and the renderer never lets them look alike. Same reasoning as
+`CheckStatus`: a consumer must always be able to tell "clean" from "never looked".
 
 Exit codes are unchanged: `0` clean, `1` violations at or above `--fail-on`, `2` could not run.
 

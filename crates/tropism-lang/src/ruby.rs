@@ -824,6 +824,8 @@ mod tests {
             sibling_packages: &[],
             known_modules: &known,
             source_files: &[],
+            local_modules: Default::default(),
+            path_aliases: &[],
         };
         let import = match form {
             ImportForm::Statement => Import::statement(raw, 1),
@@ -877,6 +879,8 @@ mod tests {
             sibling_packages: &[],
             known_modules: &known,
             source_files: &[],
+            local_modules: Default::default(),
+            path_aliases: &[],
         };
         assert_eq!(
             load_path_target("shop/order", &ctx).as_deref(),

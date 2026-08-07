@@ -42,7 +42,7 @@ fn violations(outcome: &CheckOutcome) -> Vec<String> {
 fn the_repository_scope_finds_every_violation() {
     let outcome = check("python", &[]);
     assert_eq!(violations(&outcome).len(), 2, "{:?}", violations(&outcome));
-    assert_eq!(outcome.suppressed, 0);
+    assert_eq!(outcome.suppressed, Some(0));
 
     let providers = tropism_lang::registry();
     let full = pipeline::analyze(&demo("python"), &providers, &Options::default()).unwrap();
@@ -68,7 +68,10 @@ fn a_violation_is_attributed_to_the_file_that_introduces_it() {
         found[0].contains("`entry` may depend only on `api`"),
         "{found:?}"
     );
-    assert_eq!(outcome.suppressed, 1, "the storage violation is elsewhere");
+    // Not `Some(1)`. Counting the backlog means parsing every file, which is the
+    // cost D36 removes, so a scoped run declines to count rather than reporting a
+    // number it did not earn. See `CheckOutcome::suppressed`.
+    assert_eq!(outcome.suppressed, None);
 }
 
 /// The ratchet, and the reason this feature exists: a repository that already
@@ -79,9 +82,16 @@ fn a_clean_file_passes_while_the_repository_is_dirty() {
     let outcome = check("python", &["src/app/models.py"]);
     assert!(violations(&outcome).is_empty());
     assert_eq!(
-        outcome.suppressed, 2,
-        "both existing violations are counted, not hidden"
+        outcome.suppressed, None,
+        "a scoped run must not claim a backlog figure it did not measure"
     );
+
+    // The backlog is still countable — by the run that actually looks. This pairing
+    // is the contract: fast and honest at commit time, exact on the whole
+    // repository, and never a `0` that means "did not look".
+    let whole = check("python", &[]);
+    assert_eq!(whole.suppressed, Some(0));
+    assert_eq!(violations(&whole).len(), 2);
 }
 
 /// The other end of the edge is not the commit's fault. `storage.py` is imported
@@ -105,18 +115,54 @@ fn changing_the_ruleset_widens_the_scope_to_the_repository() {
     assert!(outcome.widened_by_ruleset_change);
     assert_eq!(violations(&outcome).len(), 2);
     assert_eq!(
-        outcome.suppressed, 0,
+        outcome.suppressed,
+        Some(0),
         "nothing was suppressed; all was checked"
+    );
+}
+
+/// D36: a scoped run parses only the files it can report on.
+///
+/// The behavioural proof that extraction is actually skipped rather than merely
+/// filtered afterwards. `storage.py` violates a package rule at its own source end,
+/// so a run that parsed it would find that violation and then suppress it — and
+/// `suppressed` would be `Some(1)`. `None` is only reachable if the file was never
+/// parsed at all.
+#[test]
+fn a_scoped_run_does_not_parse_the_files_it_was_not_given() {
+    let scoped = check("python", &["src/app/models.py"]);
+    assert!(violations(&scoped).is_empty());
+    assert_eq!(scoped.suppressed, None);
+
+    // Same repository, same rules, whole-repository scope: now it does look, and
+    // finds exactly the two violations `analyze` reports.
+    let whole = check("python", &[]);
+    assert_eq!(violations(&whole).len(), 2);
+    assert_eq!(whole.suppressed, Some(0));
+}
+
+/// The widened path must not inherit the scoped path's parse narrowing.
+///
+/// A ruleset change reports on the whole repository, so it has to *parse* the whole
+/// repository. Reporting from a partial parse here would be a silent clean result
+/// in the one case where the blast radius is largest.
+#[test]
+fn a_widened_run_parses_everything_not_just_the_named_files() {
+    let outcome = check("python", &["tropism.toml"]);
+    assert_eq!(
+        violations(&outcome).len(),
+        2,
+        "a widened run that only parsed tropism.toml would report nothing"
     );
 }
 
 /// A file tropism has never heard of is not an error and not a pass-by-accident:
 /// it simply attributes nothing.
 #[test]
-fn an_unknown_file_attributes_nothing_but_still_counts_the_backlog() {
+fn an_unknown_file_attributes_nothing() {
     let outcome = check("python", &["README.md"]);
     assert!(violations(&outcome).is_empty());
-    assert_eq!(outcome.suppressed, 2);
+    assert_eq!(outcome.suppressed, None);
 }
 
 /// `check` runs the rules and nothing else. The inferred checks are not merely

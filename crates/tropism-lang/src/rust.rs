@@ -154,7 +154,7 @@ impl LanguageProvider for RustProvider {
                 // Rust 2018 uniform paths: `pub use model::Thing` at the crate root
                 // names a *local* module, with no `crate::` prefix to say so. Missing
                 // this reported tropism-core's own modules as undeclared dependencies.
-                let modules = module_set(ctx);
+                let modules = ctx.local_modules(|| module_set(ctx));
                 if modules.contains(root) {
                     let mut full = vec![root.to_owned()];
                     full.extend(rest.iter().map(|s| (*s).to_owned()));
@@ -323,7 +323,7 @@ fn resolve_internal(segments: &[&str], ctx: &ProjectContext<'_>) -> ImportTarget
 /// item, so `report::Finding` must be tried before `report`. Falling back to the
 /// crate root is correct: an item imported from `crate::Foo` lives in `lib.rs`.
 fn resolve_internal_owned(segments: &[String], ctx: &ProjectContext<'_>) -> ImportTarget {
-    let modules = module_set(ctx);
+    let modules = ctx.local_modules(|| module_set(ctx));
     for length in (0..=segments.len()).rev() {
         let candidate = join_module(&segments[..length]);
         if candidate == "." || modules.contains(&candidate) {
@@ -905,6 +905,8 @@ version = "2.0.0"
             sibling_packages: &[],
             known_modules: &BTreeSet::new(),
             source_files: &source_files,
+            local_modules: Default::default(),
+            path_aliases: &[],
         };
         let import = Import::statement(path, 1);
         RustProvider.resolve_import(&import, Utf8Path::new(from), &ctx)
@@ -1112,6 +1114,8 @@ version = "2.0.0"
             sibling_packages: &[],
             known_modules: &BTreeSet::new(),
             source_files: &[],
+            local_modules: Default::default(),
+            path_aliases: &[],
         };
         let import = Import::path_reference("Palette", 1);
         assert!(matches!(

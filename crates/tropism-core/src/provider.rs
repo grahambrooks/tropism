@@ -7,6 +7,7 @@
 //! See `design/03-language-providers.md`.
 
 use std::collections::BTreeSet;
+use std::sync::OnceLock;
 
 use camino::{Utf8Path, Utf8PathBuf};
 
@@ -37,7 +38,13 @@ pub struct ProjectContext<'a> {
     ///
     /// C# needs it: a `using` names a namespace, and the only way to tell an
     /// internal namespace from a package is to know which ones the project
-    /// declares. Rust uses it to avoid recomputing its module set per import.
+    /// declares.
+    ///
+    /// Contains *every* module kind, including integration tests and benchmarks. A
+    /// provider wanting a filtered view derives its own — see
+    /// [`Self::local_modules`], and D39 for what it cost when that derivation was
+    /// not memoized. This comment used to claim Rust used this field "to avoid
+    /// recomputing its module set per import"; it did not, and nothing checked.
     pub known_modules: &'a BTreeSet<String>,
     /// Every source file in the project, relative to the scan root.
     ///
@@ -45,6 +52,76 @@ pub struct ProjectContext<'a> {
     /// may mean `utils.ts`, `utils.tsx`, or `utils/index.ts`, and only the file
     /// list distinguishes them. Go never needed this; the second language did.
     pub source_files: &'a [Utf8PathBuf],
+    /// A provider-defined module set, derived from this context at most once.
+    ///
+    /// [`Self::known_modules`] is the pipeline's view and contains every module
+    /// kind. A provider needing a *filtered* one — Rust excludes integration tests
+    /// and benchmarks, which are separate crates that may freely use the library —
+    /// has to derive it from [`Self::source_files`], and deriving it per import is
+    /// O(files) per import: quadratic over a project, and invisible until a
+    /// repository gets large.
+    ///
+    /// Measured before this existed: 2,000 Rust files took 8.6 s and 3,000 took
+    /// 19.6 s, against 0.56 s for 500. Parallelising extraction (D4) barely moved
+    /// it, because the cost was here and not in the parse.
+    pub local_modules: OnceLock<BTreeSet<String>>,
+    /// Build-tool path aliases in effect for this project.
+    ///
+    /// `@/components/Button` is not a package — it is a `tsconfig.json` `paths`
+    /// entry pointing at `src/components/Button`. tropism used to return
+    /// [`ImportTarget::Unresolved`] for anything alias-shaped, which was honest but
+    /// costly twice over: the internal edge was lost, so no rule could see it, and
+    /// the unresolved count capped hygiene confidence for the whole project.
+    pub path_aliases: &'a [PathAlias],
+}
+
+/// One module-resolution alias: a specifier pattern and where it points.
+///
+/// TypeScript allows at most one `*` per pattern and matches the longest literal
+/// prefix, which is the rule implemented here. Targets are relative to the scan
+/// root — the provider resolves `baseUrl` against the config file's own directory,
+/// because only it knows where that file was.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct PathAlias {
+    /// `@/*`, `@app/util`, `~/lib/*`.
+    pub pattern: String,
+    /// Candidate targets in order; the first that names a real file wins.
+    pub targets: Vec<String>,
+}
+
+impl PathAlias {
+    /// Substitutes `specifier` into each target, or `None` if the pattern does not
+    /// match.
+    pub fn expand(&self, specifier: &str) -> Option<Vec<String>> {
+        match self.pattern.split_once('*') {
+            None => (self.pattern == specifier).then(|| self.targets.clone()),
+            Some((prefix, suffix)) => {
+                let rest = specifier
+                    .strip_prefix(prefix)?
+                    .strip_suffix(suffix)
+                    .filter(|_| specifier.len() >= prefix.len() + suffix.len())?;
+                Some(
+                    self.targets
+                        .iter()
+                        .map(|target| target.replacen('*', rest, 1))
+                        .collect(),
+                )
+            }
+        }
+    }
+
+    /// How specific this pattern is. TypeScript resolves the longest literal
+    /// prefix first, so `@app/util` beats `@app/*`.
+    pub fn specificity(&self) -> usize {
+        self.pattern.split('*').next().unwrap_or("").len()
+    }
+}
+
+impl<'a> ProjectContext<'a> {
+    /// The provider's own module set, computed on first use and reused after.
+    pub fn local_modules(&self, derive: impl FnOnce() -> BTreeSet<String>) -> &BTreeSet<String> {
+        self.local_modules.get_or_init(derive)
+    }
 }
 
 /// How a dependency reference appeared in source.
@@ -155,6 +232,24 @@ pub trait LanguageProvider: Send + Sync {
     /// Swift, C++, and C# have no workspace concept tropism can read without a
     /// package manager, and their projects fall back to language grouping.
     ///
+    /// Files that configure module resolution, read from each project root.
+    ///
+    /// `tsconfig.json` is the case. It is not a manifest — it declares no
+    /// dependencies and must not create a project — but it decides what a
+    /// specifier means, so resolution is wrong without it.
+    fn resolution_config_files(&self) -> &'static [&'static str] {
+        &[]
+    }
+
+    /// Path aliases declared by one of [`Self::resolution_config_files`].
+    ///
+    /// `path` is the file's location relative to the scan root, so the provider can
+    /// resolve config-relative settings — TypeScript's `baseUrl` — into scan-root
+    /// relative targets. Pure, like every other parse hook.
+    fn parse_path_aliases(&self, _path: &Utf8Path, _text: &str) -> Vec<PathAlias> {
+        Vec::new()
+    }
+
     /// Pure, like `extract_imports`: same text in, same members out.
     fn workspace_members(
         &self,

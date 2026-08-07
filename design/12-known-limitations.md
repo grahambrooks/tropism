@@ -164,15 +164,18 @@ silent-clean failure the rest of the tool is built to avoid.
 cycle but not which modules inside them. Sufficient for the finding; a fully qualified
 `project::module` graph would be more precise and is not built.
 
-### D2. Lockfile discovery is same-directory only
+### D2. ~~Lockfile discovery is same-directory only~~ — RESOLVED, differently than proposed
 
-A Cargo workspace's `Cargo.lock` and an npm workspace's `package-lock.json` live at the root, but
-discovery only pairs a lockfile with a manifest in the *same* directory. So `crates/tropism-core`
-reports "no lockfile found" while the workspace root runs the resolved-tree checks for everything.
+A workspace member now reports *where* the resolved tree is: "no lockfile in this project; the
+resolved tree for this workspace is `Cargo.lock`, and version-conflict and diamond-dep run on the
+project that owns it."
 
-**Cost:** confusing per-project output, and `Unavailable` reasons that are technically true but
-misleading.
-**Fix:** walk upward for a lockfile when the project has none, stopping at the scan root.
+**The proposed fix — walk upward and adopt the ancestor's lockfile — was measured and rejected.** A
+lockfile resolves the whole workspace at once, so handing it to each member reports one shared
+resolution once per member: on this repository, the same 17 `Cargo.lock` findings five times over,
+attributing a workspace-wide resolution to crates that do not own it. The registered *cost* was
+always the misleading message, and that is what was fixed. The checks still run exactly once, on the
+project holding the lockfile, and a test pins that they do not duplicate.
 
 ### D3. `scan_root` is echoed as given, so absolute paths reach the JSON
 
@@ -181,13 +184,17 @@ and breaks principle 5 for anyone passing an absolute path.
 
 **Fix:** normalize to `.` on output, or relativize against the working directory.
 
-### D4. Analysis is single-threaded and uncached
+### D4. ~~Analysis is single-threaded~~ — RESOLVED; the cache is still unbuilt
 
-`rayon` is specified for the parse stage and is not a dependency yet; the content-addressable cache
-in [01-architecture.md](01-architecture.md) is unbuilt. Prometheus (726 files) takes 1.3 s, so
-nothing is urgent.
+Extraction runs on `rayon`. Because `map` over an indexed parallel iterator preserves order and the
+file list is already sorted, output stays byte-identical — determinism must not become a function of
+core count, and there is a test for it.
 
-**Fix:** parallelise the per-file extraction pass, which is already pure.
+**It looked worthless when first measured.** 3,000 files took 19.5 s parallel against 20.0 s
+single-threaded, because the real cost was not the parse at all — see D39. With that fixed, the same
+run is 0.08 s parallel against 0.30 s serial.
+
+**Still open:** the content-addressable cache in [01-architecture.md](01-architecture.md).
 
 ### D5. Manifest line numbers are best-effort
 
@@ -237,6 +244,32 @@ crates.io — both work.
 **Fix:** make the root an installable package by moving the CLI crate to the repository root, the
 layout ripgrep uses. Knock-on effects on `tropism.toml`'s module globs and on the documented crate
 layout, so it is a decision rather than a detail.
+
+### D39. ~~Rust import resolution was O(files) per import~~ — RESOLVED
+
+Found by benchmarking D4, not by reading. `module_set` rebuilt a `BTreeSet` of every module in the
+project on **every unresolved import**, from both the external and the internal resolution paths.
+Quadratic over a project, and invisible below about a thousand files.
+
+| Files | Before | After |
+| ----- | ------ | ----- |
+| 500   | 0.56 s | 0.02 s |
+| 1,000 | 2.20 s | 0.04 s |
+| 2,000 | 8.73 s | 0.08 s |
+| 3,000 | 19.6 s | 0.11 s |
+
+Fixed by memoizing per project in `ProjectContext::local_modules`, a `OnceLock` the provider fills on
+first use. Output is byte-identical before and after, which is the check that mattered: the fix had
+to be a pure speed change, not a change of answer.
+
+**Two things worth keeping from how this was found.** It only surfaced because D4 was *measured*
+rather than assumed — parallelising the parse moved 19.5 s to 19.5 s, which is what said the parse
+was not the cost. And `ProjectContext::known_modules` already carried a doc comment claiming "Rust
+uses it to avoid recomputing its module set per import", which was simply not true. A comment
+asserting a performance property is not a test of one.
+
+**Not audited:** the other nine providers were not checked for the same shape. Any provider deriving
+a set from `source_files` inside `resolve_import` has this bug.
 
 ### D26. ~~No `LICENSE` file~~ — RESOLVED
 
@@ -334,7 +367,7 @@ Never implemented; reports `Unavailable` with that reason. Deferred in
 | D12 | Go       | `replace` directives in `go.mod` are ignored                                    | a redirected or dropped requirement can produce a wrong unused-dep                                                                                                        |
 | D13 | Go       | `cycle` can never fire on compilable Go                                         | the compiler already rejects import cycles; the check is dead weight and should report as structurally unavailable rather than clean                                      |
 | D14 | JS/TS    | only `package-lock.json` is parsed                                              | yarn and pnpm repos get `Unavailable` for resolved-tree checks; yarn's format is bespoke and pnpm's is YAML, which has no maintained crate ([08-crates.md](08-crates.md)) |
-| D15 | JS/TS    | `tsconfig` `paths` aliases are not read                                         | `@/components/Button` stays `Unresolved`, lowering the resolution rate                                                                                                    |
+| ~~D15~~ | JS/TS | ~~`tsconfig` `paths` aliases are not read~~ — **RESOLVED**                     | read from `tsconfig.json`/`jsconfig.json` via `resolution_config_files`, including `baseUrl`, longest-prefix precedence, and JSONC comments. `extends` is *not* followed — a base config is often a package in `node_modules`, which tropism must not need installed, so those stay `Unresolved` |
 | D16 | ~~JS/TS~~ | ~~`package.json` `workspaces` globs are not parsed~~ — **RESOLVED**            | read by `LanguageProvider::workspace_members`, along with `pnpm-workspace.yaml`, Cargo `members`, `go.work`, Maven `<modules>`, and Gradle `include`. See open question 1. |
 | D37 | Java/C#  | Gradle `projectDir` remapping and `.sln` files are not read for workspaces      | a remapped Gradle project contributes its default location; a `.sln` contributes nothing and its projects fall back to language grouping                                   |
 | D17 | Rust     | `package = "…"` renames are keyed by the import name                            | the real crate name is not tracked, so lockfile matching would miss a renamed dependency                                                                                  |
@@ -352,7 +385,7 @@ Never implemented; reports `Unavailable` with that reason. Deferred in
 | D33 | Swift    | a target with a custom `path:` is not found                                     | the file falls back to its directory as the module — less precise, never wrong                                                                                            |
 | D34 | C++      | include-path roots are a fixed list                                             | a project using an unconventional root (`headers/`, `api/`) gets component names that no `#include` matches, so its internal edges are lost                               |
 | D35 | C++      | `#include MACRO` and generated headers are invisible                            | a computed include names nothing readable and is skipped                                                                                                                  |
-| D36 | all      | `tropism check` scopes but does not parse incrementally                         | it walks and parses the whole tree, then attributes findings to the changed files. The *result* is what a parse-incremental implementation would produce; the cost is not. See design/14, "What is not incremental yet" |
+| ~~D36~~ | all  | ~~`tropism check` scopes but does not parse incrementally~~ — **RESOLVED**                         | extraction is now scoped to the changed files; module identity, project roots, manifests and the module→file map are still resolved globally because they are line scans rather than parses. Measured 0.37 s → 0.02 s on 107 files, 0.05 s on 3,000. The cost is `CheckOutcome::suppressed`, which becomes `None` rather than a number — see design/14 |
 
 ---
 

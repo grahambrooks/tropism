@@ -8,6 +8,7 @@ use std::collections::{BTreeMap, BTreeSet};
 
 use camino::{Utf8Path, Utf8PathBuf};
 use ignore::WalkBuilder;
+use rayon::prelude::*;
 
 use crate::analysis::{self, AnalysisContext, ResolvedImport};
 use crate::discovery::{self, DiscoveryError};
@@ -60,16 +61,27 @@ pub enum CheckScope {
 ///
 /// `suppressed` is the count this type exists for. A ratchet that silently
 /// conceals the backlog is how a codebase ends up with two hundred violations
-/// nobody remembers agreeing to, so the number is always carried even though the
-/// findings themselves are not.
+/// nobody remembers agreeing to, so the number is carried even though the findings
+/// themselves are not.
 pub struct CheckOutcome {
     pub report: Report,
     pub scope: CheckScope,
     /// Files the scope named that tropism actually knows how to read.
     pub checked_files: usize,
     pub rules_evaluated: usize,
-    /// Violations elsewhere in the repository, not attributable to this change.
-    pub suppressed: usize,
+    /// Violations elsewhere in the repository, not attributable to this change —
+    /// or `None` when this run did not look.
+    ///
+    /// **`None` is not zero, and the distinction is the whole point.** Counting the
+    /// backlog means finding it, which means parsing every file — the cost D36
+    /// exists to remove. So a scoped run declines to count rather than reporting a
+    /// `0` that would read as "nothing else is wrong".
+    ///
+    /// Same choice, for the same reason, as [`crate::report::CheckStatus`]: a
+    /// consumer must always be able to tell "clean" from "never ran". A whole-
+    /// repository run — `tropism check` with no arguments, which is what CI and the
+    /// pre-push hook do — still counts it exactly.
+    pub suppressed: Option<usize>,
     /// Set when a file list named the ruleset itself, which widens the scope to
     /// the whole repository — editing a rule can invalidate anything.
     pub widened_by_ruleset_change: bool,
@@ -100,7 +112,32 @@ pub fn check(
         use_rules: options.use_rules,
         rules_only: true,
     };
-    let mut report = analyze(scan_root, providers, &rules_only)?;
+
+    // Editing the ruleset can invalidate the whole repository, so a change to it
+    // is not something an incremental scope can honestly narrow. Open question 3
+    // in design/14, decided here. Computed *before* the run rather than after,
+    // because it also decides how much has to be parsed.
+    let ruleset_file = options
+        .rules_path
+        .clone()
+        .unwrap_or_else(|| Utf8PathBuf::from(crate::rules::RULESET_FILE));
+    let widened = matches!(scope, CheckScope::Files(files) if files.iter().any(|file| {
+        file == &ruleset_file || file.file_name() == Some(crate::rules::RULESET_FILE)
+    }));
+
+    // D36: parse only what this run can report on. A violation is attributed to the
+    // file at its edge's *source* end, so an unchanged file's imports cannot produce
+    // a finding here — and extraction is the whole cost of the run.
+    //
+    // A widened scope reports on everything, so it must parse everything. Reporting
+    // from a partial parse would be the silent-clean failure the tool exists to
+    // prevent, in the one place where it would be least visible.
+    let parse_scope: Option<BTreeSet<Utf8PathBuf>> = match scope {
+        CheckScope::Repository => None,
+        CheckScope::Files(_) if widened => None,
+        CheckScope::Files(files) => Some(files.iter().cloned().collect()),
+    };
+    let mut report = analyze_scoped(scan_root, providers, &rules_only, parse_scope.as_ref())?;
 
     let rules_evaluated = match &options.rules_path {
         Some(path) => std::fs::read_to_string(path)
@@ -110,20 +147,9 @@ pub fn check(
     }
     .map_or(0, |ruleset| ruleset.rule_count());
 
-    // Editing the ruleset can invalidate the whole repository, so a change to it
-    // is not something an incremental scope can honestly narrow. Open question 3
-    // in design/14, decided here.
-    let ruleset_file = options
-        .rules_path
-        .clone()
-        .unwrap_or_else(|| Utf8PathBuf::from(crate::rules::RULESET_FILE));
-    let widened = matches!(scope, CheckScope::Files(files) if files.iter().any(|file| {
-        file == &ruleset_file || file.file_name() == Some(crate::rules::RULESET_FILE)
-    }));
-
     let (checked_files, suppressed) = match scope {
-        CheckScope::Repository => (count_source_files(&report), 0),
-        CheckScope::Files(_) if widened => (count_source_files(&report), 0),
+        CheckScope::Repository => (count_source_files(&report), Some(0)),
+        CheckScope::Files(_) if widened => (count_source_files(&report), Some(0)),
         CheckScope::Files(files) => {
             let wanted: BTreeSet<&Utf8Path> = files.iter().map(Utf8PathBuf::as_path).collect();
             let mut suppressed = 0;
@@ -141,7 +167,12 @@ pub fn check(
                     attributed
                 });
             }
-            (files.len(), suppressed)
+            // Whatever was filtered here came from the manifests and the changed
+            // files alone, because nothing else was parsed. Reporting that partial
+            // figure as the backlog would be worse than reporting none: it would be
+            // a specific, confident, wrong number.
+            let counted = parse_scope.is_none().then_some(suppressed);
+            (files.len(), counted)
         }
     };
 
@@ -350,6 +381,9 @@ pub fn explain(
         provided: &provided,
         provided_names: &provided_list,
         published_roots: &published_roots(&parsed),
+        // Only used here to enumerate the project's files; `explain` parses the one
+        // file it was asked about directly.
+        parse_scope: None,
         exclude: &exclude,
         options,
     };
@@ -382,6 +416,8 @@ pub fn explain(
         sibling_packages: &provided_list,
         known_modules: &known_modules,
         source_files: &files,
+        local_modules: Default::default(),
+        path_aliases: &read_path_aliases(scan_root, project, provider),
     };
 
     let declared: BTreeSet<&str> = manifest.deps.iter().map(|dep| dep.name.as_str()).collect();
@@ -488,6 +524,9 @@ fn collect_edges(
             provided: &provided,
             provided_names: &provided_list,
             published_roots: &published_roots,
+            // `tropism workspaces` reports every crossing in the repository, so it
+            // needs every edge and cannot be scoped.
+            parse_scope: None,
             exclude: &exclude,
             options,
         };
@@ -496,6 +535,55 @@ fn collect_edges(
         }
     }
     Ok(edges)
+}
+
+/// The lockfile an ancestor project holds for this one, if any.
+///
+/// D2. Cargo's `Cargo.lock` and npm's `package-lock.json` live at the workspace
+/// root, and discovery pairs a lockfile only with a manifest in the *same*
+/// directory — so a member reports "no lockfile found" while the root runs the
+/// resolved-tree checks for the whole workspace.
+///
+/// This deliberately does **not** hand the ancestor's lockfile to the member. The
+/// registered fix was to walk upward and adopt it, but measured against this
+/// repository that would report the same 17 `Cargo.lock` findings five times over,
+/// attributing a workspace-wide resolution to crates that do not own it. The
+/// misleading part was always the *message*, and that is what this fixes.
+fn workspace_lockfile<'a>(project: &Project, roots: &'a [&'a Project]) -> Option<&'a Utf8PathBuf> {
+    roots
+        .iter()
+        .filter(|other| {
+            other.language == project.language
+                && other.root != project.root
+                && project.root.starts_with(&other.root)
+        })
+        .filter_map(|other| other.lockfile.as_ref())
+        // Innermost wins, matching how a file is attributed to a project.
+        .next()
+}
+
+/// Build-tool path aliases in effect for a project.
+///
+/// Read per project rather than per file: a `tsconfig.json` decides what a
+/// specifier *means*, so resolution is wrong without it — but it declares no
+/// dependencies and must never create a project, which is why it is a
+/// `resolution_config_file` rather than a manifest.
+fn read_path_aliases(
+    scan_root: &Utf8Path,
+    project: &Project,
+    provider: &dyn LanguageProvider,
+) -> Vec<crate::provider::PathAlias> {
+    provider
+        .resolution_config_files()
+        .iter()
+        .flat_map(|name| {
+            let relative = project.root.join(name);
+            std::fs::read_to_string(scan_root.join(&relative))
+                .ok()
+                .map(|text| provider.parse_path_aliases(&relative, &text))
+                .unwrap_or_default()
+        })
+        .collect()
 }
 
 /// Parses every project's manifest. A project whose manifest will not parse is
@@ -616,8 +704,41 @@ struct Pass<'a> {
     provided_names: &'a [String],
     /// Package name -> the project publishing it, for cross-project edges.
     published_roots: &'a BTreeMap<String, Utf8PathBuf>,
+    /// Files whose imports this run needs, or `None` for every file.
+    ///
+    /// This is D36. `tropism check <files>` used to walk and tree-sitter-parse the
+    /// entire repository and only then narrow the *findings*, so scoping a check to
+    /// one file cost exactly as much as analyzing everything — measured at 0.37 s
+    /// either way on a 107-file repository, and the ratio does not improve with
+    /// size. Only extraction is scoped; see `analyze_project`.
+    parse_scope: Option<&'a BTreeSet<Utf8PathBuf>>,
     exclude: &'a ExcludeSet,
     options: &'a Options,
+}
+
+impl Pass<'_> {
+    /// Whether this run needs the imports of `file`.
+    fn parses(&self, file: &Utf8Path) -> bool {
+        self.parse_scope.is_none_or(|scope| scope.contains(file))
+    }
+}
+
+/// What the parallel parse pass produced for one file.
+///
+/// Three outcomes rather than two, because "identified but not parsed" is a real
+/// state after D36: the file's module still has to reach the map, even though its
+/// imports were never read.
+enum FileOutcome {
+    Parsed {
+        file: Utf8PathBuf,
+        owner: ModuleId,
+        imports: Vec<Import>,
+    },
+    Identified {
+        file: Utf8PathBuf,
+        owner: ModuleId,
+    },
+    Skipped(SkippedFile),
 }
 
 /// Everything the rule engine needs, gathered across every project.
@@ -646,6 +767,21 @@ pub fn analyze(
     scan_root: &Utf8Path,
     providers: &[&dyn LanguageProvider],
     options: &Options,
+) -> Result<Report, DiscoveryError> {
+    analyze_scoped(scan_root, providers, options, None)
+}
+
+/// [`analyze`], with extraction optionally narrowed to a set of files.
+///
+/// `parse_scope` is D36 and is private on purpose: a report built from a partial
+/// parse is only honest for the rule checks, whose findings are attributed to the
+/// file at an edge's source end. [`check`] is the one caller allowed to ask for it,
+/// and it always pairs it with `rules_only`.
+fn analyze_scoped(
+    scan_root: &Utf8Path,
+    providers: &[&dyn LanguageProvider],
+    options: &Options,
+    parse_scope: Option<&BTreeSet<Utf8PathBuf>>,
 ) -> Result<Report, DiscoveryError> {
     // Exclusions and workspace boundaries have to be known before anything is
     // walked, so the ruleset is read once here for both and again at the end for
@@ -698,6 +834,7 @@ pub fn analyze(
             provided: &provided,
             provided_names: &provided_names,
             published_roots: &published_roots,
+            parse_scope,
             exclude: &exclude,
             options,
         };
@@ -785,6 +922,8 @@ fn resolve_cross_project_edges(
             sibling_packages: &[],
             known_modules: &index.modules,
             source_files: &index.files,
+            local_modules: Default::default(),
+            path_aliases: &[],
         };
         let import = Import::statement(edge.label.clone(), edge.line.unwrap_or(1));
 
@@ -1085,6 +1224,8 @@ fn analyze_project(
     let files = source_files(project, provider, pass);
     let file_count = files.len();
 
+    let path_aliases = read_path_aliases(scan_root, project, provider);
+
     let mut imports = Vec::new();
     let mut skipped = Vec::new();
     let mut module_graph = ModuleGraph::new();
@@ -1120,37 +1261,86 @@ fn analyze_project(
     // Two passes. Module identity has to be known for *every* file before any
     // import is resolved, or an edge pointing at a file later in the walk is
     // silently dropped — which made rule findings depend on filename order.
-    let mut parsed_files = Vec::new();
-    for file in files.iter().cloned() {
-        let text = match std::fs::read_to_string(scan_root.join(&file)) {
-            Ok(text) => text,
-            Err(error) => {
-                skipped.push(SkippedFile {
-                    file,
-                    reason: error.to_string(),
-                });
-                continue;
-            }
-        };
+    // D4: read, identify, and extract in parallel. Each file's work is a pure
+    // function of its own bytes — `extract_imports` is documented as such, and it is
+    // what makes this safe — so the only shared state is the result.
+    //
+    // `map` over an indexed parallel iterator preserves input order, and `files` is
+    // already sorted, so the fold below sees exactly the sequence the serial version
+    // did. That matters beyond tidiness: `module_files` keeps the *first* file it
+    // sees for a module, so a different order would change which file a finding
+    // cites. Determinism is a published property of this tool — same input, same
+    // bytes — and it must not become a function of how many cores the machine has.
+    let outcomes: Vec<FileOutcome> = files
+        .par_iter()
+        .map(|file| {
+            let text = match std::fs::read_to_string(scan_root.join(file)) {
+                Ok(text) => text,
+                Err(error) => {
+                    return FileOutcome::Skipped(SkippedFile {
+                        file: file.clone(),
+                        reason: error.to_string(),
+                    });
+                }
+            };
 
-        let extracted = match provider.extract_imports(&file, &text) {
-            Ok(extracted) => extracted,
-            Err(error) => {
-                skipped.push(SkippedFile {
-                    file,
+            // Module identity for *every* file regardless of scope. It is a line
+            // scan in every provider — a `namespace` or `package` declaration, or
+            // pure path arithmetic — so it costs a read rather than a parse, and
+            // skipping it would be wrong rather than merely faster: an internal
+            // import from a changed file resolves to a module, and naming the file
+            // that defines that module needs the whole map.
+            let default_id = module_id(&project.root, file);
+            let owner = provider.module_id_for_file(file, &text, &default_id);
+
+            // Extraction is the expensive stage — tree-sitter over the whole file —
+            // and it is the only one a scoped run can skip. A rule violation is an
+            // edge attributed to the file at its *source* end, so the imports of a
+            // file that did not change cannot produce a finding this run reports.
+            if !pass.parses(file) {
+                return FileOutcome::Identified {
+                    file: file.clone(),
+                    owner,
+                };
+            }
+
+            match provider.extract_imports(file, &text) {
+                Ok(imports) => FileOutcome::Parsed {
+                    file: file.clone(),
+                    owner,
+                    imports,
+                },
+                Err(error) => FileOutcome::Skipped(SkippedFile {
+                    file: file.clone(),
                     reason: format!("{error:#}"),
-                });
+                }),
+            }
+        })
+        .collect();
+
+    let mut parsed_files = Vec::new();
+    for outcome in outcomes {
+        let (file, owner, imports) = match outcome {
+            FileOutcome::Skipped(entry) => {
+                skipped.push(entry);
                 continue;
             }
+            FileOutcome::Identified { file, owner } => (file, owner, None),
+            FileOutcome::Parsed {
+                file,
+                owner,
+                imports,
+            } => (file, owner, Some(imports)),
         };
 
-        let default_id = module_id(&project.root, &file);
-        let owner = provider.module_id_for_file(&file, &text, &default_id);
         module_graph.add_module(owner.clone());
         module_files
             .entry(owner.name.clone())
             .or_insert_with(|| file.clone());
-        parsed_files.push((file, owner, extracted));
+
+        if let Some(imports) = imports {
+            parsed_files.push((file, owner, imports));
+        }
     }
 
     // The resolution context is built *after* the first pass, so a provider can ask
@@ -1164,6 +1354,8 @@ fn analyze_project(
         sibling_packages: provided_names,
         known_modules: &known_modules,
         source_files: &files,
+        local_modules: Default::default(),
+        path_aliases: &path_aliases,
     };
 
     for (file, owner, extracted) in parsed_files {
@@ -1250,11 +1442,23 @@ fn analyze_project(
         // The provider's structural explanation only applies when a lockfile is
         // actually present. Telling a project with no go.sum that "go.sum is not a
         // resolved graph" names a file that is not there.
-        resolved_tree_note: project
-            .lockfile
-            .as_ref()
-            .and_then(|_| provider.resolved_tree_note())
-            .map(str::to_owned),
+        //
+        // When there is none, the next most useful thing is *where it actually is*.
+        // That is D2: a workspace member reporting a bare "no lockfile found" while
+        // the root runs the resolved-tree checks for everything is technically true
+        // and actively misleading.
+        resolved_tree_note: match &project.lockfile {
+            Some(_) => provider.resolved_tree_note().map(str::to_owned),
+            None => workspace_lockfile(project, pass.roots).map(|owner| {
+                format!(
+                    "no lockfile in this project; the resolved tree for this workspace is \
+                     `{}`, and version-conflict and diamond-dep run on the project that \
+                     owns it. A lockfile resolves the whole workspace at once, so running \
+                     these checks per member would report every duplicate once per member",
+                    owner
+                )
+            }),
+        },
         sibling_packages: provided_names.to_vec(),
     };
 

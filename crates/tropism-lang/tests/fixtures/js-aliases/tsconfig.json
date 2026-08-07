@@ -1,0 +1,11 @@
+{
+  // tsc --init emits comments, so a strict JSON parse fails on most real configs.
+  "compilerOptions": {
+    "baseUrl": ".",
+    "paths": {
+      "@/*": ["src/*"],
+      "@app/util": ["src/lib/util.ts"],   /* an exact, non-wildcard alias */
+      "@app/*": ["src/lib/*"],
+    }
+  }
+}

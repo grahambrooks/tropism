@@ -372,10 +372,21 @@ with `[[workspaces]]`, inspectable with `tropism workspaces`, and enforceable wi
 workspace_files` / `workspace_members` — the first trait change since it converged across the last
 five languages, and a deliberate one.
 
-Not built, in priority order: parse-level incrementality for `check` (D36 — it scopes but still
-parses the whole tree), a baseline for whole-repository runs, the unimplemented rule kinds above, an
-`undeclared-sibling` check (D38 — measure against the ten-repo corpus before building), and the MCP
-server.
+`check` is parse-incremental (D36): only the changed files are extracted, and 3,000 files check in
+0.05 s. Extraction runs on `rayon` (D4), order-preserving so output stays byte-identical.
+`tsconfig.json` `paths` aliases resolve (D15). A workspace member now names the lockfile that covers
+it instead of saying "no lockfile found" (D2).
+
+**Performance has one hard-won rule: measure, do not reason.** D4 was implemented and moved a
+3,000-file run from 19.5 s to 19.5 s, which is what revealed D39 — Rust import resolution rebuilt the
+project's module set on *every* import, quadratically. Fixing that took the same run to 0.11 s, and
+only then was `rayon` worth anything (0.30 s serial → 0.08 s). A comment in `ProjectContext` had
+claimed the memoization existed for years; it did not. If a provider derives a set from
+`source_files` inside `resolve_import`, it has this bug — the other nine were not audited.
+
+Not built, in priority order: a baseline for whole-repository runs (D8, designed in
+design/17-baselines.md), the unimplemented rule kinds above, an `undeclared-sibling` check (D38 —
+measure against the ten-repo corpus before building), and the MCP server.
 
 **Before extending the checks, read [design/10-js-evaluation.md](design/10-js-evaluation.md).**
 Manifest hygiene (`unused-dep` / `missing-dep`) measured a **63% false-positive rate** on real

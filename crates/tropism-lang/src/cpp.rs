@@ -875,6 +875,8 @@ mod tests {
             sibling_packages: &[],
             known_modules: &known,
             source_files: &[],
+            local_modules: Default::default(),
+            path_aliases: &[],
         };
         let import = match form {
             ImportForm::Statement => Import::statement(raw, 1),

@@ -275,15 +275,27 @@ pub fn render_check_with(outcome: &CheckOutcome, styled: bool) -> String {
         );
     }
 
-    // Counted, never hidden. A ratchet that conceals the backlog is how a codebase
-    // ends up with two hundred violations nobody remembers agreeing to.
-    if outcome.suppressed > 0 {
-        let _ = writeln!(
-            out,
-            "  {dim}{} pre-existing violation(s) elsewhere are not shown; \
-             run `tropism check` for the whole repository{dim:#}",
-            outcome.suppressed
-        );
+    // Counted, or explicitly not counted — never silently zero. A ratchet that
+    // conceals the backlog is how a codebase ends up with two hundred violations
+    // nobody remembers agreeing to, and "0" and "did not look" must not render the
+    // same way.
+    match outcome.suppressed {
+        Some(0) => {}
+        Some(count) => {
+            let _ = writeln!(
+                out,
+                "  {dim}{count} pre-existing violation(s) elsewhere are not shown; \
+                 run `tropism check` for the whole repository{dim:#}",
+            );
+        }
+        None => {
+            let _ = writeln!(
+                out,
+                "  {dim}pre-existing violations elsewhere were not counted — only the \
+                 changed files were parsed; run `tropism check` for the whole \
+                 repository{dim:#}",
+            );
+        }
     }
 
     out
@@ -569,7 +581,7 @@ mod tests {
         insta::assert_snapshot!(render_with(&sample_report(), false));
     }
 
-    fn outcome(scope: CheckScope, suppressed: usize, rules: usize) -> CheckOutcome {
+    fn outcome(scope: CheckScope, suppressed: Option<usize>, rules: usize) -> CheckOutcome {
         let mut report = sample_report();
         // The shared fixture carries a cycle, which a rules-only run never
         // produces. Emptied so these assertions are about the summary line.
@@ -590,13 +602,13 @@ mod tests {
     /// repository — the distinction is the whole basis of the ratchet.
     #[test]
     fn the_summary_states_the_scope_that_was_checked() {
-        let scoped = render_check_with(&outcome(CheckScope::Files(vec![]), 0, 4), false);
+        let scoped = render_check_with(&outcome(CheckScope::Files(vec![]), Some(0), 4), false);
         assert!(
             scoped.contains("checked 6 changed file(s) against 4 rule(s)"),
             "{scoped}"
         );
 
-        let whole = render_check_with(&outcome(CheckScope::Repository, 0, 4), false);
+        let whole = render_check_with(&outcome(CheckScope::Repository, Some(0), 4), false);
         assert!(
             whole.contains("checked 6 file(s) against 4 rule(s)"),
             "{whole}"
@@ -608,13 +620,13 @@ mod tests {
     /// ends up with violations nobody remembers agreeing to.
     #[test]
     fn pre_existing_violations_are_counted_in_the_summary() {
-        let rendered = render_check_with(&outcome(CheckScope::Files(vec![]), 12, 4), false);
+        let rendered = render_check_with(&outcome(CheckScope::Files(vec![]), Some(12), 4), false);
         assert!(
             rendered.contains("12 pre-existing violation(s)"),
             "{rendered}"
         );
 
-        let clean = render_check_with(&outcome(CheckScope::Files(vec![]), 0, 4), false);
+        let clean = render_check_with(&outcome(CheckScope::Files(vec![]), Some(0), 4), false);
         assert!(!clean.contains("pre-existing"), "{clean}");
     }
 
@@ -622,7 +634,7 @@ mod tests {
     /// believes is working.
     #[test]
     fn a_ruleset_with_no_rules_says_so() {
-        let rendered = render_check_with(&outcome(CheckScope::Repository, 0, 0), false);
+        let rendered = render_check_with(&outcome(CheckScope::Repository, Some(0), 0), false);
         assert!(rendered.contains("no rules were evaluated"), "{rendered}");
     }
 
@@ -630,7 +642,7 @@ mod tests {
     /// misreport what was looked at.
     #[test]
     fn a_widened_run_does_not_call_the_repository_a_change() {
-        let mut widened = outcome(CheckScope::Files(vec![]), 0, 4);
+        let mut widened = outcome(CheckScope::Files(vec![]), Some(0), 4);
         widened.widened_by_ruleset_change = true;
         let rendered = render_check_with(&widened, false);
         assert!(rendered.contains("checked 6 file(s)"), "{rendered}");

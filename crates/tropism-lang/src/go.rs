@@ -642,6 +642,8 @@ mod tests {
             sibling_packages: &[],
             known_modules: &std::collections::BTreeSet::new(),
             source_files: &[],
+            local_modules: Default::default(),
+            path_aliases: &[],
         };
         let import = Import::statement(path.to_owned(), 1).type_only(false);
         GoProvider.resolve_import(&import, Utf8Path::new("svc/main.go"), &ctx)

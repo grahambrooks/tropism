@@ -37,6 +37,9 @@ ignore = "0.4.31"
 globset = "0.4.19"
 camino = { version = "1.2.5", features = ["serde1"] }
 blake3 = "1.8.5"
+# The parse stage is pure per file, which is what makes it safe to parallelise.
+# Specified in design/01-architecture.md from the start; added for D4.
+rayon = "1.12.0"
 annotate-snippets = "0.12.16"
 anstream = "1.0.0"
 anstyle = "1.0.14"

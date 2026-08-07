@@ -310,3 +310,49 @@ fn crosses_workspace_is_stale_in_a_single_workspace_repository() {
         "a boundary rule in a one-workspace repository must be reported as stale"
     );
 }
+
+/// D2: a workspace member says *where* the resolved tree is, rather than "no
+/// lockfile found".
+///
+/// The registered fix was to walk upward and adopt the ancestor's lockfile. That
+/// would report one workspace-wide resolution once per member — 17 findings times
+/// five crates on tropism's own repository — and attribute a shared resolution to
+/// crates that do not own it. The misleading part was the message.
+#[test]
+fn a_workspace_member_names_the_lockfile_that_covers_it() {
+    let providers = tropism_lang::registry();
+    let root = Utf8PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../..");
+    let report = pipeline::analyze(&root, &providers, &Options::default()).expect("analysis");
+
+    let member = report
+        .projects
+        .iter()
+        .find(|p| p.project.root == "crates/tropism-core")
+        .expect("tropism-core is a workspace member");
+
+    let reason = match member.checks.get(&CheckId::VersionConflict) {
+        Some(tropism_core::report::CheckStatus::Unavailable { reason }) => reason.clone(),
+        other => panic!("expected unavailable, got {other:?}"),
+    };
+    assert!(
+        reason.contains("Cargo.lock"),
+        "the reason must name where the resolved tree actually is: {reason}"
+    );
+
+    // And the checks must still run exactly once, on the project that owns it.
+    let owners: Vec<&str> = report
+        .projects
+        .iter()
+        .filter(|p| {
+            p.findings
+                .iter()
+                .any(|f| f.check == CheckId::VersionConflict)
+        })
+        .map(|p| p.project.root.as_str())
+        .collect();
+    assert_eq!(
+        owners,
+        vec![""],
+        "resolved-tree findings must not duplicate"
+    );
+}

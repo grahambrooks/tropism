@@ -146,3 +146,42 @@ fn analysis_is_deterministic() {
         analyze("js-app").to_json().unwrap()
     );
 }
+
+/// D15: `tsconfig.json` `paths` aliases resolve to real modules.
+///
+/// Before this, `@/components/Button` stayed `Unresolved`, which cost twice: the
+/// internal edge was lost so no rule could see it, and the unresolved count capped
+/// hygiene confidence for the whole project.
+#[test]
+fn tsconfig_path_aliases_resolve_to_internal_modules() {
+    let report = analyze("js-aliases");
+    let project = &report.projects[0];
+
+    // No alias may be reported as a missing dependency. `@` and `@app` are not
+    // packages, and inventing them was the failure this prevents.
+    let missing: Vec<&str> = project
+        .findings
+        .iter()
+        .filter(|f| f.check == CheckId::MissingDep)
+        .filter_map(|f| f.details["dependency"].as_str())
+        .collect();
+    assert!(
+        missing.is_empty(),
+        "an alias was mistaken for a package: {missing:?}"
+    );
+}
+
+/// An alias-shaped specifier that matches no `paths` entry must stay unresolved
+/// rather than becoming a confident guess — the `extends` case, which is not read.
+#[test]
+fn an_unmatched_alias_does_not_invent_a_dependency() {
+    let report = analyze("js-aliases");
+    let missing: Vec<&str> = report
+        .projects
+        .iter()
+        .flat_map(|p| p.findings.iter())
+        .filter(|f| f.check == CheckId::MissingDep)
+        .filter_map(|f| f.details["dependency"].as_str())
+        .collect();
+    assert!(!missing.contains(&"@"), "{missing:?}");
+}
