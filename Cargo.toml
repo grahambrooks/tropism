@@ -13,7 +13,7 @@ resolver = "3"
 # it with `make release`, never by hand. See design/13-build-and-release.md.
 version = "2026.8.4"
 edition = "2024"
-license = "MIT OR Apache-2.0"
+license = "MIT"
 repository = "https://github.com/grahambrooks/tropism"
 homepage = "https://github.com/grahambrooks/tropism"
 # Tracks latest stable. It was 1.85 — the 2024 edition's minimum — but that was

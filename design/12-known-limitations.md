@@ -238,13 +238,20 @@ crates.io — both work.
 layout ripgrep uses. Knock-on effects on `tropism.toml`'s module globs and on the documented crate
 layout, so it is a decision rather than a detail.
 
-### D26. No `LICENSE` file
+### D26. ~~No `LICENSE` file~~ — RESOLVED
 
-`Cargo.toml` declares `license = "MIT OR Apache-2.0"`; neither text is in the repository.
+`LICENSE` carries the MIT text, and `Cargo.toml` declares `license = "MIT"`. The declaration was
+narrowed from `MIT OR Apache-2.0` rather than adding a second text file — one of the two fixes this
+entry proposed.
 
-**Cost:** binaries and a crate would ship under a licence whose text is absent.
-**Fix:** add `LICENSE-MIT` and `LICENSE-APACHE`, or change the declaration. Blocks the first
-release.
+**Worth knowing about the narrowing.** The Rust convention is dual MIT/Apache-2.0, and the reason is
+not tidiness: Apache-2.0 carries an express patent grant that MIT does not. Nothing had been
+published when this changed, so no downstream user was relicensed; adding Apache-2.0 back later is
+possible but needs every contributor's agreement, which is cheap now and expensive later.
+
+This unblocked two things at once — the first release, and the SignPath Foundation application in
+[16-signing.md](16-signing.md), whose eligibility test is an OSI-approved licence and whose lead
+time dominates the signing work.
 
 ---
 
@@ -272,6 +279,11 @@ gives ratcheting for free: a run scoped to changed files passes on a repository 
 existing violations as long as the commit does not add a two-hundred-and-first. No state file, no
 drift, nothing to regenerate after a refactor. A baseline is still wanted for the whole-repository CI
 job, but it is no longer a prerequisite for adoption.
+
+**Designed, not built:** [17-baselines.md](17-baselines.md). The crux is that a baseline holds state
+and findings move, so it keys on the finding ID *and* on `(rule, from_module, to_module)` with an
+occurrence count — a rename keeps a violation in the same module pair and stays baselined, a move
+across a boundary does not. Baselined findings are downgraded and counted, never deleted.
 
 ### D9. No sub-ruleset inheritance in a monorepo
 

@@ -312,10 +312,10 @@ cannot silently produce a duplicate.
 
 ## 10. Blockers before the first release
 
-**No `LICENSE` file.** `Cargo.toml` declares `license = "MIT OR Apache-2.0"` but neither text is in
-the repository. `cargo publish` accepts that, and the packaging step tolerates it, but shipping
-binaries and a crate under a licence whose text is absent is not a thing to do by accident. Add
-`LICENSE-MIT` and `LICENSE-APACHE`, or change the declaration.
+~~**No `LICENSE` file.**~~ Resolved: `LICENSE` holds the MIT text and `Cargo.toml` declares
+`license = "MIT"`, narrowed from `MIT OR Apache-2.0`. See D26 in
+[12-known-limitations.md](12-known-limitations.md) for what the narrowing gives up — Apache-2.0's
+express patent grant — and why now was the moment to decide it.
 
 **The workspace root is a virtual manifest.** Verified: `cargo install --bins --locked --path .`
 fails with *"found a virtual manifest … instead of a package manifest"*. That does not affect the

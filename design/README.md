@@ -84,6 +84,7 @@ built, and everything about them here is still intent rather than a description 
 | [14-incremental-checking.md](14-incremental-checking.md) | **The product.** Commit-time and whole-repo checking  |
 | [15-dist-evaluation.md](15-dist-evaluation.md)       | cargo-dist, measured against the release pipeline        |
 | [16-signing.md](16-signing.md)                       | Code signing: what it buys, and what it would take       |
+| [17-baselines.md](17-baselines.md)                   | D8: making the whole-repository run adoptable            |
 
 ## Design principles
 

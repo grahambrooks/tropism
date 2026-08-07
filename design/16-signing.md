@@ -86,7 +86,8 @@ archive, which is the part that has to be signed.
 ### Option B — SignPath Foundation, free for open source, but not a drop-in
 
 [SignPath Foundation](https://signpath.io/solutions/open-source-community) signs qualifying OSS
-projects at no cost, and tropism qualifies: OSI-approved licence (MIT OR Apache-2.0), public repo, no
+projects at no cost, and tropism qualifies: OSI-approved licence (MIT, with the text in `LICENSE`
+since D26 was resolved — the eligibility test is the text, not the `Cargo.toml` field), public repo, no
 proprietary components, actively maintained and already releasing. Applications take days to weeks,
 which is the argument for starting it before it is needed.
 
