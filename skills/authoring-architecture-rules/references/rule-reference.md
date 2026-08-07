@@ -8,7 +8,8 @@ than a silent no-op.
 
 - [Top level](#top-level)
 - [Modules](#modules)
-- [Module rules](#module-rules) — `deny`, `independent`, `allow_only`
+- [Workspaces](#workspaces)
+- [Module rules](#module-rules) — `deny`, `independent`, `allow_only`, `crosses_workspace`
 - [Package rules](#package-rules) — denylist, scoping, closed-world
 - [Exclusions](#exclusions)
 - [Rejected at parse time](#rejected-at-parse-time)
@@ -19,6 +20,7 @@ than a silent no-op.
 ```toml
 schema_version = 1        # required to be 1 if present
 exclude = ["demo/**"]     # optional, applied before discovery
+[[workspaces]]            # optional, overrides inferred boundaries
 [modules]                 # named globs
 [[module_rules]]          # zero or more
 [packages]                # optional, closed-world switch
@@ -41,6 +43,51 @@ core = { paths = ["src/core/**", "src/shared/**"] }     # several
 
 When a path matches more than one module, **the longest pattern wins**. So a broad module can be
 carved into a narrower one without ambiguity.
+
+## Workspaces
+
+A workspace is the set of projects that may import each other's published names **without declaring
+them**. It decides what `missing-dep` reports, so getting it wrong is a silent wrong answer in both
+directions.
+
+Usually you write nothing here. tropism establishes boundaries in three ways, most authoritative
+first:
+
+| Origin | Source | Ecosystems |
+| --- | --- | --- |
+| `configured` | `[[workspaces]]` below | any |
+| `declared` | the ecosystem's own file | Cargo `[workspace] members`, npm `workspaces`, `pnpm-workspace.yaml`, `go.work`, Maven `<modules>`, Gradle `include` |
+| `language` | inferred: everything unclaimed, grouped by language | Python, Ruby, Swift, C++, NuGet |
+
+Check what it inferred before writing anything:
+
+```sh
+tropism workspaces .
+```
+
+Write `[[workspaces]]` when the `language` fallback is wrong — which is the usual case for a Python
+or Ruby monorepo holding several independent services, because those ecosystems state no workspace
+anywhere and every project would otherwise be treated as one group:
+
+```toml
+[[workspaces]]
+root = "svc"
+members = ["svc/*"]     # globs over project roots, relative to the scan root
+
+[[workspaces]]
+root = "tools"          # omit `members` to mean "every project under root"
+```
+
+Two things to know:
+
+- **Globs are relative to the scan root**, exactly like `[modules]` globs. There is deliberately only
+  one glob dialect in this file.
+- **Language always applies as well.** A Rust crate can never satisfy a JavaScript import, however
+  the boundary is drawn. Configuring a polyglot workspace does not change that.
+
+Whatever the boundary, an import that needed no declaration because of it is **disclosed in every
+report** with the package, the project that supplied it, and the number of import sites — same
+reasoning as `exclude` counts.
 
 ## Module rules
 
@@ -89,6 +136,36 @@ An empty `to` means "may depend on nothing":
 ```toml
 allow_only = { from = "core", to = [] }     # core is a leaf
 ```
+
+### `crosses_workspace` — no edge may leave its workspace
+
+```toml
+[[module_rules]]
+id = "packages-declare-what-they-import"
+crosses_workspace = true
+reason = """
+An import satisfied by another workspace resolves today only through node_modules
+hoisting. It breaks the moment the package is published or built on its own.
+"""
+```
+
+The only rule kind that **names no module**: it is about the workspace boundary, which tropism reads
+from the ecosystem's own files rather than from a glob somebody has to keep in step with the layout.
+Nothing to update when a directory is renamed.
+
+Use it when a repository holds several genuinely independent workspaces and you want crossings to be
+an error rather than a note. Find out what it would fire on first:
+
+```sh
+tropism workspaces .          # lists every crossing, with file and line
+```
+
+Two behaviours worth knowing:
+
+- `crosses_workspace = false` is a **parse error**, not a disabled rule. It would enforce nothing
+  while looking like it enforced something; delete the rule instead.
+- In a repository with only one workspace the rule is reported as **stale**, for the same reason a
+  rule naming a renamed module is. It is easy to write this one before any boundary exists.
 
 ## Package rules
 
@@ -175,6 +252,7 @@ by name rather than with a confusing unknown-field error:
 | `layers` | `uses 'layers', which is specified in design/11-dependency-rules.md but not implemented yet` |
 | `require` | same |
 | `transitive` | same |
+| `crosses_workspace = false` | `enforces nothing; delete the rule instead` |
 
 Version constraints in package rules are likewise unimplemented. If you want layering today, express
 it as a set of `deny` or `allow_only` rules — verbose, but it works and it means exactly what it

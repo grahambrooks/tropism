@@ -20,12 +20,18 @@ pub struct ProjectContext<'a> {
     /// `name`. Required to distinguish internal imports from external ones.
     pub package_name: Option<&'a str>,
     pub declared: &'a [DeclaredDep],
-    /// Names of packages published by *other* projects in the same scan.
+    /// Names of packages published by other projects *in the same workspace*, plus
+    /// dependencies an ancestor project hoists.
     ///
     /// In a monorepo, `@tanstack/query-core` is imported by its siblings and
     /// declared only at the workspace root. Without this, every such import is
     /// reported as an undeclared dependency — 101 of them in TanStack Query.
-    /// Resolves open question 1 in `design/07-open-questions.md`.
+    ///
+    /// The membership question — *which* projects count as siblings — is
+    /// [`crate::workspace`]'s, and it is not "all of them": the set is bounded by
+    /// the workspace and always by language, so a Rust crate can never make a
+    /// JavaScript import look declared. See `design/07-open-questions.md`,
+    /// question 1.
     pub sibling_packages: &'a [String],
     /// Modules this project defines, known before any import is resolved.
     ///
@@ -131,6 +137,32 @@ pub trait LanguageProvider: Send + Sync {
 
     /// Lockfile names, most-preferred first.
     fn lockfile_names(&self) -> &'static [&'static str];
+
+    /// Files that can declare a workspace, beyond the manifest itself.
+    ///
+    /// `go.work` and `pnpm-workspace.yaml` are the cases: both state the workspace
+    /// and neither is a manifest, so neither would ever be read otherwise.
+    fn workspace_files(&self) -> &'static [&'static str] {
+        &[]
+    }
+
+    /// The member path patterns a workspace file declares, relative to its own
+    /// directory.
+    ///
+    /// `None` means this ecosystem does not state its workspace — which is
+    /// different from `Some` with an empty member list, meaning it states one and
+    /// the workspace is empty. Six of the ten return `None` always: Python, Ruby,
+    /// Swift, C++, and C# have no workspace concept tropism can read without a
+    /// package manager, and their projects fall back to language grouping.
+    ///
+    /// Pure, like `extract_imports`: same text in, same members out.
+    fn workspace_members(
+        &self,
+        _path: &Utf8Path,
+        _text: &str,
+    ) -> Option<crate::workspace::WorkspaceDecl> {
+        None
+    }
 
     /// Extensions this provider extracts imports from, without the dot.
     fn source_extensions(&self) -> &'static [&'static str];

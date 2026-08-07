@@ -117,6 +117,41 @@ to a human, say what did not run and why — "no cycles found" is misleading if 
 unavailable. `tropism check` deliberately reports the inferred checks as not-run, because it
 evaluates only the rules.
 
+## When a finding — or its absence — does not make sense
+
+Two questions come up constantly and both have a command rather than a guess.
+
+**"Why was this import classified that way?"**
+
+```sh
+tropism explain path/to/file.ts
+tropism explain path/to/file.ts --import lodash
+```
+
+Every import in the file, the name it resolved to, and one sentence saying why. Use it before
+concluding that tropism is wrong about a dependency — most surprises are an `unresolved` import
+(which contributes no edge, so no rule can match it) or a package name that differs from the
+manifest spelling.
+
+**"Why is this undeclared import not reported?"**
+
+```sh
+tropism workspaces .
+```
+
+Projects in the same workspace may import each other's published names without declaring them, so
+`missing-dep` deliberately passes over those. Every such exemption is disclosed in the report with
+the package, the project that supplied it, and the number of import sites — it is never silent.
+
+What to look at: any workspace whose origin is `language`. That is an inference tropism made because
+the ecosystem declares no workspace at all (Python, Ruby, Swift, C++, NuGet), and if it has grouped
+independent services together, genuine missing dependencies between them go unreported. The fix is
+`[[workspaces]]` in `tropism.toml`, not a change to the code.
+
+Do not treat a crossing as a bug in tropism either. An import satisfied by another workspace resolves
+today through hoisting and breaks when the package is built alone — it is a real defect, and a
+`crosses_workspace` rule is how a team makes it an error.
+
 ## Reading the output
 
 `--format json` when you need to process results; `--format text` when a human will read them,

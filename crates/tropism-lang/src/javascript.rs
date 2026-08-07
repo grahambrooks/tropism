@@ -12,6 +12,7 @@ use camino::Utf8Path;
 use tropism_core::graph::ModuleId;
 use tropism_core::model::{DeclaredDep, DepKind, Language, Manifest, Provenance, ResolvedDep};
 use tropism_core::provider::{Import, ImportTarget, LanguageProvider, ProjectContext, VersionOps};
+use tropism_core::workspace::WorkspaceDecl;
 
 pub struct JavaScriptProvider;
 
@@ -94,6 +95,22 @@ impl LanguageProvider for JavaScriptProvider {
     /// `design/08-crates.md`. A repo using those gets `Unavailable`, correctly.
     fn lockfile_names(&self) -> &'static [&'static str] {
         &["package-lock.json"]
+    }
+
+    /// pnpm states its workspace in a file of its own rather than in the manifest,
+    /// so it would never be read as part of `package.json`.
+    fn workspace_files(&self) -> &'static [&'static str] {
+        &["pnpm-workspace.yaml", "pnpm-workspace.yml"]
+    }
+
+    fn workspace_members(&self, path: &Utf8Path, text: &str) -> Option<WorkspaceDecl> {
+        match path.file_name() {
+            Some("package.json") => parse_npm_workspaces(text),
+            Some("pnpm-workspace.yaml" | "pnpm-workspace.yml") => {
+                Some(WorkspaceDecl::members(parse_pnpm_packages(text)))
+            }
+            _ => None,
+        }
     }
 
     fn source_extensions(&self) -> &'static [&'static str] {
@@ -371,6 +388,63 @@ fn is_tooling(name: &str, script_text: &str) -> bool {
         .any(|word| word == name)
 }
 
+/// `workspaces` from a `package.json`, in either shape npm accepts: a bare array,
+/// or an object with a `packages` key (the Yarn-classic form).
+///
+/// A leading `!` is npm's negation, so it contributes an exclusion rather than a
+/// member — otherwise a repository that deliberately holds one package out of its
+/// workspace would have it silently pulled back in.
+fn parse_npm_workspaces(text: &str) -> Option<WorkspaceDecl> {
+    let root: serde_json::Value = serde_json::from_str(text).ok()?;
+    let raw = match root.get("workspaces")? {
+        serde_json::Value::Array(items) => items.clone(),
+        serde_json::Value::Object(object) => object
+            .get("packages")?
+            .as_array()
+            .cloned()
+            .unwrap_or_default(),
+        _ => return None,
+    };
+
+    let mut decl = WorkspaceDecl::default();
+    for pattern in raw.iter().filter_map(serde_json::Value::as_str) {
+        match pattern.strip_prefix('!') {
+            Some(negated) => decl.exclude.push(negated.to_owned()),
+            None => decl.members.push(pattern.to_owned()),
+        }
+    }
+    Some(decl)
+}
+
+/// The `packages:` list from `pnpm-workspace.yaml`.
+///
+/// A line parser rather than a YAML crate, deliberately: `serde_yaml` is archived
+/// and `design/08-crates.md` found no maintained replacement, while the shape this
+/// needs is a single top-level key holding a list of strings. Anything more
+/// elaborate in the file is ignored rather than guessed at.
+fn parse_pnpm_packages(text: &str) -> Vec<String> {
+    let mut members = Vec::new();
+    let mut inside = false;
+    for line in text.lines() {
+        let trimmed = line.trim();
+        if trimmed.is_empty() || trimmed.starts_with('#') {
+            continue;
+        }
+        if !line.starts_with([' ', '\t', '-']) {
+            // A new top-level key ends the list.
+            inside = trimmed.trim_end_matches(':') == "packages" && trimmed.ends_with(':');
+            continue;
+        }
+        if inside && let Some(item) = trimmed.strip_prefix('-') {
+            let value = item.trim().trim_matches(['"', '\'']).trim();
+            if !value.is_empty() {
+                members.push(value.to_owned());
+            }
+        }
+    }
+    members
+}
+
 /// Best-effort line number for a JSON key, so findings can cite one.
 ///
 /// `serde_json` discards positions. Re-parsing with a span-preserving crate would
@@ -571,6 +645,74 @@ pub fn version_spread(resolved: &[ResolvedDep]) -> BTreeMap<&str, Vec<&str>> {
 
 #[cfg(test)]
 mod tests {
+
+    #[test]
+    fn npm_workspaces_accepts_both_the_array_and_the_object_form() {
+        let array = JavaScriptProvider
+            .workspace_members(
+                Utf8Path::new("package.json"),
+                r#"{"name":"root","workspaces":["packages/*"]}"#,
+            )
+            .expect("array form");
+        assert_eq!(array.members, vec!["packages/*"]);
+
+        let object = JavaScriptProvider
+            .workspace_members(
+                Utf8Path::new("package.json"),
+                r#"{"name":"root","workspaces":{"packages":["apps/*"]}}"#,
+            )
+            .expect("yarn-classic object form");
+        assert_eq!(object.members, vec!["apps/*"]);
+    }
+
+    /// npm's negation. A repository that deliberately holds one package out of its
+    /// workspace must not have it silently pulled back in.
+    #[test]
+    fn a_negated_workspace_pattern_becomes_an_exclusion() {
+        let decl = JavaScriptProvider
+            .workspace_members(
+                Utf8Path::new("package.json"),
+                r#"{"workspaces":["packages/*","!packages/legacy"]}"#,
+            )
+            .unwrap();
+        assert_eq!(decl.members, vec!["packages/*"]);
+        assert_eq!(decl.exclude, vec!["packages/legacy"]);
+    }
+
+    #[test]
+    fn a_package_json_without_workspaces_declares_nothing() {
+        assert!(
+            JavaScriptProvider
+                .workspace_members(Utf8Path::new("package.json"), r#"{"name":"solo"}"#)
+                .is_none()
+        );
+    }
+
+    /// pnpm states its workspace in a file of its own, so it would never be read as
+    /// part of `package.json`.
+    #[test]
+    fn pnpm_workspace_yaml_lists_its_packages() {
+        let decl = JavaScriptProvider
+            .workspace_members(
+                Utf8Path::new("pnpm-workspace.yaml"),
+                "packages:\n  - 'packages/*'\n  - \"apps/**\"\n",
+            )
+            .unwrap();
+        assert_eq!(decl.members, vec!["packages/*", "apps/**"]);
+    }
+
+    /// The line parser must stop at the next top-level key rather than swallowing
+    /// every list in the file.
+    #[test]
+    fn pnpm_ignores_lists_belonging_to_other_keys() {
+        let decl = JavaScriptProvider
+            .workspace_members(
+                Utf8Path::new("pnpm-workspace.yaml"),
+                "packages:\n  - 'packages/*'\ncatalog:\n  - 'not-a-package'\n",
+            )
+            .unwrap();
+        assert_eq!(decl.members, vec!["packages/*"]);
+    }
     use super::*;
     use camino::Utf8PathBuf;
     use tropism_core::model::Project;

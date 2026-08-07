@@ -20,6 +20,9 @@ warning[cycle:cycle:465ee449]: import cycle between 2 packages
   |
 note: confidence: high
 
+2 import(s) needed no declaration (1 package(s) supplied by the workspace)
+  cycle: example.com/shared — workspace sibling from shared, 2 import(s)
+
 1 file(s) skipped
   cycle/generated.go — parse error at line 12
 

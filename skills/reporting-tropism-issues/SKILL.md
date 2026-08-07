@@ -66,6 +66,25 @@ tropism --version
 tropism analyze . --format json > report.json     # or the narrower command you ran
 ```
 
+For anything about a **single import** being classified wrongly, attach the explanation as well — it
+turns "tropism thinks this is missing" into the precise step that went wrong, and it is usually
+shorter than the report:
+
+```sh
+tropism explain path/to/the/file.ext --format json
+```
+
+For anything about a **missing-dep that did or did not fire in a monorepo**, attach the boundaries:
+
+```sh
+tropism workspaces . --format json
+```
+
+An import needs no declaration if another project in the same workspace publishes it, so this is
+frequently the answer rather than a bug. Check first whether the workspace holding the two projects
+has origin `language` — that is an inference tropism made because the ecosystem declares no
+workspace, and correcting it is a `[[workspaces]]` entry rather than an issue.
+
 Then reduce. The single most valuable thing you can attach is a **minimal reproduction**: the
 smallest directory that still shows the behaviour. Often that is one manifest and one source file.
 Because tropism never installs anything, a fake manifest naming packages that do not exist works

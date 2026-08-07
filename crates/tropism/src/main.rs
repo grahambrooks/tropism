@@ -42,6 +42,72 @@ enum Command {
     /// block a commit. With a file list, reports only violations those files
     /// introduce, which ratchets an already-violating codebase without a baseline.
     Check(CheckArgs),
+
+    /// Show the workspace boundaries and the dependencies that cross them.
+    ///
+    /// Which projects may import each other's published names without declaring
+    /// them decides what `missing-dep` reports, so a wrong boundary is a silent
+    /// wrong answer. This prints what tropism inferred, where it read it, and what
+    /// crosses it.
+    Workspaces(WorkspacesArgs),
+
+    /// Explain how every import in one file was classified, and why.
+    ///
+    /// A resolution outcome is the product of the manifest, the workspace, the
+    /// project's module set, and the provider's own rules — and the finding it
+    /// produces names none of them.
+    Explain(ExplainArgs),
+}
+
+#[derive(Args)]
+struct WorkspacesArgs {
+    /// Directory to scan.
+    #[arg(default_value = ".")]
+    path: Utf8PathBuf,
+
+    #[arg(long, value_enum, default_value_t = Format::Auto)]
+    format: Format,
+
+    /// Do not honour .gitignore.
+    #[arg(long)]
+    no_ignore: bool,
+
+    /// Ruleset to read boundaries from. Defaults to tropism.toml at the scan root.
+    #[arg(long)]
+    rules: Option<Utf8PathBuf>,
+
+    /// Ignore `[[workspaces]]`, showing only what the ecosystems declare.
+    #[arg(long)]
+    no_rules: bool,
+}
+
+#[derive(Args)]
+struct ExplainArgs {
+    /// The source file to explain, relative to the scan root.
+    file: Utf8PathBuf,
+
+    /// Show only imports whose specifier contains this text.
+    #[arg(long, value_name = "SPECIFIER")]
+    import: Option<String>,
+
+    /// Directory to scan.
+    #[arg(long, default_value = ".")]
+    path: Utf8PathBuf,
+
+    #[arg(long, value_enum, default_value_t = Format::Auto)]
+    format: Format,
+
+    /// Do not honour .gitignore.
+    #[arg(long)]
+    no_ignore: bool,
+
+    /// Ruleset to read boundaries from. Defaults to tropism.toml at the scan root.
+    #[arg(long)]
+    rules: Option<Utf8PathBuf>,
+
+    /// Ignore `[[workspaces]]`, using only what the ecosystems declare.
+    #[arg(long)]
+    no_rules: bool,
 }
 
 #[derive(Args)]
@@ -132,7 +198,69 @@ fn main() -> ExitCode {
     match cli.command {
         Command::Analyze(args) => run(analyze(args)),
         Command::Check(args) => run(check(args)),
+        Command::Workspaces(args) => run(workspaces(args)),
+        Command::Explain(args) => run(explain(args)),
     }
+}
+
+/// Neither `workspaces` nor `explain` is a check, so neither has findings to gate
+/// on. Both are inspection surfaces: they exit 0 unless the run itself failed.
+fn workspaces(args: WorkspacesArgs) -> anyhow::Result<u8> {
+    let providers = tropism_lang::registry();
+    let options = pipeline::Options {
+        respect_ignore: !args.no_ignore,
+        rules_path: args.rules.clone(),
+        use_rules: !args.no_rules,
+        rules_only: false,
+    };
+    let report = pipeline::workspaces(&args.path, &providers, &options)?;
+
+    match args.format {
+        Format::Json => println!("{}", report.to_json_pretty()?),
+        Format::Text => anstream::print!("{}", render::text::render_workspaces(&report)),
+        Format::Auto => {
+            if std::io::stdout().is_terminal() {
+                anstream::print!("{}", render::text::render_workspaces(&report));
+            } else {
+                println!("{}", report.to_json_pretty()?);
+            }
+        }
+        // The browser is built around findings; a boundary listing has none.
+        #[cfg(feature = "tui")]
+        Format::Tui => anyhow::bail!("`workspaces` has no interactive view; use --format text"),
+    }
+    Ok(EXIT_CLEAN)
+}
+
+fn explain(args: ExplainArgs) -> anyhow::Result<u8> {
+    let providers = tropism_lang::registry();
+    let options = pipeline::Options {
+        respect_ignore: !args.no_ignore,
+        rules_path: args.rules.clone(),
+        use_rules: !args.no_rules,
+        rules_only: false,
+    };
+    let file = normalize(&args.file, &args.path);
+    let mut report = pipeline::explain(&args.path, &providers, &options, &file)?;
+
+    if let Some(filter) = &args.import {
+        report.imports.retain(|import| import.raw.contains(filter));
+    }
+
+    match args.format {
+        Format::Json => println!("{}", report.to_json_pretty()?),
+        Format::Text => anstream::print!("{}", render::text::render_explain(&report)),
+        Format::Auto => {
+            if std::io::stdout().is_terminal() {
+                anstream::print!("{}", render::text::render_explain(&report));
+            } else {
+                println!("{}", report.to_json_pretty()?);
+            }
+        }
+        #[cfg(feature = "tui")]
+        Format::Tui => anyhow::bail!("`explain` has no interactive view; use --format text"),
+    }
+    Ok(EXIT_CLEAN)
 }
 
 fn run(result: anyhow::Result<u8>) -> ExitCode {

@@ -253,6 +253,13 @@ pub struct ProjectReport {
     /// that examined the repository.
     #[serde(default)]
     pub source_file_count: usize,
+    /// Imports `missing-dep` skipped because the workspace supplies them.
+    ///
+    /// Additive; consumers may ignore it. It exists so the exemption is auditable:
+    /// before it, an undeclared cross-package import inside a workspace produced
+    /// nothing at all in the output, which reads exactly like a clean project.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub sibling_exemptions: Vec<SiblingExemption>,
 }
 
 impl ProjectReport {
@@ -262,6 +269,7 @@ impl ProjectReport {
             checks: BTreeMap::new(),
             findings: Vec::new(),
             source_file_count: 0,
+            sibling_exemptions: Vec::new(),
         }
     }
 
@@ -269,11 +277,51 @@ impl ProjectReport {
     pub fn finalize(&mut self) {
         self.findings
             .sort_by(|a, b| a.sort_key().cmp(&b.sort_key()));
+        self.sibling_exemptions
+            .sort_by(|a, b| a.package.cmp(&b.package));
     }
 
     pub fn max_severity(&self) -> Option<Severity> {
         self.findings.iter().map(|f| f.severity).max()
     }
+}
+
+/// Why an import needed no declaration.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "kebab-case")]
+pub enum ExemptionVia {
+    /// Another project in the same workspace publishes this name.
+    WorkspaceSibling,
+    /// An ancestor project declares it, and module resolution walks upward.
+    HoistedFromAncestor,
+}
+
+impl ExemptionVia {
+    pub fn as_str(self) -> &'static str {
+        match self {
+            Self::WorkspaceSibling => "workspace sibling",
+            Self::HoistedFromAncestor => "hoisted from ancestor",
+        }
+    }
+}
+
+/// An import that `missing-dep` did not report because the workspace supplies it.
+///
+/// Disclosed for the same reason [`Exclusion`] is: this is a deliberate blind spot,
+/// and a silent blind spot is the failure mode `CheckStatus` exists to prevent. It
+/// is also the honest form of a judgement call — an undeclared sibling import
+/// resolves through hoisting today and breaks the moment the package is published
+/// or built in isolation, so a reader deserves to know the exemption happened even
+/// while tropism declines to call it an error.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct SiblingExemption {
+    pub package: String,
+    pub via: ExemptionVia,
+    /// The project root that supplies the name.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub provided_by: Option<Utf8PathBuf>,
+    /// How many import sites this exemption covered.
+    pub imports: usize,
 }
 
 /// A path deliberately kept out of the analysis.

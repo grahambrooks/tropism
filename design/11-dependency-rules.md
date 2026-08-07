@@ -244,9 +244,26 @@ Saying so is better than a half-implementation that silently misses most depende
 
 ## Implementation status
 
-Implemented and enforced: `exclude`, `deny`, `independent`, `allow_only`, package denylists with
-`replacement`, `allowed_in` scoping, closed-world approved lists (`unlisted = "deny"`), and
-stale-rule detection.
+Implemented and enforced: `exclude`, `[[workspaces]]`, `deny`, `independent`, `allow_only`,
+`crosses_workspace`, package denylists with `replacement`, `allowed_in` scoping, closed-world
+approved lists (`unlisted = "deny"`), and stale-rule detection.
+
+`crosses_workspace = true` is the one rule kind that **names no module**. It forbids any edge leaving
+its workspace, where the boundary comes from `crate::workspace` — the ecosystem's own declaration, or
+`[[workspaces]]`, or the language fallback — rather than from a glob somebody has to keep in step
+with the repository layout. Three consequences:
+
+- Nothing to update when a directory is renamed, which is the usual way a module-named rule rots.
+- `crosses_workspace = false` is a **parse error**. It would enforce nothing while looking like it
+  enforced something, which is the failure this whole section exists to prevent.
+- It is **stale in a single-workspace repository**, since it cannot fire there. Same treatment as a
+  rule naming a module that matches nothing, and the likelier mistake — the rule is easy to write
+  before any boundary exists to enforce.
+
+It exists because a cross-workspace import is a real defect that tropism should not unilaterally
+assign a severity to: it resolves today through hoisting and breaks when the package is published or
+built alone, and whether that blocks a commit is the team's judgement. That is precisely the argument
+for a rule over an inferred check.
 
 Not implemented: `layers`, `require`, `transitive`, and version constraints. These are **rejected at
 parse time with an error naming the field**, rather than ignored — a ruleset must never appear to
@@ -326,6 +343,18 @@ act without parsing prose.
 **CLI.** `tropism check` runs rules only — the fast, high-signal subset suitable for a pre-commit hook.
 `tropism analyze` runs everything. `--rules <path>` overrides discovery; `--no-rules` disables.
 
+Two inspection surfaces, neither of which is a check and both of which exit 0 unless the run itself
+failed. They exist because a wrong *input* to a rule produces a silent wrong answer, and until they
+existed the only way to see that input was to read tropism's source:
+
+- **`tropism workspaces`** — the boundaries, the file each was read from, and every dependency
+  crossing one. The origin field is the part to read: `language` means tropism inferred the grouping
+  because the ecosystem declares nothing, and that is the case most likely to be wrong.
+- **`tropism explain <file>`** — every import in one file, what it resolved to, and one sentence
+  saying why: declared, exempted by a named workspace sibling, hoisted from an ancestor, stdlib,
+  genuinely missing, or unresolved. `--import <spec>` narrows it. An `unresolved` import contributes
+  no edge, so it is the usual answer to "why did my rule not fire".
+
 **Exit codes** are unchanged. Because rule violations default to `error`, `--fail-on error` gates
 them by default while the noisier general checks stay advisory — which is the correct division
 given [10-js-evaluation.md](10-js-evaluation.md).
@@ -343,6 +372,10 @@ told afterwards. This is the first genuinely agent-shaped capability in the prod
 2. **Inheritance in a monorepo.** Does `packages/web/tropism.toml` extend the root ruleset or replace
    it? Extending is more useful and harder to reason about. Recommend extend, with an explicit
    `inherit = false` escape.
+
+   *Unchanged by `[[workspaces]]`.* That block draws workspace **boundaries** — which projects may
+   import each other's published names undeclared — and does not split the ruleset. One
+   `tropism.toml` at the scan root still governs everything.
 3. **Ratcheting.** Teams adopt these tools on codebases that already violate the rules. A
    `baseline` file recording accepted violations — failing only on *new* ones — is what makes
    adoption possible at all, and it should probably ship with the first version rather than after.

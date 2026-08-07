@@ -11,8 +11,9 @@ use std::ops::Range;
 use annotate_snippets::{AnnotationKind, Group, Level, Renderer, Snippet};
 use anstyle::{AnsiColor, Style};
 use camino::Utf8Path;
-use tropism_core::pipeline::{CheckOutcome, CheckScope};
+use tropism_core::pipeline::{CheckOutcome, CheckScope, ExplainReport, WorkspaceReport};
 use tropism_core::report::{CheckStatus, Finding, Report, Severity};
+use tropism_core::workspace::WorkspaceOrigin;
 
 /// Styles for the report chrome. Held in a struct rather than as constants so tests
 /// can snapshot plain output; in production `anstream` also strips ANSI when the
@@ -51,6 +52,160 @@ impl Palette {
 /// Renders a whole report with colour.
 pub fn render(report: &Report) -> String {
     render_with(report, true)
+}
+
+/// Renders the workspace boundaries and what crosses them.
+pub fn render_workspaces(report: &WorkspaceReport) -> String {
+    render_workspaces_with(report, true)
+}
+
+fn render_workspaces_with(report: &WorkspaceReport, colour: bool) -> String {
+    let palette = if colour {
+        Palette::styled()
+    } else {
+        Palette::plain()
+    };
+    let (bold, dim, warn) = (palette.bold, palette.dim, palette.warn);
+    let mut out = String::new();
+
+    if report.workspaces.is_empty() {
+        return "no projects found\n".to_owned();
+    }
+
+    let _ = writeln!(
+        out,
+        "{bold}{} workspace(s){bold:#}\n",
+        report.workspaces.len()
+    );
+
+    for workspace in &report.workspaces {
+        let languages = workspace
+            .languages
+            .iter()
+            .map(ToString::to_string)
+            .collect::<Vec<_>>()
+            .join(", ");
+        let _ = writeln!(
+            out,
+            "{bold}{}{bold:#}  {dim}({languages}){dim:#}",
+            workspace.id
+        );
+
+        // How the boundary was established is the part a reader has to judge. A
+        // `language` grouping is an inference tropism made because the ecosystem
+        // stated nothing, and it is the one most likely to be wrong.
+        let origin = match workspace.declared_by.as_ref() {
+            Some(file) => format!("{} — declared by {file}", workspace.origin.as_str()),
+            None => format!(
+                "{} — inferred, because this ecosystem declares no workspace",
+                workspace.origin.as_str()
+            ),
+        };
+        let style = if workspace.origin == WorkspaceOrigin::Language {
+            warn
+        } else {
+            dim
+        };
+        let _ = writeln!(out, "  {style}{origin}{style:#}");
+
+        for member in &workspace.members {
+            let member = if member.as_str().is_empty() {
+                "."
+            } else {
+                member.as_str()
+            };
+            let _ = writeln!(out, "  {dim}• {member}{dim:#}");
+        }
+        out.push('\n');
+    }
+
+    if report.crossings.is_empty() {
+        let _ = writeln!(
+            out,
+            "{dim}no dependency crosses a workspace boundary{dim:#}"
+        );
+        return out;
+    }
+
+    let _ = writeln!(
+        out,
+        "{warn}{} dependenc(ies) cross a workspace boundary{warn:#}",
+        report.crossings.len()
+    );
+    let _ = writeln!(
+        out,
+        "{dim}each resolves today through hoisting and breaks when the package is built \
+         alone; enforce with a `crosses_workspace` rule{dim:#}"
+    );
+    for crossing in &report.crossings {
+        let line = crossing
+            .line
+            .map_or_else(String::new, |line| format!(":{line}"));
+        let _ = writeln!(
+            out,
+            "  {dim}{}{line} — {} `{}` → workspace `{}`{dim:#}",
+            crossing.from, crossing.level, crossing.label, crossing.to_workspace
+        );
+    }
+    out
+}
+
+/// Renders one file's import classifications.
+pub fn render_explain(report: &ExplainReport) -> String {
+    render_explain_with(report, true)
+}
+
+fn render_explain_with(report: &ExplainReport, colour: bool) -> String {
+    let palette = if colour {
+        Palette::styled()
+    } else {
+        Palette::plain()
+    };
+    let (bold, dim, good, warn) = (palette.bold, palette.dim, palette.good, palette.warn);
+    let mut out = String::new();
+
+    let project = if report.project.as_str().is_empty() {
+        "."
+    } else {
+        report.project.as_str()
+    };
+    let _ = writeln!(out, "{bold}{}{bold:#}", report.file);
+    let _ = writeln!(
+        out,
+        "  {dim}project {project} ({}), module `{}`{dim:#}",
+        report.language, report.module
+    );
+    if let Some(workspace) = &report.workspace {
+        let _ = writeln!(
+            out,
+            "  {dim}workspace `{}` ({}){dim:#}",
+            workspace.id,
+            workspace.origin.as_str()
+        );
+    }
+    out.push('\n');
+
+    if report.imports.is_empty() {
+        let _ = writeln!(out, "{dim}no imports{dim:#}");
+        return out;
+    }
+
+    for import in &report.imports {
+        // `unresolved` caps the confidence of every hygiene finding in the project,
+        // so it is the outcome worth making visible rather than the clean ones.
+        let style = match import.target.as_str() {
+            "unresolved" => warn,
+            "internal" | "stdlib" => good,
+            _ => bold,
+        };
+        let _ = writeln!(
+            out,
+            "{style}{}:{}{style:#}  {} {dim}({}){dim:#}",
+            import.line, import.raw, import.target, import.form
+        );
+        let _ = writeln!(out, "  {dim}{}{dim:#}", import.reason);
+    }
+    out
 }
 
 /// Renders a `check` run.
@@ -188,6 +343,60 @@ pub fn render_with(report: &Report, styled: bool) -> String {
                 out,
                 "  {style}{} — {} path(s){note}{style:#}",
                 exclusion.pattern, exclusion.matched
+            );
+        }
+        out.push('\n');
+    }
+
+    // Disclosed for the same reason exclusions are: an exemption is a deliberate
+    // blind spot, and a silent one reads exactly like a clean project.
+    let exemptions: Vec<(
+        &camino::Utf8PathBuf,
+        &tropism_core::report::SiblingExemption,
+    )> = report
+        .projects
+        .iter()
+        .flat_map(|project| {
+            project
+                .sibling_exemptions
+                .iter()
+                .map(move |exemption| (&project.project.root, exemption))
+        })
+        .collect();
+    if !exemptions.is_empty() {
+        let dim = palette.dim;
+        let total: usize = exemptions.iter().map(|(_, e)| e.imports).sum();
+        let _ = writeln!(
+            out,
+            "{dim}{total} import(s) needed no declaration ({} package(s) supplied by the \
+             workspace){dim:#}",
+            exemptions.len()
+        );
+        for (root, exemption) in &exemptions {
+            let root = if root.as_str().is_empty() {
+                "."
+            } else {
+                root.as_str()
+            };
+            let from = exemption
+                .provided_by
+                .as_ref()
+                .map_or_else(String::new, |path| {
+                    format!(
+                        " from {}",
+                        if path.as_str().is_empty() {
+                            "."
+                        } else {
+                            path.as_str()
+                        }
+                    )
+                });
+            let _ = writeln!(
+                out,
+                "  {dim}{root}: {} — {}{from}, {} import(s){dim:#}",
+                exemption.package,
+                exemption.via.as_str(),
+                exemption.imports
             );
         }
         out.push('\n');

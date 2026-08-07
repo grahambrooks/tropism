@@ -41,6 +41,7 @@ Effort, not obstacle. A good report can move these up.
 | **D7** | Version constraints in package rules unimplemented |
 | **D8** | No baseline file (largely obviated: `tropism check <files>` ratchets by scope instead) |
 | **D9** | No sub-ruleset inheritance in a monorepo — one `tropism.toml` at the scan root |
+| **D16** | npm `workspaces` globs are now read, but a `projectDir`-remapped Gradle project and a `.sln` still fall back to language grouping |
 | **D10** | `version-conflict` and `diamond-dep` overlap and can double-report |
 | **D11** | `dependency-bloat` has no crisp definition and reports unavailable |
 | **D24** | `--check <id>` filter not implemented |
@@ -58,6 +59,10 @@ Do not report these; they were fixed. Mentioned because older discussion may sti
 - **D1** — cross-project cycles are now detected repo-wide
 - **D23** — `exclude` globs now keep sample code out of the analysis
 - **D24** — `tropism check` exists
+- **The repo-wide sibling set** — projects are no longer all siblings of one another. A Rust crate
+  can no longer make a JavaScript import look declared, and two separate npm workspaces in one
+  repository are two workspaces. Run `tropism workspaces` to see the boundaries and where each was
+  read from; every exemption is disclosed in the report.
 
 ## The two things that will not be built
 

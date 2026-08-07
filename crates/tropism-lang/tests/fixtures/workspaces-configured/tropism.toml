@@ -1,0 +1,8 @@
+# Python states no workspace anywhere, so without this every Python project in the
+# repository would be grouped together by the language fallback and `svc/alpha`
+# could import `gamma` undeclared without a word being said.
+schema_version = 1
+
+[[workspaces]]
+root = "svc"
+members = ["svc/*"]

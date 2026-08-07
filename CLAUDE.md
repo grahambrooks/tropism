@@ -130,6 +130,9 @@ being deliberately broken. Exclusions are disclosed in every report with a match
 exclusion is a blind spot, and a silent blind spot is the failure mode `CheckStatus` exists to
 prevent. **Never widen an exclusion to make the gate pass.**
 
+It also carries `[[workspaces]]`, which draws workspace boundaries where an ecosystem states none.
+See "Workspace boundaries" below.
+
 Rule findings are the only ones besides `cycle` that earn `High` confidence, and they default to
 `error` severity because the team asserted them.
 
@@ -204,6 +207,33 @@ severity and package but not directory. `make alerts` splits the real count from
 nothing under `demo/` is ever installed. Never "fix" a demo dependency — the pinned, conflicting,
 outdated versions are what the samples demonstrate, and `demos.rs` asserts them.
 
+## Workspace boundaries
+
+A **workspace** is the set of projects that may import each other's published names *without
+declaring them*. It decides what `missing-dep` reports, so a wrong boundary is a silent wrong answer.
+`crates/tropism-core/src/workspace.rs` owns it; membership is established three ways, most
+authoritative first: `configured` (`[[workspaces]]` in `tropism.toml`), `declared` (Cargo `members`,
+npm `workspaces`, `pnpm-workspace.yaml`, `go.work`, Maven `<modules>`, Gradle `include`), and
+`language` (everything unclaimed, grouped by language — the fallback for Python, Ruby, Swift, C++,
+and NuGet, which declare nothing).
+
+Four things not to undo:
+
+- **Language is checked in addition to membership, never instead of it.** No workspace declaration
+  makes a Rust crate importable from Node. This is what keeps the scheme a strict narrowing of the
+  old repo-wide sibling set, so it cannot introduce a false positive that set did not already have.
+- **Ancestor hoisting is bounded by the directory tree, not by the workspace**, because Node's
+  resolution walks up parent directories whether or not a workspace is involved.
+- **The exemption is disclosed, never silent** — `ProjectReport::sibling_exemptions`, with the
+  package, the supplying project, and the import count. Same reasoning as `exclude` match counts.
+- **A crossing is a rule, not an inferred check.** `crosses_workspace = true` lets a team assert it
+  at High confidence; tropism does not guess a severity for it.
+
+This resolved open question 1 in `design/07-open-questions.md`, and the resolution is worth reading
+before touching any of it: the graph half and the hygiene half of that question had shipped
+*disagreeing about the same edge*, and the disagreement was only visible by testing them against
+each other. `crates/tropism-lang/tests/workspaces.rs` pins both leaks closed.
+
 ## Cycle scopes
 
 Cycle findings carry `details.scope`:
@@ -276,6 +306,8 @@ cargo build -p tropism --no-default-features # must still build without ratatui
 ./scripts/demo.sh --tui                      # ...ending in the interactive browser
 ./target/debug/tropism analyze .                # dogfood directly
 ./target/debug/tropism check src/a.rs           # rules only, scoped to a change
+./target/debug/tropism workspaces .             # boundaries, their provenance, and what crosses them
+./target/debug/tropism explain src/a.rs         # why each import in one file classified as it did
 
 prek install                                 # wire the hooks (prek.toml)
 prek run tropism -a                          # the commit-time hook, without committing
@@ -334,9 +366,16 @@ ships so other repositories can consume the hook. The release pipeline cuts CalV
 targets on every green push to main, with checksums and provenance; crates.io publishing is wired but
 deliberately manual.
 
+Workspace boundaries are first-class: inferred from each ecosystem's own declaration, overridable
+with `[[workspaces]]`, inspectable with `tropism workspaces`, and enforceable with a
+`crosses_workspace` rule. This closed open question 1 and D16, and added `LanguageProvider::
+workspace_files` / `workspace_members` — the first trait change since it converged across the last
+five languages, and a deliberate one.
+
 Not built, in priority order: parse-level incrementality for `check` (D36 — it scopes but still
-parses the whole tree), a baseline for whole-repository runs, the unimplemented rule kinds above, and
-the MCP server.
+parses the whole tree), a baseline for whole-repository runs, the unimplemented rule kinds above, an
+`undeclared-sibling` check (D38 — measure against the ten-repo corpus before building), and the MCP
+server.
 
 **Before extending the checks, read [design/10-js-evaluation.md](design/10-js-evaluation.md).**
 Manifest hygiene (`unused-dep` / `missing-dep`) measured a **63% false-positive rate** on real

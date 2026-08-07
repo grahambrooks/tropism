@@ -9,6 +9,7 @@ use camino::Utf8Path;
 use tropism_core::graph::ModuleId;
 use tropism_core::model::{DeclaredDep, DepKind, Language, Manifest, Provenance, ResolvedDep};
 use tropism_core::provider::{Import, ImportTarget, LanguageProvider, ProjectContext, VersionOps};
+use tropism_core::workspace::WorkspaceDecl;
 
 pub struct GoProvider;
 
@@ -95,6 +96,19 @@ impl LanguageProvider for GoProvider {
 
     fn lockfile_names(&self) -> &'static [&'static str] {
         &["go.sum"]
+    }
+
+    /// `go.work` sits beside no `go.mod` — it is a peer of the module directories,
+    /// not of a module — so it is only ever seen as a workspace file.
+    fn workspace_files(&self) -> &'static [&'static str] {
+        &["go.work"]
+    }
+
+    fn workspace_members(&self, path: &Utf8Path, text: &str) -> Option<WorkspaceDecl> {
+        if path.file_name() != Some("go.work") {
+            return None;
+        }
+        Some(WorkspaceDecl::members(parse_go_work_use(text)))
     }
 
     fn source_extensions(&self) -> &'static [&'static str] {
@@ -298,6 +312,48 @@ fn parse_go_mod(text: &str) -> Manifest {
     manifest
 }
 
+/// The directories a `go.work` file lists, from either `use` form:
+///
+/// ```text
+/// use ./a
+/// use (
+///     ./b
+///     ./c
+/// )
+/// ```
+///
+/// Same line-oriented shape as `go.mod`'s `require`, and the same rule: anything
+/// not understood contributes nothing.
+fn parse_go_work_use(text: &str) -> Vec<String> {
+    let mut members = Vec::new();
+    let mut in_use_block = false;
+
+    for raw_line in text.lines() {
+        let (content, _) = split_comment(raw_line);
+        let content = content.trim();
+        if content.is_empty() {
+            continue;
+        }
+
+        if in_use_block {
+            if content == ")" {
+                in_use_block = false;
+            } else {
+                members.push(content.trim_matches('"').to_owned());
+            }
+            continue;
+        }
+
+        if content == "use (" {
+            in_use_block = true;
+        } else if let Some(rest) = content.strip_prefix("use ") {
+            members.push(rest.trim().trim_matches('"').to_owned());
+        }
+    }
+
+    members
+}
+
 fn split_comment(line: &str) -> (&str, &str) {
     match line.find("//") {
         Some(at) => (&line[..at], &line[at + 2..]),
@@ -407,6 +463,28 @@ fn collect_import_specs(node: tree_sitter::Node<'_>, source: &[u8], out: &mut Ve
 
 #[cfg(test)]
 mod tests {
+
+    /// `go.work` sits beside no `go.mod`, so it is only ever seen as a workspace
+    /// file — and both `use` forms have to be read.
+    #[test]
+    fn go_work_reads_both_use_forms() {
+        let decl = GoProvider
+            .workspace_members(
+                Utf8Path::new("go.work"),
+                "go 1.22\n\nuse ./api\n\nuse (\n\t./worker\n\t./shared // a comment\n)\n",
+            )
+            .expect("a go.work always declares a workspace");
+        assert_eq!(decl.members, vec!["./api", "./worker", "./shared"]);
+    }
+
+    #[test]
+    fn a_go_mod_never_declares_a_workspace() {
+        assert!(
+            GoProvider
+                .workspace_members(Utf8Path::new("go.mod"), "module example.com/x\n")
+                .is_none()
+        );
+    }
     use super::*;
     use camino::Utf8PathBuf;
     use tropism_core::model::Project;

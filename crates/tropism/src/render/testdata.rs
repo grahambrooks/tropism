@@ -1,15 +1,16 @@
 //! Shared fixture for renderer tests.
 //!
 //! One report exercising every branch a renderer has to handle: a finding with
-//! multi-file evidence, a check that ran clean, a check that never ran, and a
-//! skipped file. Both the text and TUI renderers are tested against it, so the two
-//! cannot silently disagree about what a report contains.
+//! multi-file evidence, a check that ran clean, a check that never ran, a skipped
+//! file, and an import exempted by the workspace. Both the text and TUI renderers
+//! are tested against it, so the two cannot silently disagree about what a report
+//! contains.
 
 use camino::Utf8PathBuf;
 use tropism_core::model::{Language, Project};
 use tropism_core::report::{
-    CheckId, CheckStatus, Confidence, Evidence, Finding, ProjectReport, Report, Severity,
-    SkippedFile,
+    CheckId, CheckStatus, Confidence, Evidence, ExemptionVia, Finding, ProjectReport, Report,
+    Severity, SiblingExemption, SkippedFile,
 };
 
 /// The report's scan root. Absolute, because the text renderer reads the fixture
@@ -62,6 +63,14 @@ pub fn sample_report() -> Report {
         CheckId::VersionConflict,
         CheckStatus::unavailable("no lockfile found; resolved tree unknown"),
     );
+    // A `missing-dep` that was not reported. It has to appear somewhere, or the
+    // project reads as clean when a check deliberately looked away.
+    project_report.sibling_exemptions.push(SiblingExemption {
+        package: "example.com/shared".to_owned(),
+        via: ExemptionVia::WorkspaceSibling,
+        provided_by: Some("shared".into()),
+        imports: 2,
+    });
 
     let mut report = Report::new(fixtures());
     report.projects.push(project_report);

@@ -19,6 +19,7 @@ use crate::report::{
     SkippedFile,
 };
 use crate::rules::{DependencyEdge, EdgeLevel, ExcludeSet, PackageUse, Ruleset};
+use crate::workspace::{self, WorkspaceMap};
 
 pub struct Options {
     pub respect_ignore: bool,
@@ -176,14 +177,443 @@ fn count_source_files(report: &Report) -> usize {
     report.projects.iter().map(|p| p.source_file_count).sum()
 }
 
+/// What `tropism workspaces` reports.
+///
+/// A boundary that cannot be inspected is a boundary nobody can trust or correct.
+/// Every check downstream of `WorkspaceMap` — which imports need no declaration,
+/// whether an edge leaves its workspace — depends on this grouping being right, and
+/// until now the only way to find out what tropism had inferred was to read the
+/// source.
+#[derive(Debug, Clone, serde::Serialize)]
+pub struct WorkspaceReport {
+    pub scan_root: Utf8PathBuf,
+    pub workspaces: Vec<crate::workspace::Workspace>,
+    /// Dependencies whose two ends are in different workspaces.
+    pub crossings: Vec<Crossing>,
+}
+
+impl WorkspaceReport {
+    /// Serialized here rather than by the caller, for the same reason
+    /// [`Report::to_json_pretty`] is: one contract, so the CLI and the MCP server
+    /// cannot answer the same question differently.
+    pub fn to_json_pretty(&self) -> serde_json::Result<String> {
+        serde_json::to_string_pretty(self)
+    }
+}
+
+#[derive(Debug, Clone, serde::Serialize)]
+pub struct Crossing {
+    pub from_workspace: String,
+    pub to_workspace: String,
+    pub from: Utf8PathBuf,
+    pub to: Utf8PathBuf,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub line: Option<u32>,
+    pub label: String,
+    pub level: String,
+}
+
+/// Resolves workspace boundaries and the edges that cross them.
+///
+/// Runs the same passes `analyze` does, over the same inputs, so what this prints
+/// is what the checks actually used — not a second implementation that could drift.
+pub fn workspaces(
+    scan_root: &Utf8Path,
+    providers: &[&dyn LanguageProvider],
+    options: &Options,
+) -> Result<WorkspaceReport, DiscoveryError> {
+    let (exclude, configured) = if options.use_rules {
+        Ruleset::discover_prepass(scan_root).unwrap_or_default()
+    } else {
+        (ExcludeSet::default(), Vec::new())
+    };
+
+    let projects = discovery::discover(scan_root, providers, options.respect_ignore, &exclude)?;
+    let map = workspace::resolve(scan_root, &projects, providers, &configured);
+
+    // Edges come from the full pass, because a crossing is exactly the edge shape
+    // the rule engine already collects.
+    let rules_only = Options {
+        respect_ignore: options.respect_ignore,
+        rules_path: options.rules_path.clone(),
+        use_rules: options.use_rules,
+        rules_only: true,
+    };
+    let edges = collect_edges(scan_root, providers, &rules_only)?;
+    let roots: Vec<Utf8PathBuf> = projects.iter().map(|p| p.root.clone()).collect();
+
+    let mut crossings: Vec<Crossing> = edges
+        .iter()
+        .filter_map(|edge| {
+            let from = map.of_path(&edge.from, &roots)?;
+            let to = map.of_path(&edge.to, &roots)?;
+            (from.id != to.id).then(|| Crossing {
+                from_workspace: from.id.clone(),
+                to_workspace: to.id.clone(),
+                from: edge.from.clone(),
+                to: edge.to.clone(),
+                line: edge.line,
+                label: edge.label.clone(),
+                level: edge.level.as_str().to_owned(),
+            })
+        })
+        .collect();
+    crossings.sort_by(|a, b| (&a.from, a.line, &a.label).cmp(&(&b.from, b.line, &b.label)));
+    crossings.dedup_by(|a, b| (&a.from, a.line, &a.label) == (&b.from, b.line, &b.label));
+
+    Ok(WorkspaceReport {
+        scan_root: scan_root.to_owned(),
+        workspaces: map.workspaces().to_vec(),
+        crossings,
+    })
+}
+
+/// What `tropism explain` reports for one source file.
+#[derive(Debug, Clone, serde::Serialize)]
+pub struct ExplainReport {
+    pub file: Utf8PathBuf,
+    pub project: Utf8PathBuf,
+    pub language: crate::model::Language,
+    pub module: String,
+    /// The workspace the file's project belongs to, and how that was established.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub workspace: Option<crate::workspace::Workspace>,
+    pub imports: Vec<ExplainedImport>,
+}
+
+impl ExplainReport {
+    pub fn to_json_pretty(&self) -> serde_json::Result<String> {
+        serde_json::to_string_pretty(self)
+    }
+}
+
+#[derive(Debug, Clone, serde::Serialize)]
+pub struct ExplainedImport {
+    pub raw: String,
+    pub line: u32,
+    /// `statement` or `path-reference`. A path reference proves use and never
+    /// absence, which is why the two are distinguished everywhere.
+    pub form: String,
+    /// `internal`, `external`, `stdlib`, or `unresolved`.
+    pub target: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub name: Option<String>,
+    /// Why it resolved this way, in one sentence.
+    pub reason: String,
+}
+
+/// Explains how every import in one file was classified.
+///
+/// The debugging surface for everything else in this module. A resolution outcome
+/// is the product of the manifest, the workspace, the module set, and the
+/// provider's own rules, and when one of those is wrong the finding it produces
+/// names none of them.
+pub fn explain(
+    scan_root: &Utf8Path,
+    providers: &[&dyn LanguageProvider],
+    options: &Options,
+    file: &Utf8Path,
+) -> anyhow::Result<ExplainReport> {
+    let (exclude, configured) = if options.use_rules {
+        Ruleset::discover_prepass(scan_root).unwrap_or_default()
+    } else {
+        (ExcludeSet::default(), Vec::new())
+    };
+    let projects = discovery::discover(scan_root, providers, options.respect_ignore, &exclude)?;
+    let map = workspace::resolve(scan_root, &projects, providers, &configured);
+
+    let mut roots: Vec<&Project> = projects.iter().collect();
+    roots.sort_by_key(|project| std::cmp::Reverse(project.root.as_str().len()));
+    let owner = owning_project(file, &roots)
+        .ok_or_else(|| anyhow::anyhow!("{file} is not inside any project tropism discovered"))?;
+    let project = projects
+        .iter()
+        .find(|project| project.root == owner)
+        .expect("owning_project returns a discovered root");
+    let provider = *providers
+        .iter()
+        .find(|candidate| candidate.language() == project.language)
+        .ok_or_else(|| anyhow::anyhow!("no provider for {}", project.language))?;
+
+    let parsed = parse_manifests(scan_root, &projects, providers);
+    let manifest = parsed
+        .iter()
+        .find(|(candidate, _)| candidate.root == project.root)
+        .map(|(_, manifest)| manifest.clone())
+        .unwrap_or_default();
+    let provided = provided_names(project, &parsed, &map);
+    let provided_list: Vec<String> = provided.keys().cloned().collect();
+
+    let pass = Pass {
+        scan_root,
+        roots: &roots,
+        provided: &provided,
+        provided_names: &provided_list,
+        published_roots: &published_roots(&parsed),
+        exclude: &exclude,
+        options,
+    };
+
+    // The module set has to come from the whole project: resolution asks which
+    // modules exist, and answering from one file would call every internal import
+    // external.
+    let files = source_files(project, provider, &pass);
+    let mut module_files: BTreeMap<String, Utf8PathBuf> = BTreeMap::new();
+    for candidate in &files {
+        let Ok(text) = std::fs::read_to_string(scan_root.join(candidate)) else {
+            continue;
+        };
+        let default_id = module_id(&project.root, candidate);
+        let owner = provider.module_id_for_file(candidate, &text, &default_id);
+        module_files.entry(owner.name).or_insert(candidate.clone());
+    }
+    let known_modules: BTreeSet<String> = module_files.keys().cloned().collect();
+
+    let text = std::fs::read_to_string(scan_root.join(file))
+        .map_err(|error| anyhow::anyhow!("{file}: {error}"))?;
+    let module = provider
+        .module_id_for_file(file, &text, &module_id(&project.root, file))
+        .name;
+
+    let ctx = ProjectContext {
+        project,
+        package_name: manifest.package_name.as_deref(),
+        declared: &manifest.deps,
+        sibling_packages: &provided_list,
+        known_modules: &known_modules,
+        source_files: &files,
+    };
+
+    let declared: BTreeSet<&str> = manifest.deps.iter().map(|dep| dep.name.as_str()).collect();
+    let imports = provider
+        .extract_imports(file, &text)?
+        .into_iter()
+        .map(|import| {
+            let target = provider.resolve_import(&import, file, &ctx);
+            let (kind, name, reason) = match &target {
+                ImportTarget::Internal(module) => (
+                    "internal",
+                    Some(module.clone()),
+                    format!("resolves to module `{module}` in this project"),
+                ),
+                ImportTarget::External(name) => {
+                    let reason = if declared.contains(name.as_str()) {
+                        format!("`{name}` is declared in this project's manifest")
+                    } else {
+                        match provided.get(name.as_str()) {
+                            Some(ProvidedBy::SelfPackage) => format!(
+                                "`{name}` is this project's own published name, reached the way an \
+                                 integration test reaches the library it tests"
+                            ),
+                            Some(ProvidedBy::WorkspaceSibling(root)) => format!(
+                                "`{name}` is undeclared here, but published by `{root}` in the \
+                                 same workspace — exempt from missing-dep, and disclosed"
+                            ),
+                            Some(ProvidedBy::HoistedFrom(root)) => format!(
+                                "`{name}` is undeclared here, but declared by the ancestor \
+                                 project `{root}` and reachable by upward resolution"
+                            ),
+                            None => format!(
+                                "`{name}` is neither declared nor supplied by the workspace — \
+                                 this is a missing dependency"
+                            ),
+                        }
+                    };
+                    ("external", Some(name.clone()), reason)
+                }
+                ImportTarget::Stdlib => (
+                    "stdlib",
+                    None,
+                    "supplied by the language, so it needs no declaration".to_owned(),
+                ),
+                ImportTarget::Unresolved { reason } => ("unresolved", None, reason.clone()),
+            };
+            ExplainedImport {
+                raw: import.raw,
+                line: import.line,
+                form: match import.form {
+                    crate::provider::ImportForm::Statement => "statement".to_owned(),
+                    crate::provider::ImportForm::PathReference => "path-reference".to_owned(),
+                },
+                target: kind.to_owned(),
+                name,
+                reason,
+            }
+        })
+        .collect();
+
+    Ok(ExplainReport {
+        file: file.to_owned(),
+        project: project.root.clone(),
+        language: project.language,
+        module,
+        workspace: map.of_project(&project.root).cloned(),
+        imports,
+    })
+}
+
+/// The repo-wide dependency edges, without evaluating any rule against them.
+fn collect_edges(
+    scan_root: &Utf8Path,
+    providers: &[&dyn LanguageProvider],
+    options: &Options,
+) -> Result<Vec<DependencyEdge>, DiscoveryError> {
+    let (exclude, configured) = if options.use_rules {
+        Ruleset::discover_prepass(scan_root).unwrap_or_default()
+    } else {
+        (ExcludeSet::default(), Vec::new())
+    };
+    let projects = discovery::discover(scan_root, providers, options.respect_ignore, &exclude)?;
+    let map = workspace::resolve(scan_root, &projects, providers, &configured);
+
+    let parsed: Vec<(&Project, crate::model::Manifest)> =
+        parse_manifests(scan_root, &projects, providers);
+    let mut roots: Vec<&Project> = projects.iter().collect();
+    roots.sort_by_key(|project| std::cmp::Reverse(project.root.as_str().len()));
+    let published_roots = published_roots(&parsed);
+
+    let mut edges = Vec::new();
+    for project in &projects {
+        let Some(provider) = providers
+            .iter()
+            .find(|candidate| candidate.language() == project.language)
+        else {
+            continue;
+        };
+        let provided = provided_names(project, &parsed, &map);
+        let provided_list: Vec<String> = provided.keys().cloned().collect();
+        let pass = Pass {
+            scan_root,
+            roots: &roots,
+            provided: &provided,
+            provided_names: &provided_list,
+            published_roots: &published_roots,
+            exclude: &exclude,
+            options,
+        };
+        if let Ok((_, _, input, _)) = analyze_project(project, *provider, &pass) {
+            edges.extend(input.edges);
+        }
+    }
+    Ok(edges)
+}
+
+/// Parses every project's manifest. A project whose manifest will not parse is
+/// dropped here and reported by the pass that tries to analyze it.
+fn parse_manifests<'a>(
+    scan_root: &Utf8Path,
+    projects: &'a [Project],
+    providers: &[&dyn LanguageProvider],
+) -> Vec<(&'a Project, crate::model::Manifest)> {
+    projects
+        .iter()
+        .filter_map(|project| {
+            let provider = providers
+                .iter()
+                .find(|candidate| candidate.language() == project.language)?;
+            let manifest_path = project.manifests.first()?;
+            let text = std::fs::read_to_string(scan_root.join(manifest_path)).ok()?;
+            Some((project, provider.parse_manifest(manifest_path, &text).ok()?))
+        })
+        .collect()
+}
+
+/// Package name -> the project that publishes it, so a dependency on a sibling
+/// becomes an edge between two places in the repository rather than an external
+/// package reference.
+fn published_roots(parsed: &[(&Project, crate::model::Manifest)]) -> BTreeMap<String, Utf8PathBuf> {
+    parsed
+        .iter()
+        .filter_map(|(project, manifest)| {
+            manifest
+                .package_name
+                .clone()
+                .map(|name| (name, project.root.clone()))
+        })
+        .collect()
+}
+
+/// Everything the workspace makes importable here without a local declaration, and
+/// where each name came from.
+///
+/// Two distinct mechanisms, kept apart because they have different bounds and the
+/// report names which one applied:
+///
+/// * **A workspace sibling's published name.** Bounded by the workspace, because
+///   `packages/web` importing `@b/kit` from a *different* workspace does not
+///   resolve — npm would fail, and tropism used to say nothing.
+/// * **An ancestor project's declared dependency.** Bounded by the directory tree
+///   and not by the workspace, because Node's resolution walks up parent
+///   directories whether or not a workspace is involved. npm hoists a monorepo
+///   root's devDependencies into a shared `node_modules`, so a child importing
+///   `vitest` is not undeclared.
+///
+/// Both are additionally bounded by language. That bound is unconditional and does
+/// not defer to the workspace: a Rust crate named `mylib` must never make a
+/// JavaScript `import 'mylib'` look declared, however the boundary was drawn.
+fn provided_names(
+    project: &Project,
+    parsed: &[(&Project, crate::model::Manifest)],
+    workspaces: &workspace::WorkspaceMap,
+) -> BTreeMap<String, ProvidedBy> {
+    let same_language = |other: &Project| other.language == project.language;
+    let mut provided: BTreeMap<String, ProvidedBy> = BTreeMap::new();
+
+    for (other, manifest) in parsed {
+        if !same_language(other) {
+            continue;
+        }
+        if other.root != project.root && project.root.starts_with(&other.root) {
+            for dep in &manifest.deps {
+                provided
+                    .entry(dep.name.clone())
+                    .or_insert_with(|| ProvidedBy::HoistedFrom(other.root.clone()));
+            }
+        }
+    }
+
+    for (other, manifest) in parsed {
+        if !same_language(other) || !workspaces.same_workspace(&project.root, &other.root) {
+            continue;
+        }
+        if let Some(name) = &manifest.package_name {
+            let source = if other.root == project.root {
+                ProvidedBy::SelfPackage
+            } else {
+                ProvidedBy::WorkspaceSibling(other.root.clone())
+            };
+            provided.insert(name.clone(), source);
+        }
+    }
+
+    provided
+}
+
+/// Which mechanism supplied a name, so the exemption can be disclosed rather than
+/// silently applied.
+#[derive(Debug, Clone, PartialEq, Eq)]
+enum ProvidedBy {
+    WorkspaceSibling(Utf8PathBuf),
+    HoistedFrom(Utf8PathBuf),
+    /// The project's *own* published name.
+    ///
+    /// It has to be resolvable — Rust integration tests under `tests/` are separate
+    /// crates that reach the library by its package name, and Go's `_test` packages
+    /// do the same — but it is not an exemption and must not be disclosed as one.
+    /// Nobody declares a dependency on themselves, so nothing was waived.
+    SelfPackage,
+}
+
 /// The shared inputs every project's analysis needs, gathered once.
 struct Pass<'a> {
     scan_root: &'a Utf8Path,
     /// Project roots, longest first, so a file in a nested project is attributed to
     /// the innermost one.
     roots: &'a [&'a Project],
-    /// Names the workspace makes importable without a local declaration.
-    provided: &'a [String],
+    /// Names the workspace makes importable without a local declaration, and why.
+    provided: &'a BTreeMap<String, ProvidedBy>,
+    /// The same names as a flat list, which is what a provider is handed.
+    provided_names: &'a [String],
     /// Package name -> the project publishing it, for cross-project edges.
     published_roots: &'a BTreeMap<String, Utf8PathBuf>,
     exclude: &'a ExcludeSet,
@@ -217,12 +647,13 @@ pub fn analyze(
     providers: &[&dyn LanguageProvider],
     options: &Options,
 ) -> Result<Report, DiscoveryError> {
-    // Exclusions have to be known before anything is walked, so the ruleset is read
-    // once here for its `exclude` list and again at the end for its rules.
-    let exclude = if options.use_rules {
-        Ruleset::discover_excludes(scan_root).unwrap_or_default()
+    // Exclusions and workspace boundaries have to be known before anything is
+    // walked, so the ruleset is read once here for both and again at the end for
+    // its rules.
+    let (exclude, configured_workspaces) = if options.use_rules {
+        Ruleset::discover_prepass(scan_root).unwrap_or_default()
     } else {
-        ExcludeSet::default()
+        (ExcludeSet::default(), Vec::new())
     };
 
     let projects = discovery::discover(scan_root, providers, options.respect_ignore, &exclude)?;
@@ -234,35 +665,18 @@ pub fn analyze(
 
     // First pass: parse every manifest, so the second pass can tell what the
     // workspace makes available from what is genuinely undeclared.
-    let parsed: Vec<(&Project, crate::model::Manifest)> = projects
-        .iter()
-        .filter_map(|project| {
-            let provider = providers
-                .iter()
-                .find(|candidate| candidate.language() == project.language)?;
-            let manifest_path = project.manifests.first()?;
-            let text = std::fs::read_to_string(scan_root.join(manifest_path)).ok()?;
-            Some((project, provider.parse_manifest(manifest_path, &text).ok()?))
-        })
-        .collect();
+    let parsed = parse_manifests(scan_root, &projects, providers);
 
     // Longest root first, so a file inside a nested project is attributed to the
     // innermost one rather than to its parent.
     let mut roots: Vec<&Project> = projects.iter().collect();
     roots.sort_by_key(|project| std::cmp::Reverse(project.root.as_str().len()));
 
-    // Package name -> the project that publishes it, so a dependency on a sibling
-    // becomes an edge between two places in the repository rather than an external
-    // package reference.
-    let published_roots: BTreeMap<String, Utf8PathBuf> = parsed
-        .iter()
-        .filter_map(|(project, manifest)| {
-            manifest
-                .package_name
-                .clone()
-                .map(|name| (name, project.root.clone()))
-        })
-        .collect();
+    let published_roots = published_roots(&parsed);
+
+    // Which projects may import each other's published names without declaring
+    // them. Not "all of them": see `crate::workspace` and design/07 question 1.
+    let workspaces = workspace::resolve(scan_root, &projects, providers, &configured_workspaces);
 
     let mut rule_input = RuleInput::default();
     let mut indexes: Vec<ProjectIndex> = Vec::new();
@@ -275,23 +689,14 @@ pub fn analyze(
             continue;
         };
 
-        // Everything the workspace makes importable here without a local
-        // declaration: any sibling's published name, plus dependencies declared by
-        // an ancestor project. npm hoists a monorepo root's devDependencies into a
-        // shared node_modules, so a child importing `vitest` is not undeclared.
-        let provided: Vec<String> = parsed
-            .iter()
-            .filter(|(other, _)| {
-                other.root != project.root && project.root.starts_with(&other.root)
-            })
-            .flat_map(|(_, manifest)| manifest.deps.iter().map(|dep| dep.name.clone()))
-            .chain(parsed.iter().filter_map(|(_, m)| m.package_name.clone()))
-            .collect();
+        let provided = provided_names(project, &parsed, &workspaces);
+        let provided_names: Vec<String> = provided.keys().cloned().collect();
 
         let pass = Pass {
             scan_root,
             roots: &roots,
             provided: &provided,
+            provided_names: &provided_names,
             published_roots: &published_roots,
             exclude: &exclude,
             options,
@@ -333,7 +738,7 @@ pub fn analyze(
         add_project_cycles(&mut report, &rule_input);
     }
 
-    apply_rules(scan_root, &mut report, &rule_input, options);
+    apply_rules(scan_root, &mut report, &rule_input, options, &workspaces);
     report.finalize();
     Ok(report)
 }
@@ -517,7 +922,13 @@ fn containing_root(path: &Utf8Path, roots: &[Utf8PathBuf]) -> Option<String> {
         })
 }
 
-fn apply_rules(scan_root: &Utf8Path, report: &mut Report, input: &RuleInput, options: &Options) {
+fn apply_rules(
+    scan_root: &Utf8Path,
+    report: &mut Report,
+    input: &RuleInput,
+    options: &Options,
+    workspaces: &WorkspaceMap,
+) {
     let rule_checks = [CheckId::ModuleRule, CheckId::PackageRule];
 
     let loaded = if !options.use_rules {
@@ -566,7 +977,12 @@ fn apply_rules(scan_root: &Utf8Path, report: &mut Report, input: &RuleInput, opt
         Ok(Some(ruleset)) => ruleset,
     };
 
-    let (findings, stale) = ruleset.evaluate(&input.edges, &input.uses);
+    let project_roots: Vec<Utf8PathBuf> = report
+        .projects
+        .iter()
+        .map(|p| p.project.root.clone())
+        .collect();
+    let (findings, stale) = ruleset.evaluate(&input.edges, &input.uses, workspaces, &project_roots);
 
     let mut counts: BTreeMap<(Utf8PathBuf, CheckId), usize> = BTreeMap::new();
     for finding in findings {
@@ -644,6 +1060,7 @@ fn analyze_project(
     let Pass {
         scan_root,
         provided,
+        provided_names,
         published_roots,
         ..
     } = *pass;
@@ -744,7 +1161,7 @@ fn analyze_project(
         project,
         package_name: manifest.package_name.as_deref(),
         declared: &manifest.deps,
-        sibling_packages: provided,
+        sibling_packages: provided_names,
         known_modules: &known_modules,
         source_files: &files,
     };
@@ -808,6 +1225,12 @@ fn analyze_project(
         }
     }
 
+    // Every import `missing-dep` will not report because the workspace supplies
+    // the name. Computed here rather than in the analyzer because it is a fact
+    // about resolution, and it has to be disclosed even on a `rules_only` run
+    // where no analyzer executes at all.
+    let exemptions = sibling_exemptions(&manifest.deps, &imports, provided);
+
     // Kept before `manifest.deps` is moved into the analysis context; the index
     // outlives this function so cross-project edges can be resolved later.
     let index = ProjectIndex {
@@ -832,11 +1255,12 @@ fn analyze_project(
             .as_ref()
             .and_then(|_| provider.resolved_tree_note())
             .map(str::to_owned),
-        sibling_packages: provided.to_vec(),
+        sibling_packages: provided_names.to_vec(),
     };
 
     let mut project_report = ProjectReport::new(project.clone());
     project_report.source_file_count = file_count;
+    project_report.sibling_exemptions = exemptions;
     if pass.options.rules_only {
         // Say that they did not run rather than omitting them. A consumer that
         // sees no `cycle` entry at all has to guess whether the check was clean,
@@ -859,6 +1283,60 @@ fn analyze_project(
     project_report.finalize();
 
     Ok((project_report, skipped, rule_input, index))
+}
+
+/// Imports that resolved to a package the manifest does not declare, which
+/// `missing-dep` will pass over because the workspace supplies the name.
+///
+/// This is the exemption made visible. Each one is a judgement call — an undeclared
+/// sibling import works today through hoisting and breaks the moment the package is
+/// published or built on its own — and a judgement call nobody can see is
+/// indistinguishable from a clean result.
+fn sibling_exemptions(
+    declared: &[DeclaredDep],
+    imports: &[ResolvedImport],
+    provided: &BTreeMap<String, ProvidedBy>,
+) -> Vec<crate::report::SiblingExemption> {
+    use crate::report::{ExemptionVia, SiblingExemption};
+
+    let declared: BTreeSet<&str> = declared.iter().map(|dep| dep.name.as_str()).collect();
+    let mut counts: BTreeMap<&str, usize> = BTreeMap::new();
+
+    for import in imports {
+        if let ImportTarget::External(name) = &import.target
+            && !declared.contains(name.as_str())
+            // A project's own name is resolvable but waives nothing, so it is not
+            // an exemption and reporting it would be noise that trains readers to
+            // skip the section.
+            && !matches!(
+                provided.get(name.as_str()),
+                None | Some(ProvidedBy::SelfPackage)
+            )
+        {
+            *counts.entry(name.as_str()).or_default() += 1;
+        }
+    }
+
+    counts
+        .into_iter()
+        .filter_map(|(package, imports)| {
+            let (via, provided_by) = match provided.get(package)? {
+                ProvidedBy::WorkspaceSibling(root) => {
+                    (ExemptionVia::WorkspaceSibling, Some(root.clone()))
+                }
+                ProvidedBy::HoistedFrom(root) => {
+                    (ExemptionVia::HoistedFromAncestor, Some(root.clone()))
+                }
+                ProvidedBy::SelfPackage => return None,
+            };
+            Some(SiblingExemption {
+                package: package.to_owned(),
+                via,
+                provided_by,
+                imports,
+            })
+        })
+        .collect()
 }
 
 /// Source files belonging to this project, excluding those owned by a nested one.

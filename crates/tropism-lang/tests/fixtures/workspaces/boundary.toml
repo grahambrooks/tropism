@@ -1,0 +1,9 @@
+# Used by the `crosses_workspace` test. Kept out of `tropism.toml` so the rest of
+# the fixture exercises boundary *inference* with no ruleset present at all.
+schema_version = 1
+
+[[module_rules]]
+id = "no-cross-workspace"
+crosses_workspace = true
+severity = "error"
+reason = "A package must declare what it imports; hoisting is not a contract."

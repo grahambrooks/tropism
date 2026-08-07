@@ -1,0 +1,1 @@
+{ "name": "b-root", "private": true, "workspaces": ["packages/*"] }

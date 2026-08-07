@@ -77,6 +77,8 @@ struct RawRuleset {
     #[serde(default)]
     exclude: Vec<String>,
     #[serde(default)]
+    workspaces: Vec<RawWorkspace>,
+    #[serde(default)]
     modules: BTreeMap<String, RawModule>,
     #[serde(default)]
     module_rules: Vec<RawModuleRule>,
@@ -91,6 +93,20 @@ struct RawRuleset {
 enum RawModule {
     One(String),
     Many { paths: Vec<String> },
+}
+
+/// A workspace boundary stated by hand, overriding whatever the ecosystem's own
+/// files say — or supplying one where the ecosystem states nothing.
+///
+/// `members` are globs over project roots, written relative to the scan root like
+/// every other glob in this file. Two glob dialects in one file would be a trap, so
+/// there is only one. Omitting `members` means "every project under `root`".
+#[derive(Debug, Deserialize)]
+#[serde(deny_unknown_fields)]
+struct RawWorkspace {
+    root: String,
+    #[serde(default)]
+    members: Vec<String>,
 }
 
 #[derive(Debug, Default, Deserialize)]
@@ -114,6 +130,9 @@ struct RawModuleRule {
     independent: Option<Vec<String>>,
     #[serde(default)]
     allow_only: Option<RawFromTo>,
+    /// Forbid any edge leaving its workspace.
+    #[serde(default)]
+    crosses_workspace: Option<bool>,
     // Specified but not implemented; present so the parser can reject them by name
     // rather than with a confusing unknown-field error.
     #[serde(default)]
@@ -187,6 +206,15 @@ enum ModuleRuleKind {
     Independent(Vec<String>),
     /// `from` may depend only on `to`.
     AllowOnly { from: String, to: Vec<String> },
+    /// No edge may leave its workspace.
+    ///
+    /// The one rule kind that names no module: it is about the *boundary*, which
+    /// `crate::workspace` establishes from the ecosystem's own files rather than
+    /// from a glob someone has to keep in step with the repository layout. An
+    /// undeclared cross-workspace import resolves through hoisting today and breaks
+    /// on publish, so a team that wants it to be an error can now say so instead of
+    /// waiting for tropism to guess a severity for them.
+    CrossesWorkspace,
 }
 
 struct ModuleRule {
@@ -240,6 +268,7 @@ impl ExcludeSet {
 
 pub struct Ruleset {
     exclude: ExcludeSet,
+    workspaces: Vec<crate::workspace::WorkspaceSpec>,
     modules: Vec<ModuleGlob>,
     module_rules: Vec<ModuleRule>,
     package_rules: Vec<PackageRule>,
@@ -278,6 +307,15 @@ impl Ruleset {
         {
             anyhow::bail!("{source}: schema_version {version} is not supported (expected 1)");
         }
+
+        let workspaces: Vec<crate::workspace::WorkspaceSpec> = raw
+            .workspaces
+            .into_iter()
+            .map(|workspace| crate::workspace::WorkspaceSpec {
+                root: Utf8PathBuf::from(workspace.root),
+                members: workspace.members,
+            })
+            .collect();
 
         let mut exclude = ExcludeSet::default();
         for pattern in raw.exclude {
@@ -324,18 +362,32 @@ impl Ruleset {
                 }
             }
 
-            let kind = match (rule.deny, rule.independent, rule.allow_only) {
-                (Some(deny), None, None) => ModuleRuleKind::Deny {
+            // `crosses_workspace = false` is not a rule, it is the absence of one.
+            // Accepting it silently would let a ruleset look like it enforced a
+            // boundary it does not.
+            if rule.crosses_workspace == Some(false) {
+                anyhow::bail!(
+                    "{source}: rule `{}` sets `crosses_workspace = false`, which enforces \
+                     nothing; delete the rule instead",
+                    rule.id
+                );
+            }
+            let crosses = rule.crosses_workspace.unwrap_or(false).then_some(());
+
+            let kind = match (rule.deny, rule.independent, rule.allow_only, crosses) {
+                (Some(deny), None, None, None) => ModuleRuleKind::Deny {
                     from: deny.from,
                     to: deny.to.into_vec(),
                 },
-                (None, Some(members), None) => ModuleRuleKind::Independent(members),
-                (None, None, Some(allow)) => ModuleRuleKind::AllowOnly {
+                (None, Some(members), None, None) => ModuleRuleKind::Independent(members),
+                (None, None, Some(allow), None) => ModuleRuleKind::AllowOnly {
                     from: allow.from,
                     to: allow.to.into_vec(),
                 },
-                (None, None, None) => anyhow::bail!(
-                    "{source}: rule `{}` has no deny, independent, or allow_only",
+                (None, None, None, Some(())) => ModuleRuleKind::CrossesWorkspace,
+                (None, None, None, None) => anyhow::bail!(
+                    "{source}: rule `{}` has no deny, independent, allow_only, or \
+                     crosses_workspace",
                     rule.id
                 ),
                 _ => anyhow::bail!(
@@ -399,6 +451,7 @@ impl Ruleset {
 
         Ok(Self {
             exclude,
+            workspaces,
             modules,
             module_rules,
             package_rules,
@@ -409,6 +462,30 @@ impl Ruleset {
 
     pub fn exclude(&self) -> &ExcludeSet {
         &self.exclude
+    }
+
+    pub fn workspaces(&self) -> &[crate::workspace::WorkspaceSpec] {
+        &self.workspaces
+    }
+
+    /// The two things the run needs *before* discovery walks anything: what to keep
+    /// out, and where the workspace boundaries are.
+    ///
+    /// Both are read from the same file at the same time because reading it three
+    /// times — once for exclusions, once for workspaces, once for rules — is how the
+    /// three answers drift apart.
+    pub fn into_prepass(self) -> (ExcludeSet, Vec<crate::workspace::WorkspaceSpec>) {
+        (self.exclude, self.workspaces)
+    }
+
+    /// Loads the exclusions and workspace boundaries, for the pass that runs before
+    /// discovery.
+    pub fn discover_prepass(
+        scan_root: &Utf8Path,
+    ) -> anyhow::Result<(ExcludeSet, Vec<crate::workspace::WorkspaceSpec>)> {
+        Ok(Self::discover(scan_root)?
+            .map(Self::into_prepass)
+            .unwrap_or_default())
     }
 
     /// Loads only the exclusions, for the pass that runs before discovery.
@@ -451,6 +528,8 @@ impl Ruleset {
         &self,
         edges: &[DependencyEdge],
         uses: &[PackageUse],
+        workspaces: &crate::workspace::WorkspaceMap,
+        project_roots: &[Utf8PathBuf],
     ) -> (Vec<Finding>, Vec<String>) {
         let mut findings = Vec::new();
 
@@ -465,6 +544,28 @@ impl Ruleset {
             .collect();
 
         for rule in &self.module_rules {
+            // The boundary rule is about workspaces, not module globs, so it does
+            // not need — and must not require — either end to be a named module.
+            if matches!(rule.kind, ModuleRuleKind::CrossesWorkspace) {
+                for edge in edges {
+                    let (Some(from), Some(to)) = (
+                        workspaces.of_path(&edge.from, project_roots),
+                        workspaces.of_path(&edge.to, project_roots),
+                    ) else {
+                        continue;
+                    };
+                    if from.id == to.id {
+                        continue;
+                    }
+                    let explanation = format!(
+                        "workspace `{}` must not depend on workspace `{}`",
+                        from.id, to.id
+                    );
+                    findings.push(self.module_finding(rule, &from.id, &to.id, edge, &explanation));
+                }
+                continue;
+            }
+
             for edge in edges {
                 let (Some(from), Some(to)) = (self.module_of(&edge.from), self.module_of(&edge.to))
                 else {
@@ -504,10 +605,15 @@ impl Ruleset {
         let mut stale: Vec<String> = self
             .module_rules
             .iter()
-            .filter(|rule| {
-                kind_modules(&rule.kind)
+            .filter(|rule| match &rule.kind {
+                // A boundary rule in a repository with one workspace cannot fire.
+                // That is exactly as stale as a rule naming a renamed module, and
+                // it is the likelier of the two: the rule is easy to write before
+                // any boundary exists to enforce.
+                ModuleRuleKind::CrossesWorkspace => workspaces.workspaces().len() < 2,
+                kind => kind_modules(kind)
                     .iter()
-                    .any(|m| !seen.contains(m.as_str()))
+                    .any(|m| !seen.contains(m.as_str())),
             })
             .map(|rule| rule.id.clone())
             .collect();
@@ -641,6 +747,10 @@ fn kind_modules(kind: &ModuleRuleKind) -> Vec<String> {
             all
         }
         ModuleRuleKind::Independent(members) => members.clone(),
+        // Names no module by construction, so nothing here can go stale by a
+        // rename. Its staleness test is whether the repository has two workspaces
+        // at all — see `Ruleset::evaluate`.
+        ModuleRuleKind::CrossesWorkspace => Vec::new(),
     }
 }
 
@@ -672,6 +782,9 @@ impl ModuleRule {
                     )
                 }
             }),
+            // Evaluated against the workspace map, not module names, so it is
+            // handled by the caller and never reached here.
+            ModuleRuleKind::CrossesWorkspace => None,
         }
     }
 }
@@ -706,6 +819,21 @@ impl PackageRule {
         }
 
         None
+    }
+}
+
+#[cfg(test)]
+impl Ruleset {
+    /// Test shim: evaluate with no workspace information.
+    ///
+    /// Every rule kind except `crosses_workspace` is independent of the workspace
+    /// map, so the tests that predate it pass an empty one and stay unchanged.
+    fn evaluate_bare(
+        &self,
+        edges: &[DependencyEdge],
+        uses: &[PackageUse],
+    ) -> (Vec<Finding>, Vec<String>) {
+        self.evaluate(edges, uses, &crate::workspace::WorkspaceMap::default(), &[])
     }
 }
 
@@ -788,7 +916,7 @@ allowed_in = ["cli"]
     #[test]
     fn independent_modules_may_not_depend_on_each_other() {
         let rules = ruleset();
-        let (findings, _) = rules.evaluate(
+        let (findings, _) = rules.evaluate_bare(
             &[edge("crates/cli/src/main.rs", "crates/mcp/src/main.rs")],
             &[],
         );
@@ -805,7 +933,7 @@ allowed_in = ["cli"]
     #[test]
     fn independence_is_symmetric() {
         let rules = ruleset();
-        let (findings, _) = rules.evaluate(
+        let (findings, _) = rules.evaluate_bare(
             &[edge("crates/mcp/src/main.rs", "crates/cli/src/main.rs")],
             &[],
         );
@@ -815,7 +943,7 @@ allowed_in = ["cli"]
     #[test]
     fn a_permitted_dependency_produces_nothing() {
         let rules = ruleset();
-        let (findings, _) = rules.evaluate(
+        let (findings, _) = rules.evaluate_bare(
             &[edge("crates/cli/src/main.rs", "crates/core/src/lib.rs")],
             &[],
         );
@@ -825,7 +953,7 @@ allowed_in = ["cli"]
     #[test]
     fn allow_only_with_an_empty_list_forbids_everything() {
         let rules = ruleset();
-        let (findings, _) = rules.evaluate(
+        let (findings, _) = rules.evaluate_bare(
             &[edge("crates/core/src/lib.rs", "crates/cli/src/main.rs")],
             &[],
         );
@@ -836,7 +964,7 @@ allowed_in = ["cli"]
     #[test]
     fn a_finding_carries_the_teams_reason() {
         let rules = ruleset();
-        let (findings, _) = rules.evaluate(
+        let (findings, _) = rules.evaluate_bare(
             &[edge("crates/cli/src/main.rs", "crates/mcp/src/main.rs")],
             &[],
         );
@@ -854,7 +982,8 @@ allowed_in = ["cli"]
     #[test]
     fn a_denied_package_is_reported_with_its_replacement() {
         let rules = ruleset();
-        let (findings, _) = rules.evaluate(&[], &[use_of("serde_yaml", "crates/core/Cargo.toml")]);
+        let (findings, _) =
+            rules.evaluate_bare(&[], &[use_of("serde_yaml", "crates/core/Cargo.toml")]);
         assert_eq!(findings.len(), 1);
         assert_eq!(findings[0].details["replacement"], "saphyr");
     }
@@ -862,14 +991,16 @@ allowed_in = ["cli"]
     #[test]
     fn a_scoped_package_is_allowed_inside_its_module() {
         let rules = ruleset();
-        let (findings, _) = rules.evaluate(&[], &[import_of("ratatui", "crates/cli/src/tui.rs")]);
+        let (findings, _) =
+            rules.evaluate_bare(&[], &[import_of("ratatui", "crates/cli/src/tui.rs")]);
         assert!(findings.is_empty());
     }
 
     #[test]
     fn a_scoped_package_is_reported_outside_its_module() {
         let rules = ruleset();
-        let (findings, _) = rules.evaluate(&[], &[import_of("ratatui", "crates/core/src/lib.rs")]);
+        let (findings, _) =
+            rules.evaluate_bare(&[], &[import_of("ratatui", "crates/core/src/lib.rs")]);
         assert_eq!(findings.len(), 1);
         assert!(findings[0].message.contains("restricted to"));
     }
@@ -879,7 +1010,7 @@ allowed_in = ["cli"]
     #[test]
     fn a_scoped_package_is_not_reported_from_a_manifest_declaration() {
         let rules = ruleset();
-        let (findings, _) = rules.evaluate(&[], &[use_of("ratatui", "crates/cli/Cargo.toml")]);
+        let (findings, _) = rules.evaluate_bare(&[], &[use_of("ratatui", "crates/cli/Cargo.toml")]);
         assert!(findings.is_empty());
     }
 
@@ -890,7 +1021,7 @@ allowed_in = ["cli"]
     fn a_rule_naming_a_module_that_matches_nothing_is_stale() {
         let rules = ruleset();
         // Only `cli` and `core` exist in this repository; `mcp` matches nothing.
-        let (_, stale) = rules.evaluate(
+        let (_, stale) = rules.evaluate_bare(
             &[edge("crates/cli/src/main.rs", "crates/core/src/lib.rs")],
             &[],
         );
@@ -909,7 +1040,7 @@ allowed_in = ["cli"]
     #[test]
     fn a_satisfied_rule_is_not_stale() {
         let rules = ruleset();
-        let (findings, stale) = rules.evaluate(
+        let (findings, stale) = rules.evaluate_bare(
             &[
                 edge("crates/cli/src/main.rs", "crates/core/src/lib.rs"),
                 edge("crates/mcp/src/main.rs", "crates/core/src/lib.rs"),
@@ -931,7 +1062,7 @@ allowed_in = ["cli"]
              [[package_rules]]\nid = \"approved\"\nallow = [\"serde\"]\n",
         )
         .unwrap();
-        let (findings, _) = rules.evaluate(
+        let (findings, _) = rules.evaluate_bare(
             &[],
             &[
                 use_of("serde", "Cargo.toml"),
@@ -1013,7 +1144,7 @@ allowed_in = ["cli"]
     fn a_rule_with_no_kind_is_an_error() {
         let error = parse_error("[modules]\na = \"a/**\"\n[[module_rules]]\nid = \"r\"\n");
         assert!(
-            error.contains("no deny, independent, or allow_only"),
+            error.contains("no deny, independent, allow_only, or crosses_workspace"),
             "{error}"
         );
     }

@@ -14,6 +14,7 @@ use tropism_core::model::{DeclaredDep, DepKind, Language, Manifest, Provenance, 
 use tropism_core::provider::{
     Import, ImportForm, ImportTarget, LanguageProvider, ProjectContext, VersionOps,
 };
+use tropism_core::workspace::WorkspaceDecl;
 
 pub struct RustProvider;
 
@@ -51,6 +52,35 @@ impl LanguageProvider for RustProvider {
 
     fn lockfile_names(&self) -> &'static [&'static str] {
         &["Cargo.lock"]
+    }
+
+    /// `[workspace] members`, with `exclude` honoured.
+    ///
+    /// The exclusion is not decoration: this repository's own root manifest carries
+    /// `exclude = ["demo"]`, and without it the deliberately-broken demo projects
+    /// would join the workspace and start exempting each other's imports.
+    fn workspace_members(&self, path: &Utf8Path, text: &str) -> Option<WorkspaceDecl> {
+        if path.file_name() != Some("Cargo.toml") {
+            return None;
+        }
+        let doc: toml::Value = toml::from_str(text).ok()?;
+        let workspace = doc.get("workspace")?;
+        let list = |key: &str| -> Vec<String> {
+            workspace
+                .get(key)
+                .and_then(toml::Value::as_array)
+                .map(|items| {
+                    items
+                        .iter()
+                        .filter_map(|item| item.as_str().map(str::to_owned))
+                        .collect()
+                })
+                .unwrap_or_default()
+        };
+        Some(WorkspaceDecl {
+            members: list("members"),
+            exclude: list("exclude"),
+        })
     }
 
     fn source_extensions(&self) -> &'static [&'static str] {
@@ -594,6 +624,36 @@ fn use_prefix(raw: &str) -> Option<String> {
 
 #[cfg(test)]
 mod tests {
+
+    /// Cargo's `exclude` is not decoration: this repository's own root manifest
+    /// carries `exclude = ["demo"]`, and without it the deliberately-broken demo
+    /// projects would join the workspace and start exempting each other's imports.
+    #[test]
+    fn a_cargo_workspace_declares_its_members_and_its_exclusions() {
+        let decl = RustProvider
+            .workspace_members(
+                Utf8Path::new("Cargo.toml"),
+                "[workspace]\nmembers = [\"crates/*\"]\nexclude = [\"demo\"]\n",
+            )
+            .expect("a [workspace] section declares a workspace");
+        assert_eq!(decl.members, vec!["crates/*"]);
+        assert_eq!(decl.exclude, vec!["demo"]);
+    }
+
+    /// A plain package is not a workspace. `None` and an empty member list mean
+    /// different things: the first falls back to language grouping, the second
+    /// would claim nothing and leave the project stranded.
+    #[test]
+    fn a_manifest_without_a_workspace_section_declares_nothing() {
+        assert!(
+            RustProvider
+                .workspace_members(
+                    Utf8Path::new("Cargo.toml"),
+                    "[package]\nname = \"solo\"\nversion = \"0.1.0\"\n",
+                )
+                .is_none()
+        );
+    }
     use super::*;
     use camino::Utf8PathBuf;
     use tropism_core::model::Project;

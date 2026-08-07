@@ -25,8 +25,60 @@ and root-hoisted dependencies are visible to children; see
 server" spans two projects, so a repo-wide module graph is a precondition of the ruleset, not an
 optional refinement.
 
-*Blocks:* graph construction, missing-dep analyzer, and the Rust/JS providers where workspaces are
-the norm.
+### RESOLVED — but the two halves were not symmetric, and that was the real question
+
+Both halves shipped, and measuring them against each other showed they disagreed. The graph half is
+repo-wide *by design* and correct. The hygiene half was repo-wide *by accident*: the sibling set was
+every project in the scan root, unfiltered by language or workspace. Two consequences, both
+reproduced before the fix and both now regression-tested in
+`crates/tropism-lang/tests/workspaces.rs`:
+
+- A JavaScript project importing `mylib` was exempted from `missing-dep` because a **Rust crate** in
+  the repository published that name.
+- A package in one npm workspace importing a package published in a **separate** npm workspace was
+  exempted, though npm would fail to resolve it.
+
+In both cases the rule engine reported the very same edge as a violation. One analysis, two answers
+about one import — and the hygiene answer was the silent one, which is the failure mode the rest of
+the tool is organized against.
+
+**The question was never "internal or external".** It is *what bounds the set of mutually-importable
+projects*, and the answer is now in [`crates/tropism-core/src/workspace.rs`](../crates/tropism-core/src/workspace.rs),
+established three ways, most authoritative first:
+
+| Origin | Source | Ecosystems |
+| ------------ | ---------------------------------------- | ---------------------------------------------------------- |
+| `configured` | `[[workspaces]]` in `tropism.toml` | any |
+| `declared` | the ecosystem's own file | Cargo `members`, npm `workspaces`, `pnpm-workspace.yaml`, `go.work`, Maven `<modules>`, Gradle `include` |
+| `language` | inferred: everything unclaimed, by language | Python, Ruby, Swift, C++, NuGet — which declare nothing |
+
+Four decisions worth not re-litigating:
+
+- **Language is checked in addition to membership, never instead of it.** No workspace declaration,
+  however authoritative, makes an `.rlib` importable from Node. This is why the fallback is a
+  narrowing of the old behaviour and never a widening — it cannot introduce a false positive that
+  the unbounded set did not already have.
+- **Ancestor hoisting is bounded by the directory tree, not by the workspace.** Node's resolution
+  walks up parent directories whether or not a workspace is involved, so requiring workspace
+  membership there would have been wrong for the very case that motivated it.
+- **The exemption is disclosed, not silent.** `ProjectReport::sibling_exemptions` carries the
+  package, the project that supplied it, and the import count, for the same reason `exclude` reports
+  a match count. It is also the honest form of a judgement call: an undeclared sibling import works
+  today through hoisting and breaks on publish, so a reader deserves to know it happened even while
+  tropism declines to call it an error.
+- **Whether a crossing is an error is the team's call**, expressed as `crosses_workspace = true` — a
+  rule, at High confidence, rather than another inferred check whose severity tropism would have to
+  guess. This is the same argument that made rules the product.
+
+**Still open, deliberately:** whether an undeclared *same-workspace* sibling import should become a
+finding of its own (an `undeclared-sibling` check). The exemption's value is measured —
+[10-js-evaluation.md](10-js-evaluation.md) shows it removing 107 findings across ten real
+repositories — but its *correctness* was asserted rather than audited: the 35-finding hand audit's
+taxonomy contains no sibling class. The ten-repo corpus still exists, so this is testable rather
+than arguable. It should be measured before it is built.
+
+*Blocked nothing further.* `tropism workspaces` prints the boundaries and the crossings;
+`tropism explain <file>` says how each import in a file was classified and why.
 
 ## 2. Default granularity for cycle detection
 

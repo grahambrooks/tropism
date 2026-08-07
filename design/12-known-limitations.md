@@ -278,6 +278,28 @@ job, but it is no longer a prerequisite for adoption.
 Whether `packages/web/tropism.toml` extends or replaces the root ruleset is undecided
 ([11-dependency-rules.md](11-dependency-rules.md), open question 2).
 
+Note this is *not* the same as workspace boundaries, which are now first-class: `[[workspaces]]` in
+the root ruleset draws them, and `tropism workspaces` shows what was inferred. One ruleset still
+governs the whole scan root.
+
+### D38. An undeclared same-workspace sibling import is exempted, not reported
+
+An import satisfied only because a workspace sibling publishes the name resolves today through
+hoisting and breaks when the package is published or built alone. tropism exempts it from
+`missing-dep` and **discloses the exemption** rather than reporting it.
+
+**Why not report it.** The exemption is worth 107 findings across the ten repositories in
+[10-js-evaluation.md](10-js-evaluation.md), and turning it into a check risks taking those back on a
+codebase where nobody considers it a defect.
+
+**Why it is still open.** That 107 is a measurement; the *correctness* of the exemption is not. The
+35-finding hand audit's false-positive taxonomy contains no sibling class, so no one has checked
+whether these are genuine false positives or a defect class hiding behind a convenience. The corpus
+and the method both still exist.
+
+**Fix, if measured:** an `undeclared-sibling` check at Low confidence, never gating. Until then a
+team that wants it enforced has `crosses_workspace` for the across-boundary case.
+
 ### D10. `version-conflict` and `diamond-dep` overlap
 
 For npm and Cargo, a duplicated package *is* the resolved outcome of a diamond with incompatible
@@ -301,7 +323,8 @@ Never implemented; reports `Unavailable` with that reason. Deferred in
 | D13 | Go       | `cycle` can never fire on compilable Go                                         | the compiler already rejects import cycles; the check is dead weight and should report as structurally unavailable rather than clean                                      |
 | D14 | JS/TS    | only `package-lock.json` is parsed                                              | yarn and pnpm repos get `Unavailable` for resolved-tree checks; yarn's format is bespoke and pnpm's is YAML, which has no maintained crate ([08-crates.md](08-crates.md)) |
 | D15 | JS/TS    | `tsconfig` `paths` aliases are not read                                         | `@/components/Button` stays `Unresolved`, lowering the resolution rate                                                                                                    |
-| D16 | JS/TS    | `package.json` `workspaces` globs are not parsed                                | siblings are inferred from discovered projects, which works but is indirect                                                                                               |
+| D16 | ~~JS/TS~~ | ~~`package.json` `workspaces` globs are not parsed~~ — **RESOLVED**            | read by `LanguageProvider::workspace_members`, along with `pnpm-workspace.yaml`, Cargo `members`, `go.work`, Maven `<modules>`, and Gradle `include`. See open question 1. |
+| D37 | Java/C#  | Gradle `projectDir` remapping and `.sln` files are not read for workspaces      | a remapped Gradle project contributes its default location; a `.sln` contributes nothing and its projects fall back to language grouping                                   |
 | D17 | Rust     | `package = "…"` renames are keyed by the import name                            | the real crate name is not tracked, so lockfile matching would miss a renamed dependency                                                                                  |
 | D18 | Rust     | `[workspace.dependencies]` inheritance records the requirement as `"workspace"` | no check needs the version yet; would matter for D7                                                                                                                       |
 | D19 | C#       | `Directory.Packages.props` is not read                                          | Central Package Management projects have no versions; names are still correct, so current checks are unaffected                                                           |

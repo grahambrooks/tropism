@@ -27,6 +27,7 @@ use camino::Utf8Path;
 use tropism_core::graph::ModuleId;
 use tropism_core::model::{DeclaredDep, DepKind, Language, Manifest, Provenance, ResolvedDep};
 use tropism_core::provider::{Import, ImportTarget, LanguageProvider, ProjectContext, VersionOps};
+use tropism_core::workspace::WorkspaceDecl;
 
 pub struct JavaProvider;
 
@@ -121,6 +122,26 @@ impl LanguageProvider for JavaProvider {
     /// as insufficient — see [`Self::resolved_tree_note`].
     fn lockfile_names(&self) -> &'static [&'static str] {
         &["gradle.lockfile"]
+    }
+
+    /// Gradle states its multi-project build in `settings.gradle`, which is not a
+    /// manifest — `build.gradle` is.
+    fn workspace_files(&self) -> &'static [&'static str] {
+        &["settings.gradle", "settings.gradle.kts"]
+    }
+
+    /// Maven's `<modules>` and Gradle's `include` are the two multi-project
+    /// declarations, and both are read for the same reason: a reactor module
+    /// importing its sibling's classes is a workspace fact, not an undeclared
+    /// dependency.
+    fn workspace_members(&self, path: &Utf8Path, text: &str) -> Option<WorkspaceDecl> {
+        match path.file_name() {
+            Some("pom.xml") => parse_maven_modules(text),
+            Some("settings.gradle" | "settings.gradle.kts") => {
+                Some(WorkspaceDecl::members(parse_gradle_includes(text)))
+            }
+            _ => None,
+        }
     }
 
     fn source_extensions(&self) -> &'static [&'static str] {
@@ -319,6 +340,77 @@ fn package_declaration(text: &str) -> Option<String> {
 /// later use, exactly like `Directory.Packages.props` in .NET or Cargo's
 /// `[workspace.dependencies]`. Its entries are not dependencies of the module that
 /// carries them, and counting them as such reports every one unused.
+/// `<modules><module>a</module></modules>` from an aggregator POM.
+///
+/// Only the top-level `<project><modules>` block counts: `<modules>` can also
+/// appear inside a `<profile>`, where whether it applies depends on activation
+/// tropism cannot evaluate without running Maven.
+fn parse_maven_modules(text: &str) -> Option<WorkspaceDecl> {
+    use quick_xml::events::Event;
+
+    let mut reader = quick_xml::Reader::from_str(text);
+    let mut stack: Vec<String> = Vec::new();
+    let mut buffer = String::new();
+    let mut members = Vec::new();
+
+    loop {
+        match reader.read_event() {
+            Err(_) | Ok(Event::Eof) => break,
+            Ok(Event::Start(element)) => {
+                stack.push(String::from_utf8_lossy(element.local_name().as_ref()).into_owned());
+                buffer.clear();
+            }
+            Ok(Event::Text(event)) => buffer.push_str(&event.decode().unwrap_or_default()),
+            Ok(Event::End(element)) => {
+                let name = String::from_utf8_lossy(element.local_name().as_ref()).into_owned();
+                let value = buffer.trim().to_owned();
+                // The chain must be exactly `project > modules > module`. Anything
+                // deeper is a `<profile>`, whose activation cannot be evaluated
+                // without running Maven.
+                let top_level = stack.len() >= 3
+                    && stack[stack.len() - 2] == "modules"
+                    && stack[stack.len() - 3] == "project";
+                if name == "module" && !value.is_empty() && top_level {
+                    members.push(value);
+                }
+                stack.pop();
+                buffer.clear();
+            }
+            Ok(_) => buffer.clear(),
+        }
+    }
+
+    (!members.is_empty()).then(|| WorkspaceDecl::members(members))
+}
+
+/// `include ':a', ':b'` / `include("a:b")` from `settings.gradle[.kts]`.
+///
+/// A Gradle project path is colon-separated (`:services:api`); the directory it
+/// maps to is the same path with separators swapped, unless a `projectDir` is set —
+/// which is dynamic, so a remapped project simply contributes its default location
+/// and is corrected by the language fallback if that is wrong.
+fn parse_gradle_includes(text: &str) -> Vec<String> {
+    let mut members = Vec::new();
+    for raw_line in text.lines() {
+        let line = strip_line_comment(raw_line).trim();
+        if !starts_with_word(line, "include") {
+            continue;
+        }
+        let rest = line.trim_start_matches("include").trim();
+        // Both `include ':a', ':b'` and `include(":a", ":b")` are one list of
+        // quoted literals once the punctuation is ignored.
+        for chunk in rest.split(',') {
+            if let Some(literal) = quoted_literal(chunk.trim().trim_start_matches('(')) {
+                let path = literal.trim_start_matches(':').replace(':', "/");
+                if !path.is_empty() {
+                    members.push(path);
+                }
+            }
+        }
+    }
+    members
+}
+
 fn parse_pom(path: &Utf8Path, text: &str) -> anyhow::Result<Manifest> {
     use quick_xml::events::Event;
 
@@ -616,6 +708,43 @@ fn trim_last_segment(name: &str) -> &str {
 
 #[cfg(test)]
 mod tests {
+
+    #[test]
+    fn an_aggregator_pom_declares_its_modules() {
+        let decl = JavaProvider
+            .workspace_members(
+                Utf8Path::new("pom.xml"),
+                r#"<project><modules><module>api</module><module>core</module></modules></project>"#,
+            )
+            .expect("a <modules> block declares a workspace");
+        assert_eq!(decl.members, vec!["api", "core"]);
+    }
+
+    /// A `<modules>` inside a `<profile>` applies only when the profile activates,
+    /// which cannot be evaluated without running Maven. Contributing nothing is the
+    /// same rule the Gradle and Gemfile parsers follow for dynamic constructs.
+    #[test]
+    fn modules_inside_a_profile_are_not_read() {
+        assert!(
+            JavaProvider
+                .workspace_members(
+                    Utf8Path::new("pom.xml"),
+                    r#"<project><profiles><profile><modules><module>only-sometimes</module></modules></profile></profiles></project>"#,
+                )
+                .is_none()
+        );
+    }
+
+    #[test]
+    fn gradle_include_maps_a_project_path_to_a_directory() {
+        let decl = JavaProvider
+            .workspace_members(
+                Utf8Path::new("settings.gradle"),
+                "rootProject.name = 'app'\ninclude ':api', ':services:worker'\ninclude(\"lib\")\n",
+            )
+            .unwrap();
+        assert_eq!(decl.members, vec!["api", "services/worker", "lib"]);
+    }
     use super::*;
     use camino::Utf8PathBuf;
     use std::collections::BTreeSet;

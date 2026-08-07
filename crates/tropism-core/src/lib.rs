@@ -12,6 +12,7 @@ pub mod pipeline;
 pub mod provider;
 pub mod report;
 pub mod rules;
+pub mod workspace;
 
 pub use model::{DeclaredDep, DepKind, Language, Manifest, Project, Provenance, ResolvedDep};
 pub use provider::{
@@ -19,5 +20,6 @@ pub use provider::{
 };
 pub use report::{
     CheckId, CheckStatus, Confidence, Evidence, Exclusion, Finding, ProjectReport, Report,
-    SCHEMA_VERSION, Severity, SkippedFile,
+    SCHEMA_VERSION, Severity, SiblingExemption, SkippedFile,
 };
+pub use workspace::{Workspace, WorkspaceMap, WorkspaceOrigin};

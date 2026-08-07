@@ -36,6 +36,23 @@ Read the output for the *shape* of the repository: how many projects, which lang
 a monorepo of packages or one tree with directories. Then look at the actual layout — the directory
 names are what module globs have to match.
 
+If it is a monorepo, also run:
+
+```sh
+tropism workspaces .
+```
+
+This prints the boundaries tropism inferred, **where it read each one**, and every dependency that
+crosses one. Two things to check before going further:
+
+- **Any workspace whose origin is `language`.** That is an inference, made because the ecosystem
+  declares no workspace at all — the normal state for Python, Ruby, Swift, C++, and NuGet. If it has
+  grouped several independent services into one, `missing-dep` will not report undeclared imports
+  between them. Fix it with `[[workspaces]]` before writing any rule; see the reference.
+- **The crossings list.** These are imports that resolve today through hoisting and break when a
+  package is built on its own. They are often the best first rule in the repository, because the
+  team usually agrees they are wrong the moment they are shown.
+
 ### 2. Find the boundaries that already exist
 
 Rules should describe the architecture the code already has, or is trying to have. Look for:
@@ -151,6 +168,24 @@ allowed_in = ["providers"]
 
 The general lesson is not about Rust: **verify by probing rather than by reading**, because the
 name a rule must match is a fact about tropism's output, not about the manifest.
+
+When a rule does not fire and you cannot see why, ask directly instead of guessing:
+
+```sh
+tropism explain src/api/user.ts
+tropism explain src/api/user.ts --import lodash    # just the one
+```
+
+It prints every import in the file with the name tropism resolved it to and one sentence saying why —
+internal, external, stdlib, or unresolved, and for an external one whether it was declared, exempted
+by a workspace sibling, or genuinely missing. That is the whole input a rule matches against.
+
+Two outcomes explain most silent rules:
+
+- **`unresolved`.** The import contributed no edge at all, so no rule could match it. Common for
+  tsconfig path aliases (`@/components`) and bare Rust path references.
+- **An external name you did not expect** — the underscore case above, or a scoped package
+  resolving to something other than the manifest spelling.
 
 ### 6. Adopt without a wall of errors
 
