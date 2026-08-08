@@ -1,0 +1,26 @@
+crates/tropism-lang/src/swift.rs
+  s_3111171e960687::t_22320ff8b821ff 731-762,767-772
+  s_3111171e960687::t_b996817f01a88c 475,763-766
+  s_3111171e960687::t_92162ce9d69a54 278-279,282-293,457-474,476-487
+  s_3111171e960687::t_7baf24476ae1a3 488-489
+evaluation/REPORT.md
+  s_3111171e960687::t_06b012dd8af74d 108-109,121,138,287
+design/12-known-limitations.md
+  s_3111171e960687::t_277d873896a5d6 462,474-489
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.21",
+  "base_commit_sha": "3927db35d5d9eeb30889fbd11998e72d473b40c9",
+  "prompts": {},
+  "sessions": {
+    "s_3111171e960687": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "8dbcbda8-4623-438b-a805-7c8f1634b75d",
+        "model": "claude-opus-5"
+      },
+      "human_author": "Graham Brooks <graham@grahambrooks.com>"
+    }
+  }
+}
