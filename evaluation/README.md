@@ -12,8 +12,51 @@ native tooling, and report where the analysis is right.
 ./report.py --audit-sample 20 > audit.json
 ```
 
-Both scripts are resumable: anything already produced is skipped, so an interrupted run costs
-nothing to restart. `FORCE=1` re-does it.
+```sh
+./clean.sh          # reclaim clones and scratch, keep results
+./clean.sh --all    # results too
+./clean.sh --images # and the docker images this harness built
+```
+
+Both scripts are resumable and failure-tolerant: anything already produced is skipped, and a
+repository that cannot be cloned or analyzed is **recorded as failed** and the run continues. A
+three-hour run must not die on repository nineteen. `FORCE=1` re-does completed work.
+
+## Disk
+
+**One repository is on disk at a time.** Each checkout is deleted as soon as it has been analyzed,
+and the oracle pass deletes its copy along with whatever `node_modules` or `target` the oracle
+installed into it. The corpus includes kubernetes, vscode, elasticsearch and dotnet/runtime; keeping
+them all would cost tens of gigabytes to hold data that is fully reproducible from `corpus.tsv`.
+
+The result JSON is the artefact. The clone is scaffolding.
+
+Both scripts refuse to start a repository when free space is below `MIN_FREE_MIB` (8 GiB for
+`run.sh`, 16 GiB for `oracles.sh`, which installs on top of the checkout). Running out half way
+through leaves a truncated checkout that the resume logic would treat as complete, so it stops first
+and says so.
+
+`KEEP=1 ./run.sh` retains checkouts for debugging, at much greater cost.
+
+## git-lfs is disabled, deliberately
+
+`microsoft/vscode` keeps test fixtures such as
+`extensions/copilot/test/simulation/cache/base.sqlite` in LFS, and on a machine without `git-lfs`
+the checkout aborts the entire run:
+
+```
+git-lfs filter-process: git-lfs: command not found
+fatal: extensions/copilot/.../base.sqlite: smudge filter lfs failed
+```
+
+`fetch_repo` overrides the filters (`filter.lfs.smudge=cat`, `filter.lfs.process=`,
+`filter.lfs.required=false`), which leaves those paths as their pointer stubs. That is the right
+outcome rather than a workaround: they are binary fixtures, tropism never reads them, and fetching
+them would cost gigabytes across the corpus for nothing the analysis uses. Verified — vscode checks
+out 17,597 files and analyzes as 147 projects with the stubs in place.
+
+Installing `git-lfs` would also work and is not needed; the harness should not require a tool to
+analyze a repository when tropism itself does not.
 
 ## Why there are two containers, not one
 

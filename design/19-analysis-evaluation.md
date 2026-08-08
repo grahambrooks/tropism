@@ -220,7 +220,14 @@ interrupted run costs nothing to restart.
 
 1. **Pin the corpus.** `pin-corpus.sh` records a SHA per repository, because an unpinned corpus makes
    every difference between runs ambiguous between "tropism changed" and "the repository changed" —
-   the one question this exists to answer. Blobless shallow clone; expect 10–15 GB.
+   the one question this exists to answer. Blobless shallow clone, **git-lfs filters disabled**, and
+   each checkout deleted once analyzed, so peak disk is one repository rather than the whole corpus.
+
+   Both were forced by the first real run. `microsoft/vscode` stores test fixtures in LFS and aborted
+   the entire run on a machine without `git-lfs`; leaving those paths as pointer stubs is correct
+   rather than a workaround, since they are binary fixtures tropism never reads. And keeping 24
+   checkouts — kubernetes, vscode, elasticsearch, dotnet/runtime among them — costs tens of gigabytes
+   to hold what `corpus.tsv` already reproduces.
 2. **`./run.sh`** — analyze each repository in the hermetic container, recording the JSON alongside
    wall-clock and exit code, so D7 and D8 need no second pass.
 3. **Keep the raw JSON** under `evaluation/results/`. The next evaluation is then a *diff*, and a
