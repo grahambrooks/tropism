@@ -1,0 +1,41 @@
+crates/tropism-core/src/pipeline.rs
+  s_3111171e960687::t_1396ea331d2911 589-671,962-965
+  s_3111171e960687::t_1718f98faea3ff 1769-1771
+  s_3111171e960687::t_e9fdaea1290110 1695,1706-1768,1772-1774
+  s_3111171e960687::t_e76c942be19540 1775
+crates/tropism-lang/src/rust.rs
+  s_3111171e960687::t_0667b9ebb08f04 154-165,167-178
+  s_3111171e960687::t_8e283073ffb448 1065-1066,1068-1133
+  s_3111171e960687::t_a92992ced29878 1067
+crates/tropism-lang/src/cpp.rs
+  s_3111171e960687::t_0fa6b5daf58c35 782-831
+  s_3111171e960687::t_d8a7393d7e1890 271,273,282-376
+  s_3111171e960687::t_387103ef7ace87 377
+crates/tropism-core/src/report.rs
+  s_3111171e960687::t_f8ac74d52b0fca 382-404,433-436,448
+crates/tropism/src/render/text.rs
+  s_3111171e960687::t_89c52f75319f91 417-423,425-428,438,445,447-448,450-451,453-455,465-466
+  s_3111171e960687::t_af4f8e5054f32d 424,429-437,439-444,446,449,452,456-464
+design/12-known-limitations.md
+  s_3111171e960687::t_653bf5f3679b52 418,433-440
+  s_3111171e960687::t_1ae87790afa2e7 399-417,458-477
+  s_3111171e960687::t_07be7f419c49b4 478
+evaluation/README.md
+  s_3111171e960687::t_c3a18c041592af 197-200
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.21",
+  "base_commit_sha": "77373421d8f3026c138694cd91dc3059f0ad7948",
+  "prompts": {},
+  "sessions": {
+    "s_3111171e960687": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "8dbcbda8-4623-438b-a805-7c8f1634b75d",
+        "model": "claude-opus-5"
+      },
+      "human_author": "Graham Brooks <graham@grahambrooks.com>"
+    }
+  }
+}
