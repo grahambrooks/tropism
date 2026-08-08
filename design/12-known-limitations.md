@@ -290,9 +290,16 @@ stayed superlinear after the fix, and the residue was the cycle analyzer buildin
 (JavaScript 0.08 s at 3,000 files; Python 0.05 s at 2,000). Benchmark on an acyclic graph unless the
 cycle is the thing being measured.
 
-**Still not covered:** Go, Ruby, and Swift resolve through `contains` on a set already, so they never
-had the shape. Nothing guards against reintroducing it — a per-provider scaling test would, and does
-not exist.
+Go, Ruby, and Swift resolve through `contains` on a set already, so they never had the shape.
+
+**Guarded by `crates/tropism-lang/tests/scaling.rs`.** One test per affected provider, asserting the
+property directly rather than benchmarking a run: resolving a *fixed* number of imports against a
+4x larger project must cost the same, because per-import work must be bounded by the import. Nothing
+touches the disk and nothing is parsed, so the signal is the resolution loop alone.
+
+Every one of the six was verified to fail by reintroducing the bug it guards — measured 3.7x–4.0x
+broken against 1.0x–1.9x fixed, with the threshold at 2.5. A regression test that does not fail on
+the regression is decoration, and this family of bugs is precisely the kind that passes review.
 
 ### D26. ~~No `LICENSE` file~~ — RESOLVED
 

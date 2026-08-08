@@ -386,8 +386,11 @@ claimed the memoization existed for years; it did not.
 The audit that followed found the same shape — O(project) work per import — in **JavaScript**
 (scanning `source_files` per relative import), **Python/Java/C#** (`longest_prefix` walking every
 module), and **C++** (a suffix `find` over every module). All fixed; see D39 for the table. Go, Ruby
-and Swift were already `contains` on a set. **Nothing guards against reintroducing this**, so when
-touching `resolve_import`, check that per-import work is bounded by the *import*, not by the project.
+and Swift were already `contains` on a set. `crates/tropism-lang/tests/scaling.rs` now guards every
+one: per-import work must not grow with project size, and each test was verified to fail by
+reintroducing the bug it guards. **When touching `resolve_import`, keep per-import work bounded by
+the *import*, not by the project** — and if a scaling test starts failing spuriously, raise the work
+per measurement rather than the threshold.
 
 Two rules for benchmarking it. Verify output is byte-identical before claiming a speedup — a speed
 fix must not change an answer. And benchmark on an *acyclic* fixture: a synthetic repo whose imports
