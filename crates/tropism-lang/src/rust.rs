@@ -164,7 +164,15 @@ impl LanguageProvider for RustProvider {
                 // dependency — 15 of 20 Rust findings in the evaluation audit, and the
                 // dominant Rust false positive on ruff, tokio-stream and deno.
                 let modules = ctx.local_modules(|| module_set(ctx));
-                let mut scoped = split_module(&current);
+
+                // `module_set` names modules *relative to the project root*, so the
+                // importing file has to be measured the same way or the two never
+                // meet. They agree only when the manifest sits at the scan root,
+                // which is why D42's first fix worked on a fixture and missed deno:
+                // its crate root is `cli/`, so `current` said `cli::tools::pm` while
+                // the set held `tools::pm::audit`.
+                let relative = from.strip_prefix(&ctx.project.root).unwrap_or(from);
+                let mut scoped = split_module(&module_path_of(relative).0);
                 scoped.push(root.to_owned());
                 let sibling = join_module(&scoped);
 
@@ -1071,6 +1079,46 @@ version = "2.0.0"
     ///
     /// Resolving the bare root only against the crate root made this work at the top
     /// level and nowhere else, and reported ruff's entire `rules/mod.rs` pattern as
+    /// D42, second half. `module_set` names modules relative to the *project root*,
+    /// so the importing file must be measured the same way — they agree only when
+    /// the manifest sits at the scan root, which is why the first fix worked on a
+    /// fixture and missed deno, whose crate root is `cli/`.
+    #[test]
+    fn a_sibling_resolves_when_the_crate_root_is_not_the_scan_root() {
+        let files = [
+            "cli/main.rs",
+            "cli/tools/mod.rs",
+            "cli/tools/pm/mod.rs",
+            "cli/tools/pm/audit.rs",
+        ];
+        let project = Project {
+            root: Utf8PathBuf::from("cli"),
+            language: Language::Rust,
+            manifests: vec!["cli/Cargo.toml".into()],
+            lockfile: None,
+        };
+        let source_files: Vec<Utf8PathBuf> = files.iter().map(Utf8PathBuf::from).collect();
+        let known = Default::default();
+        let ctx = ProjectContext {
+            project: &project,
+            package_name: Some("deno"),
+            declared: &[],
+            sibling_packages: &[],
+            known_modules: &known,
+            source_files: &source_files,
+            local_modules: Default::default(),
+            path_aliases: &[],
+        };
+        assert_eq!(
+            RustProvider.resolve_import(
+                &Import::statement("audit::AuditFlags", 1),
+                Utf8Path::new("cli/tools/pm/mod.rs"),
+                &ctx,
+            ),
+            ImportTarget::Internal("tools::pm::audit".to_owned())
+        );
+    }
+
     /// missing dependencies: 15 of 20 Rust findings in the evaluation audit.
     #[test]
     fn a_bare_use_names_a_sibling_module_of_the_importing_file() {

@@ -435,6 +435,13 @@ package that vendors a header of the same name, while the alternative reports a 
 on `windows.h` for every Windows codebase. A test pins that `fmt/core.h` and `nlohmann/json.hpp` stay
 external, because widening the platform list must not start hiding real packages.
 
+**Also caught by the redrawn sample: the match was case-sensitive.** Windows filesystems are not, so
+real code writes `<Windows.h>` and `<windows.h>` interchangeably and both appear in the corpus —
+`windows.h` was in the list from the start and `Windows.h` was reported as a missing dependency on a
+package called `Windows`. Matching is now case-insensitive, and `msctf.h`,
+`securityappcontainer.h` and the kernel include roots (`linux/`, `asm/`, `bits/`) were added from the
+same sample.
+
 ### D42. ~~A bare `use <sibling module>` in a nested Rust module is reported as a missing dependency~~ — RESOLVED
 
 Rust 2018 uniform paths let a module write `pub(crate) use ast_with::*;` for a sibling declared
@@ -458,6 +465,17 @@ claiming external crates are local.
 
 It resolves rather than suppresses. `tropism explain` on the reproduction now reports
 `resolves to module \`rules::ast_with\``, so the edge exists and a rule can see it.
+
+**The first fix was half of one, and the redrawn audit sample caught it.** `module_set` names modules
+relative to the *project root*, while the importing file was measured from the scan root — the two
+agree only when the manifest sits at the scan root, which is exactly the shape the fixture had. deno,
+whose crate root is `cli/`, went on reporting `audit`, `graph` and `reporters` as missing: `current`
+said `cli::tools::pm` while the set held `tools::pm::audit`. Measuring both the same way took deno's
+`missing-dep` from 205 to 110.
+
+The lesson is about the fixture, not the code: a reproduction built at the scan root cannot
+distinguish the two, so it confirmed a fix that was not general. The regression test now uses a crate
+root that is *not* the scan root.
 
 ### D43. ~~`.package(path: "..")` yields a Swift dependency named `..`~~ — RESOLVED
 

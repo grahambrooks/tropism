@@ -89,7 +89,7 @@ Counts only. Soundness needs the oracle columns and the hand audit below; a coun
 | kubernetes/kubernetes | 0 | 1 | 0 | 0 | 0 | 0.1 | go-list |
 | prometheus/prometheus | 9 | 40 | 0 | 180 | 150 | 387.1 | go-list |
 | grafana/grafana | 75 | 199 | 14 | 434 | 328 | 69.6 | go-list, madge-circular |
-| denoland/deno | 3 | 239 | 205 | 103 | 74 | 321.2 | cargo-duplicates |
+| denoland/deno | 3 | 239 | 110 | 103 | 74 | 272.3 | cargo-duplicates |
 | tokio-rs/tokio | 5 | 8 | 10 | 0 | 0 | 29.1 | cargo-duplicates |
 | BurntSushi/ripgrep | 0 | 16 | 1 | 1 | 1 | 172.7 | cargo-duplicates |
 | astral-sh/ruff | 34 | 71 | 113 | 64 | 48 | 148.2 | cargo-duplicates, pylint-cycles |
@@ -103,8 +103,8 @@ Counts only. Soundness needs the oracle columns and the hand audit below; a coun
 | elastic/elasticsearch | 103 | 789 | 332 | 17 | 6 | 39.6 | jdeps-cycles |
 | jellyfin/jellyfin | 8 | 162 | 19 | 0 | 0 | 88.6 | — |
 | AvaloniaUI/Avalonia | 24 | 291 | 21 | 0 | 0 | 83.7 | — |
-| microsoft/terminal | 23 | 4 | 354 | 0 | 0 | 308.8 | — |
-| apache/arrow | 30 | 67 | 126 | 0 | 0 | 73.4 | pylint-cycles |
+| microsoft/terminal | 23 | 4 | 341 | 0 | 0 | 298.2 | — |
+| apache/arrow | 30 | 67 | 123 | 0 | 0 | 72.4 | pylint-cycles |
 | pointfreeco/swift-composable-architecture | 0 | 2 | 32 | 0 | 0 | 42.7 | — |
 | apple/swift-nio | 0 | 5 | 22 | 0 | 0 | 48.7 | — |
 | rails/rails | 0 | 60 | 77 | 69 | 50 | 81.5 | bundle-list |
@@ -117,9 +117,9 @@ Counts only. Soundness needs the oracle columns and the hand audit below; a coun
 
 | Confidence | Findings | Share |
 | --- | --- | --- |
-| high | 10,381 | 51% |
-| medium | 7,542 | 37% |
-| low | 2,082 | 10% |
+| high | 10,381 | 52% |
+| medium | 7,526 | 37% |
+| low | 1,987 | 9% |
 
 ## Per-language
 
@@ -127,14 +127,14 @@ The split design/19 asks for. tropism is not one tool with one accuracy — it i
 
 | Language | Repos | Projects | Files | Statements resolved | All imports | Findings | per 1k files |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| cpp | 2 | 6 | 3,174 | 100.0% | 100.0% | 499 | 157.2 |
+| cpp | 2 | 6 | 3,174 | 100.0% | 100.0% | 483 | 152.2 |
 | csharp | 3 | 163 | 6,203 | 92.6% ⚠ | 92.6% | 520 | 83.8 |
 | go | 4 | 86 | 24,736 | 100.0% | 100.0% | 40 | 1.6 |
 | java | 5 | 1222 | 43,352 | 68.3% ⚠ | 68.3% | 2,145 | 49.5 |
 | javascript | 13 | 1756 | 53,313 | 99.8% | 99.8% | 12,651 | 237.3 |
 | python | 7 | 201 | 8,243 | 99.9% | 99.9% | 2,507 | 304.1 |
 | ruby | 4 | 21 | 14,500 | 100.0% | 100.0% | 481 | 33.2 |
-| rust | 8 | 253 | 5,122 | 100.0% | 33.9% | 1,101 | 215.0 |
+| rust | 8 | 253 | 5,122 | 100.0% | 34.0% | 1,006 | 196.4 |
 | swift | 2 | 10 | 1,350 | 100.0% | 100.0% | 61 | 45.2 |
 
 ## D2 — Resolution
@@ -146,7 +146,7 @@ The share of imports tropism understood, and **the number that caps every hygien
 | kubernetes/kubernetes | 108,660 | 100.0% | 108,660 | 100.0% |
 | prometheus/prometheus | 7,718 | 100.0% | 7,718 | 100.0% |
 | grafana/grafana | 103,671 | 100.0% | 103,671 | 100.0% |
-| denoland/deno | 107,050 | 42.0% | 19,261 | 100.0% |
+| denoland/deno | 107,050 | 42.2% | 19,261 | 100.0% |
 | tokio-rs/tokio | 23,581 | 52.9% | 4,361 | 100.0% |
 | BurntSushi/ripgrep | 4,965 | 25.1% | 384 | 100.0% |
 | astral-sh/ruff | 109,641 | 24.9% | 17,086 | 99.7% |
@@ -248,7 +248,7 @@ Run `tropism workspaces <repo>` to check origins; any `language` origin where th
 | kubernetes/kubernetes | 20 | 17,702 | 885 | 0 |
 | prometheus/prometheus | 2 | 979 | 490 | 0 |
 | grafana/grafana | 15 | 15,089 | 1,006 | 0 |
-| denoland/deno | 9 | 1,943 | 216 | 2 ⚠ |
+| denoland/deno | 13 | 1,943 | 149 | 2 ⚠ |
 | tokio-rs/tokio | 1 | 790 | 790 | 0 |
 | BurntSushi/ripgrep | 0 | 110 | — | 0 |
 | astral-sh/ruff | 4 | 2,226 | 556 | 0 |
@@ -261,9 +261,9 @@ Run `tropism workspaces <repo>` to check origins; any `language` origin where th
 | google/guava | 1 | 3,229 | 3,229 | 0 |
 | elastic/elasticsearch | 42 | 31,458 | 749 | 0 |
 | jellyfin/jellyfin | 1 | 2,133 | 2,133 | 0 |
-| AvaloniaUI/Avalonia | 3 | 4,013 | 1,338 | 0 |
-| microsoft/terminal | 1 | 1,234 | 1,234 | 0 |
-| apache/arrow | 2 | 3,038 | 1,519 | 0 |
+| AvaloniaUI/Avalonia | 4 | 4,013 | 1,003 | 0 |
+| microsoft/terminal | 2 | 1,234 | 617 | 0 |
+| apache/arrow | 4 | 3,038 | 760 | 0 |
 | pointfreeco/swift-composable-architecture | 1 | 796 | 796 | 0 |
 | apple/swift-nio | 1 | 554 | 554 | 0 |
 | rails/rails | 2 | 3,142 | 1,571 | 0 |
@@ -276,14 +276,14 @@ Run `tropism workspaces <repo>` to check origins; any `language` origin where th
 
 | Language | Hygiene findings available to sample |
 | --- | --- |
-| cpp | 449 |
+| cpp | 433 |
 | csharp | 488 |
 | go | 36 |
 | java | 2021 |
 | javascript | 3233 |
 | python | 2470 |
 | ruby | 457 |
-| rust | 409 |
+| rust | 314 |
 | swift | 61 |
 
 Draw the sample with `./report.py --audit-sample 20` — seeded, so a second auditor grades the same findings and the two audits are comparable.

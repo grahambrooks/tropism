@@ -1,129 +1,20 @@
 [
   {
-    "repo": "microsoft/terminal",
-    "language": "cpp",
-    "check": "missing-dep",
-    "id": "missing-dep:.:8926eeee",
-    "message": "`LaunchViewModel.g` is imported but not declared",
-    "evidence": [
-      {
-        "file": "src/cascadia/TerminalSettingsEditor/LaunchViewModel.cpp",
-        "line": 6,
-        "note": "imports LaunchViewModel.g.cpp"
-      },
-      {
-        "file": "src/cascadia/TerminalSettingsEditor/LaunchViewModel.h",
-        "line": 6,
-        "note": "imports LaunchViewModel.g.h"
-      }
-    ]
-  },
-  {
-    "repo": "microsoft/terminal",
-    "language": "cpp",
-    "check": "missing-dep",
-    "id": "missing-dep:.:37d4aa2d",
-    "message": "`FolderTreeViewEntry.g` is imported but not declared",
-    "evidence": [
-      {
-        "file": "src/cascadia/TerminalSettingsEditor/NewTabMenuViewModel.cpp",
-        "line": 9,
-        "note": "imports FolderTreeViewEntry.g.cpp"
-      },
-      {
-        "file": "src/cascadia/TerminalSettingsEditor/NewTabMenuViewModel.h",
-        "line": 7,
-        "note": "imports FolderTreeViewEntry.g.h"
-      }
-    ]
-  },
-  {
-    "repo": "microsoft/terminal",
-    "language": "cpp",
-    "check": "missing-dep",
-    "id": "missing-dep:.:cd85e52b",
-    "message": "`SettingContainer.g` is imported but not declared",
-    "evidence": [
-      {
-        "file": "src/cascadia/TerminalSettingsEditor/SettingContainer.cpp",
-        "line": 6,
-        "note": "imports SettingContainer.g.cpp"
-      },
-      {
-        "file": "src/cascadia/TerminalSettingsEditor/SettingContainer.h",
-        "line": 20,
-        "note": "imports SettingContainer.g.h"
-      }
-    ]
-  },
-  {
-    "repo": "microsoft/terminal",
-    "language": "cpp",
-    "check": "missing-dep",
-    "id": "missing-dep:.:eb94e33e",
-    "message": "`dsound` is imported but not declared",
-    "evidence": [
-      {
-        "file": "src/audio/midi/precomp.h",
-        "line": 31,
-        "note": "imports dsound.h"
-      },
-      {
-        "file": "src/cascadia/TerminalControl/ControlCore.cpp",
-        "line": 9,
-        "note": "imports dsound.h"
-      }
-    ]
-  },
-  {
-    "repo": "microsoft/terminal",
-    "language": "cpp",
-    "check": "missing-dep",
-    "id": "missing-dep:.:6f386b29",
-    "message": "`uxtheme` is imported but not declared",
-    "evidence": [
-      {
-        "file": "src/cascadia/WindowsTerminal/NonClientIslandWindow.cpp",
-        "line": 10,
-        "note": "imports uxtheme.h"
-      }
-    ]
-  },
-  {
-    "repo": "microsoft/terminal",
-    "language": "cpp",
-    "check": "missing-dep",
-    "id": "missing-dep:.:9308343b",
-    "message": "`ArgsTemplateSelectors.g` is imported but not declared",
-    "evidence": [
-      {
-        "file": "src/cascadia/TerminalSettingsEditor/ArgsTemplateSelectors.cpp",
-        "line": 6,
-        "note": "imports ArgsTemplateSelectors.g.cpp"
-      },
-      {
-        "file": "src/cascadia/TerminalSettingsEditor/ArgsTemplateSelectors.h",
-        "line": 6,
-        "note": "imports ArgsTemplateSelectors.g.h"
-      }
-    ]
-  },
-  {
     "repo": "apache/arrow",
     "language": "cpp",
     "check": "missing-dep",
-    "id": "missing-dep:cpp:b273086c",
-    "message": "`commctrl` is imported but not declared",
+    "id": "missing-dep:cpp:5d4ec8ca",
+    "message": "`sql` is imported but not declared",
     "evidence": [
       {
-        "file": "cpp/src/arrow/flight/sql/odbc/odbc_impl/ui/add_property_window.cc",
-        "line": 25,
-        "note": "imports commctrl.h"
+        "file": "cpp/src/arrow/flight/sql/odbc/entry_points.cc",
+        "line": 21,
+        "note": "imports sql.h"
       },
       {
-        "file": "cpp/src/arrow/flight/sql/odbc/odbc_impl/ui/custom_window.cc",
-        "line": 25,
-        "note": "imports commctrl.h"
+        "file": "cpp/src/arrow/flight/sql/odbc/odbc_api_internal.h",
+        "line": 22,
+        "note": "imports sql.h"
       }
     ]
   },
@@ -131,51 +22,18 @@
     "repo": "microsoft/terminal",
     "language": "cpp",
     "check": "missing-dep",
-    "id": "missing-dep:.:8af9a188",
-    "message": "`dwrite` is imported but not declared",
+    "id": "missing-dep:.:9b014b3c",
+    "message": "`EditAction.g` is imported but not declared",
     "evidence": [
       {
-        "file": "src/renderer/wddmcon/precomp.h",
-        "line": 29,
-        "note": "imports dwrite.h"
-      }
-    ]
-  },
-  {
-    "repo": "microsoft/terminal",
-    "language": "cpp",
-    "check": "missing-dep",
-    "id": "missing-dep:.:470b24d0",
-    "message": "`ActionEventArgs.g` is imported but not declared",
-    "evidence": [
-      {
-        "file": "src/cascadia/TerminalSettingsModel/ActionArgs.cpp",
-        "line": 8,
-        "note": "imports ActionEventArgs.g.cpp"
-      },
-      {
-        "file": "src/cascadia/TerminalSettingsModel/ActionArgs.h",
-        "line": 8,
-        "note": "imports ActionEventArgs.g.h"
-      }
-    ]
-  },
-  {
-    "repo": "microsoft/terminal",
-    "language": "cpp",
-    "check": "missing-dep",
-    "id": "missing-dep:.:b5818303",
-    "message": "`KeyChordListener.g` is imported but not declared",
-    "evidence": [
-      {
-        "file": "src/cascadia/TerminalSettingsEditor/KeyChordListener.cpp",
+        "file": "src/cascadia/TerminalSettingsEditor/EditAction.cpp",
         "line": 6,
-        "note": "imports KeyChordListener.g.cpp"
+        "note": "imports EditAction.g.cpp"
       },
       {
-        "file": "src/cascadia/TerminalSettingsEditor/KeyChordListener.h",
+        "file": "src/cascadia/TerminalSettingsEditor/EditAction.h",
         "line": 6,
-        "note": "imports KeyChordListener.g.h"
+        "note": "imports EditAction.g.h"
       }
     ]
   },
@@ -183,155 +41,18 @@
     "repo": "microsoft/terminal",
     "language": "cpp",
     "check": "missing-dep",
-    "id": "missing-dep:.:0cee8cb2",
-    "message": "`nturtl` is imported but not declared",
-    "evidence": [
-      {
-        "file": "src/host/ft_integrity/precomp.hpp",
-        "line": 9,
-        "note": "imports nturtl.h"
-      },
-      {
-        "file": "src/interactivity/onecore/precomp.h",
-        "line": 12,
-        "note": "imports nturtl.h"
-      }
-    ]
-  },
-  {
-    "repo": "microsoft/terminal",
-    "language": "cpp",
-    "check": "missing-dep",
-    "id": "missing-dep:.:461b762e",
-    "message": "`d3d11_2` is imported but not declared",
-    "evidence": [
-      {
-        "file": "src/renderer/atlas/AtlasEngine.h",
-        "line": 7,
-        "note": "imports d3d11_2.h"
-      },
-      {
-        "file": "src/renderer/atlas/pch.h",
-        "line": 24,
-        "note": "imports d3d11_2.h"
-      }
-    ]
-  },
-  {
-    "repo": "microsoft/terminal",
-    "language": "cpp",
-    "check": "missing-dep",
-    "id": "missing-dep:.:d364e961",
-    "message": "`wincontypes` is imported but not declared",
-    "evidence": [
-      {
-        "file": "dep/Console/winconp.h",
-        "line": 20,
-        "note": "imports wincontypes.h"
-      }
-    ]
-  },
-  {
-    "repo": "microsoft/terminal",
-    "language": "cpp",
-    "check": "missing-dep",
-    "id": "missing-dep:.:02f98cb7",
-    "message": "`CommandHistoryContext.g` is imported but not declared",
-    "evidence": [
-      {
-        "file": "src/cascadia/TerminalControl/ControlCore.h",
-        "line": 20,
-        "note": "imports CommandHistoryContext.g.h"
-      }
-    ]
-  },
-  {
-    "repo": "apache/arrow",
-    "language": "cpp",
-    "check": "missing-dep",
-    "id": "missing-dep:cpp:56bf14eb",
-    "message": "`lsxintrin` is imported but not declared",
-    "evidence": [
-      {
-        "file": "cpp/src/arrow/vendored/xxhash/xxhash.h",
-        "line": 3873,
-        "note": "imports lsxintrin.h"
-      },
-      {
-        "file": "cpp/src/arrow/vendored/xxhash/xxhash.h",
-        "line": 3875,
-        "note": "imports lsxintrin.h"
-      }
-    ]
-  },
-  {
-    "repo": "apache/arrow",
-    "language": "cpp",
-    "check": "unused-dep",
-    "id": "unused-dep:ci/vcpkg:249063db",
-    "message": "`gflags` is declared but never imported",
-    "evidence": [
-      {
-        "file": "ci/vcpkg/vcpkg.json",
-        "line": 15,
-        "note": "declared here"
-      }
-    ]
-  },
-  {
-    "repo": "microsoft/terminal",
-    "language": "cpp",
-    "check": "missing-dep",
-    "id": "missing-dep:.:f99ed1c6",
-    "message": "`CompletionsChangedEventArgs.g` is imported but not declared",
+    "id": "missing-dep:.:f52f2329",
+    "message": "`ContextMenuRequestedEventArgs.g` is imported but not declared",
     "evidence": [
       {
         "file": "src/cascadia/TerminalControl/EventArgs.cpp",
-        "line": 18,
-        "note": "imports CompletionsChangedEventArgs.g.cpp"
+        "line": 8,
+        "note": "imports ContextMenuRequestedEventArgs.g.cpp"
       },
       {
         "file": "src/cascadia/TerminalControl/EventArgs.h",
-        "line": 18,
-        "note": "imports CompletionsChangedEventArgs.g.h"
-      }
-    ]
-  },
-  {
-    "repo": "apache/arrow",
-    "language": "cpp",
-    "check": "missing-dep",
-    "id": "missing-dep:c_glib:fe12bbd1",
-    "message": "`arrow-dataset-glib` is imported but not declared",
-    "evidence": [
-      {
-        "file": "c_glib/arrow-dataset-glib/arrow-dataset-glib.h",
-        "line": 24,
-        "note": "imports arrow-dataset-glib/version.h"
-      },
-      {
-        "file": "c_glib/arrow-dataset-glib/arrow-dataset-glib.h",
-        "line": 28,
-        "note": "imports arrow-dataset-glib/enums.h"
-      }
-    ]
-  },
-  {
-    "repo": "apache/arrow",
-    "language": "cpp",
-    "check": "missing-dep",
-    "id": "missing-dep:cpp:d836ef3a",
-    "message": "`direct` is imported but not declared",
-    "evidence": [
-      {
-        "file": "cpp/src/arrow/util/io_util.cc",
-        "line": 63,
-        "note": "imports direct.h"
-      },
-      {
-        "file": "cpp/src/arrow/vendored/datetime/tz.cpp",
-        "line": 163,
-        "note": "imports direct.h"
+        "line": 8,
+        "note": "imports ContextMenuRequestedEventArgs.g.h"
       }
     ]
   },
@@ -339,143 +60,299 @@
     "repo": "microsoft/terminal",
     "language": "cpp",
     "check": "missing-dep",
-    "id": "missing-dep:.:c4c8b49e",
-    "message": "`Appearances.g` is imported but not declared",
+    "id": "missing-dep:.:ae04b90e",
+    "message": "`SDKDDKVer` is imported but not declared",
     "evidence": [
       {
-        "file": "src/cascadia/TerminalSettingsEditor/Appearances.cpp",
-        "line": 12,
-        "note": "imports Appearances.g.cpp"
+        "file": "samples/ConPTY/EchoCon/EchoCon/targetver.h",
+        "line": 8,
+        "note": "imports SDKDDKVer.h"
+      }
+    ]
+  },
+  {
+    "repo": "microsoft/terminal",
+    "language": "cpp",
+    "check": "missing-dep",
+    "id": "missing-dep:.:99bb7e44",
+    "message": "`ExtensionPackageTemplateSelector.g` is imported but not declared",
+    "evidence": [
+      {
+        "file": "src/cascadia/TerminalSettingsEditor/Extensions.cpp",
+        "line": 10,
+        "note": "imports ExtensionPackageTemplateSelector.g.cpp"
       },
       {
-        "file": "src/cascadia/TerminalSettingsEditor/Appearances.h",
-        "line": 21,
-        "note": "imports Appearances.g.h"
+        "file": "src/cascadia/TerminalSettingsEditor/Extensions.h",
+        "line": 12,
+        "note": "imports ExtensionPackageTemplateSelector.g.h"
       }
     ]
   },
   {
-    "repo": "AvaloniaUI/Avalonia",
-    "language": "csharp",
-    "check": "unused-dep",
-    "id": "unused-dep:tests/Avalonia.DesignerSupport.TestApp:378da7b8",
-    "message": "`Avalonia.OpenGL` is declared but never imported",
+    "repo": "microsoft/terminal",
+    "language": "cpp",
+    "check": "missing-dep",
+    "id": "missing-dep:.:7a6ece3b",
+    "message": "`ProfileCollectionEntry.g` is imported but not declared",
     "evidence": [
       {
-        "file": "tests/Avalonia.DesignerSupport.TestApp/Avalonia.DesignerSupport.TestApp.csproj",
-        "line": 18,
-        "note": "declared here"
-      }
-    ]
-  },
-  {
-    "repo": "jellyfin/jellyfin",
-    "language": "csharp",
-    "check": "unused-dep",
-    "id": "unused-dep:tests/Jellyfin.LiveTv.Tests:901aad2f",
-    "message": "`Microsoft.NET.Test.Sdk` is declared but never imported",
-    "evidence": [
-      {
-        "file": "tests/Jellyfin.LiveTv.Tests/Jellyfin.LiveTv.Tests.csproj",
-        "line": 16,
-        "note": "declared here"
-      }
-    ]
-  },
-  {
-    "repo": "AvaloniaUI/Avalonia",
-    "language": "csharp",
-    "check": "unused-dep",
-    "id": "unused-dep:samples/ControlCatalog.tvOS:6f3a6190",
-    "message": "`ControlCatalog` is declared but never imported",
-    "evidence": [
-      {
-        "file": "samples/ControlCatalog.tvOS/ControlCatalog.tvOS.csproj",
-        "line": 16,
-        "note": "declared here"
-      }
-    ]
-  },
-  {
-    "repo": "AvaloniaUI/Avalonia",
-    "language": "csharp",
-    "check": "unused-dep",
-    "id": "unused-dep:tests/Avalonia.Headless.XUnit.PerTest.UnitTests:68ef1a91",
-    "message": "`Avalonia.HarfBuzz` is declared but never imported",
-    "evidence": [
-      {
-        "file": "tests/Avalonia.Headless.XUnit.PerTest.UnitTests/Avalonia.Headless.XUnit.PerTest.UnitTests.csproj",
-        "line": 25,
-        "note": "declared here"
-      }
-    ]
-  },
-  {
-    "repo": "AvaloniaUI/Avalonia",
-    "language": "csharp",
-    "check": "unused-dep",
-    "id": "unused-dep:src/Avalonia.MicroCom:8bfee715",
-    "message": "`Avalonia.Build.Tasks` is declared but never imported",
-    "evidence": [
-      {
-        "file": "src/Avalonia.MicroCom/Avalonia.MicroCom.csproj",
+        "file": "src/cascadia/TerminalSettingsModel/ProfileCollectionEntry.cpp",
         "line": 8,
-        "note": "declared here"
-      }
-    ]
-  },
-  {
-    "repo": "AvaloniaUI/Avalonia",
-    "language": "csharp",
-    "check": "unused-dep",
-    "id": "unused-dep:tests/Avalonia.Skia.RenderTests:2e70a861",
-    "message": "`Avalonia.Controls` is declared but never imported",
-    "evidence": [
+        "note": "imports ProfileCollectionEntry.g.cpp"
+      },
       {
-        "file": "tests/Avalonia.Skia.RenderTests/Avalonia.Skia.RenderTests.csproj",
-        "line": 29,
-        "note": "declared here"
-      }
-    ]
-  },
-  {
-    "repo": "AvaloniaUI/Avalonia",
-    "language": "csharp",
-    "check": "unused-dep",
-    "id": "unused-dep:samples/MiniMvvm:728381e0",
-    "message": "`Avalonia.Base` is declared but never imported",
-    "evidence": [
-      {
-        "file": "samples/MiniMvvm/MiniMvvm.csproj",
-        "line": 8,
-        "note": "declared here"
-      }
-    ]
-  },
-  {
-    "repo": "jellyfin/jellyfin",
-    "language": "csharp",
-    "check": "unused-dep",
-    "id": "unused-dep:MediaBrowser.Providers:02ef0a02",
-    "message": "`IDisposableAnalyzers` is declared but never imported",
-    "evidence": [
-      {
-        "file": "MediaBrowser.Providers/MediaBrowser.Providers.csproj",
-        "line": 39,
-        "note": "declared here"
-      }
-    ]
-  },
-  {
-    "repo": "AvaloniaUI/Avalonia",
-    "language": "csharp",
-    "check": "unused-dep",
-    "id": "unused-dep:tests/Avalonia.Base.UnitTests:f80cf6ea",
-    "message": "`Nito.AsyncEx.Context` is declared but never imported",
-    "evidence": [
-      {
-        "file": "tests/Avalonia.Base.UnitTests/Avalonia.Base.UnitTests.csproj",
+        "file": "src/cascadia/TerminalSettingsModel/ProfileCollectionEntry.h",
         "line": 20,
+        "note": "imports ProfileCollectionEntry.g.h"
+      }
+    ]
+  },
+  {
+    "repo": "microsoft/terminal",
+    "language": "cpp",
+    "check": "missing-dep",
+    "id": "missing-dep:.:ef379d23",
+    "message": "`ActionAndArgs.g` is imported but not declared",
+    "evidence": [
+      {
+        "file": "src/cascadia/TerminalSettingsModel/ActionAndArgs.cpp",
+        "line": 5,
+        "note": "imports ActionAndArgs.g.cpp"
+      },
+      {
+        "file": "src/cascadia/TerminalSettingsModel/ActionAndArgs.h",
+        "line": 6,
+        "note": "imports ActionAndArgs.g.h"
+      }
+    ]
+  },
+  {
+    "repo": "apache/arrow",
+    "language": "cpp",
+    "check": "unused-dep",
+    "id": "unused-dep:ci/vcpkg:cd5db025",
+    "message": "`glog` is declared but never imported",
+    "evidence": [
+      {
+        "file": "ci/vcpkg/vcpkg.json",
+        "line": 16,
+        "note": "declared here"
+      }
+    ]
+  },
+  {
+    "repo": "microsoft/terminal",
+    "language": "cpp",
+    "check": "missing-dep",
+    "id": "missing-dep:.:0309d8a8",
+    "message": "`SetColorSchemeArgs.g` is imported but not declared",
+    "evidence": [
+      {
+        "file": "src/cascadia/TerminalSettingsModel/ActionArgs.cpp",
+        "line": 26,
+        "note": "imports SetColorSchemeArgs.g.cpp"
+      },
+      {
+        "file": "src/cascadia/TerminalSettingsModel/ActionArgs.h",
+        "line": 25,
+        "note": "imports SetColorSchemeArgs.g.h"
+      }
+    ]
+  },
+  {
+    "repo": "apache/arrow",
+    "language": "cpp",
+    "check": "missing-dep",
+    "id": "missing-dep:cpp:b2f64d7e",
+    "message": "`builtins` is imported but not declared",
+    "evidence": [
+      {
+        "file": "cpp/src/arrow/vendored/portable-snippets/debug-trap.h",
+        "line": 31,
+        "note": "imports builtins.h"
+      }
+    ]
+  },
+  {
+    "repo": "microsoft/terminal",
+    "language": "cpp",
+    "check": "missing-dep",
+    "id": "missing-dep:.:ef17fb74",
+    "message": "`..\\onecore\\ConIoSrvComm` is imported but not declared",
+    "evidence": [
+      {
+        "file": "src/interactivity/base/InteractivityFactory.cpp",
+        "line": 14,
+        "note": "imports ..\\onecore\\ConIoSrvComm.hpp"
+      }
+    ]
+  },
+  {
+    "repo": "microsoft/terminal",
+    "language": "cpp",
+    "check": "missing-dep",
+    "id": "missing-dep:.:62571a54",
+    "message": "`aclapi` is imported but not declared",
+    "evidence": [
+      {
+        "file": "src/inc/til/io.h",
+        "line": 6,
+        "note": "imports aclapi.h"
+      }
+    ]
+  },
+  {
+    "repo": "microsoft/terminal",
+    "language": "cpp",
+    "check": "missing-dep",
+    "id": "missing-dep:.:ce5c1881",
+    "message": "`UIAutomationCore` is imported but not declared",
+    "evidence": [
+      {
+        "file": "src/cascadia/TerminalControl/InteractivityAutomationPeer.cpp",
+        "line": 5,
+        "note": "imports UIAutomationCore.h"
+      },
+      {
+        "file": "src/cascadia/TerminalControl/TermControlAutomationPeer.cpp",
+        "line": 5,
+        "note": "imports UIAutomationCore.h"
+      }
+    ]
+  },
+  {
+    "repo": "microsoft/terminal",
+    "language": "cpp",
+    "check": "missing-dep",
+    "id": "missing-dep:.:d421cbf6",
+    "message": "`shlguid` is imported but not declared",
+    "evidence": [
+      {
+        "file": "src/propsheet/PropSheetHandler.cpp",
+        "line": 13,
+        "note": "imports shlguid.h"
+      }
+    ]
+  },
+  {
+    "repo": "microsoft/terminal",
+    "language": "cpp",
+    "check": "missing-dep",
+    "id": "missing-dep:.:51f207f3",
+    "message": "`Theme.g` is imported but not declared",
+    "evidence": [
+      {
+        "file": "src/cascadia/TerminalSettingsModel/Theme.cpp",
+        "line": 18,
+        "note": "imports Theme.g.cpp"
+      },
+      {
+        "file": "src/cascadia/TerminalSettingsModel/Theme.h",
+        "line": 27,
+        "note": "imports Theme.g.h"
+      }
+    ]
+  },
+  {
+    "repo": "microsoft/terminal",
+    "language": "cpp",
+    "check": "missing-dep",
+    "id": "missing-dep:.:c989794a",
+    "message": "`winhttp` is imported but not declared",
+    "evidence": [
+      {
+        "file": "src/cascadia/TerminalConnection/pch.h",
+        "line": 32,
+        "note": "imports winhttp.h"
+      }
+    ]
+  },
+  {
+    "repo": "apache/arrow",
+    "language": "cpp",
+    "check": "missing-dep",
+    "id": "missing-dep:cpp:a996d0b2",
+    "message": "`lz4hc` is imported but not declared",
+    "evidence": [
+      {
+        "file": "cpp/src/arrow/util/compression_lz4.cc",
+        "line": 26,
+        "note": "imports lz4hc.h"
+      }
+    ]
+  },
+  {
+    "repo": "microsoft/terminal",
+    "language": "cpp",
+    "check": "missing-dep",
+    "id": "missing-dep:.:a233e579",
+    "message": "`wil\\resource` is imported but not declared",
+    "evidence": [
+      {
+        "file": "src/server/ConDrvDeviceComm.h",
+        "line": 22,
+        "note": "imports wil\\resource.h"
+      }
+    ]
+  },
+  {
+    "repo": "microsoft/terminal",
+    "language": "cpp",
+    "check": "missing-dep",
+    "id": "missing-dep:.:4d1e3084",
+    "message": "`custom_shader_ps` is imported but not declared",
+    "evidence": [
+      {
+        "file": "src/renderer/atlas/BackendD3D.cpp",
+        "line": 10,
+        "note": "imports custom_shader_ps.h"
+      }
+    ]
+  },
+  {
+    "repo": "microsoft/terminal",
+    "language": "cpp",
+    "check": "missing-dep",
+    "id": "missing-dep:.:67cc7392",
+    "message": "`ShObjIdl_core` is imported but not declared",
+    "evidence": [
+      {
+        "file": "src/cascadia/WinRTUtils/inc/Utils.h",
+        "line": 6,
+        "note": "imports ShObjIdl_core.h"
+      }
+    ]
+  },
+  {
+    "repo": "AvaloniaUI/Avalonia",
+    "language": "csharp",
+    "check": "missing-dep",
+    "id": "missing-dep:tests/Avalonia.Wayland.UnitTests:19fc248a",
+    "message": "`xunit` is imported but not declared",
+    "evidence": [
+      {
+        "file": "tests/Avalonia.Wayland.UnitTests/TextInputOptionsConverterTests.cs",
+        "line": 3,
+        "note": "imports Xunit"
+      },
+      {
+        "file": "tests/Avalonia.Wayland.UnitTests/WaylandTextUtilsTests.cs",
+        "line": 1,
+        "note": "imports Xunit"
+      }
+    ]
+  },
+  {
+    "repo": "AvaloniaUI/Avalonia",
+    "language": "csharp",
+    "check": "unused-dep",
+    "id": "unused-dep:tests/Avalonia.Markup.Xaml.UnitTests:18aebda6",
+    "message": "`Avalonia.Fonts.Inter` is declared but never imported",
+    "evidence": [
+      {
+        "file": "tests/Avalonia.Markup.Xaml.UnitTests/Avalonia.Markup.Xaml.UnitTests.csproj",
+        "line": 18,
         "note": "declared here"
       }
     ]
@@ -498,12 +375,12 @@
     "repo": "jellyfin/jellyfin",
     "language": "csharp",
     "check": "unused-dep",
-    "id": "unused-dep:MediaBrowser.Common:2aec623b",
-    "message": "`Microsoft.CodeAnalysis.BannedApiAnalyzers` is declared but never imported",
+    "id": "unused-dep:tests/Jellyfin.Server.Tests:c18157f3",
+    "message": "`AutoFixture.AutoMoq` is declared but never imported",
     "evidence": [
       {
-        "file": "MediaBrowser.Common/MediaBrowser.Common.csproj",
-        "line": 46,
+        "file": "tests/Jellyfin.Server.Tests/Jellyfin.Server.Tests.csproj",
+        "line": 9,
         "note": "declared here"
       }
     ]
@@ -512,12 +389,157 @@
     "repo": "AvaloniaUI/Avalonia",
     "language": "csharp",
     "check": "unused-dep",
-    "id": "unused-dep:src/Headless/Avalonia.Headless.XUnit:5e3c5b8a",
-    "message": "`Avalonia.Headless` is declared but never imported",
+    "id": "unused-dep:tests/BuildTests/BuildTests.Desktop:05fa7390",
+    "message": "`Avalonia.X11` is declared but never imported",
     "evidence": [
       {
-        "file": "src/Headless/Avalonia.Headless.XUnit/Avalonia.Headless.XUnit.csproj",
+        "file": "tests/BuildTests/BuildTests.Desktop/BuildTests.Desktop.csproj",
         "line": 12,
+        "note": "declared here"
+      }
+    ]
+  },
+  {
+    "repo": "AvaloniaUI/Avalonia",
+    "language": "csharp",
+    "check": "missing-dep",
+    "id": "missing-dep:tests/Avalonia.Benchmarks:e27e449f",
+    "message": "`Moq` is imported but not declared",
+    "evidence": [
+      {
+        "file": "tests/Avalonia.Benchmarks/Styling/ResourceBenchmarks.cs",
+        "line": 8,
+        "note": "imports Moq"
+      },
+      {
+        "file": "tests/Avalonia.Benchmarks/Themes/FluentBenchmark.cs",
+        "line": 9,
+        "note": "imports Moq"
+      }
+    ]
+  },
+  {
+    "repo": "jellyfin/jellyfin",
+    "language": "csharp",
+    "check": "unused-dep",
+    "id": "unused-dep:tests/Jellyfin.MediaEncoding.Tests:ce3df223",
+    "message": "`xunit.runner.visualstudio` is declared but never imported",
+    "evidence": [
+      {
+        "file": "tests/Jellyfin.MediaEncoding.Tests/Jellyfin.MediaEncoding.Tests.csproj",
+        "line": 23,
+        "note": "declared here"
+      }
+    ]
+  },
+  {
+    "repo": "AvaloniaUI/Avalonia",
+    "language": "csharp",
+    "check": "unused-dep",
+    "id": "unused-dep:src/tools/Avalonia.Designer.HostApp:bb539e05",
+    "message": "`Avalonia.Controls` is declared but never imported",
+    "evidence": [
+      {
+        "file": "src/tools/Avalonia.Designer.HostApp/Avalonia.Designer.HostApp.csproj",
+        "line": 11,
+        "note": "declared here"
+      }
+    ]
+  },
+  {
+    "repo": "AvaloniaUI/Avalonia",
+    "language": "csharp",
+    "check": "unused-dep",
+    "id": "unused-dep:samples/SafeAreaDemo.Desktop:27319fce",
+    "message": "`SafeAreaDemo` is declared but never imported",
+    "evidence": [
+      {
+        "file": "samples/SafeAreaDemo.Desktop/SafeAreaDemo.Desktop.csproj",
+        "line": 15,
+        "note": "declared here"
+      }
+    ]
+  },
+  {
+    "repo": "AvaloniaUI/Avalonia",
+    "language": "csharp",
+    "check": "unused-dep",
+    "id": "unused-dep:src/Avalonia.X11:8b6dffde",
+    "message": "`Avalonia.Skia` is declared but never imported",
+    "evidence": [
+      {
+        "file": "src/Avalonia.X11/Avalonia.X11.csproj",
+        "line": 10,
+        "note": "declared here"
+      }
+    ]
+  },
+  {
+    "repo": "AvaloniaUI/Avalonia",
+    "language": "csharp",
+    "check": "unused-dep",
+    "id": "unused-dep:samples/WinUIEmbedSample:1e73e8ab",
+    "message": "`Avalonia` is declared but never imported",
+    "evidence": [
+      {
+        "file": "samples/WinUIEmbedSample/WinUIEmbedSample.csproj",
+        "line": 46,
+        "note": "declared here"
+      }
+    ]
+  },
+  {
+    "repo": "jellyfin/jellyfin",
+    "language": "csharp",
+    "check": "unused-dep",
+    "id": "unused-dep:MediaBrowser.Model:a74cde12",
+    "message": "`IDisposableAnalyzers` is declared but never imported",
+    "evidence": [
+      {
+        "file": "MediaBrowser.Model/MediaBrowser.Model.csproj",
+        "line": 52,
+        "note": "declared here"
+      }
+    ]
+  },
+  {
+    "repo": "AvaloniaUI/Avalonia",
+    "language": "csharp",
+    "check": "unused-dep",
+    "id": "unused-dep:samples/Sandbox:ad3af3d0",
+    "message": "`Avalonia.Themes.Fluent` is declared but never imported",
+    "evidence": [
+      {
+        "file": "samples/Sandbox/Sandbox.csproj",
+        "line": 14,
+        "note": "declared here"
+      }
+    ]
+  },
+  {
+    "repo": "jellyfin/jellyfin",
+    "language": "csharp",
+    "check": "unused-dep",
+    "id": "unused-dep:tests/Jellyfin.Server.Implementations.Tests:d8832b22",
+    "message": "`xunit.v3` is declared but never imported",
+    "evidence": [
+      {
+        "file": "tests/Jellyfin.Server.Implementations.Tests/Jellyfin.Server.Implementations.Tests.csproj",
+        "line": 21,
+        "note": "declared here"
+      }
+    ]
+  },
+  {
+    "repo": "jellyfin/jellyfin",
+    "language": "csharp",
+    "check": "unused-dep",
+    "id": "unused-dep:tests/Jellyfin.MediaEncoding.Tests:a2f3379d",
+    "message": "`coverlet.collector` is declared but never imported",
+    "evidence": [
+      {
+        "file": "tests/Jellyfin.MediaEncoding.Tests/Jellyfin.MediaEncoding.Tests.csproj",
+        "line": 19,
         "note": "declared here"
       }
     ]
@@ -537,57 +559,29 @@
     ]
   },
   {
-    "repo": "jellyfin/jellyfin",
-    "language": "csharp",
-    "check": "unused-dep",
-    "id": "unused-dep:Jellyfin.Server.Implementations:023c28a2",
-    "message": "`IDisposableAnalyzers` is declared but never imported",
-    "evidence": [
-      {
-        "file": "Jellyfin.Server.Implementations/Jellyfin.Server.Implementations.csproj",
-        "line": 11,
-        "note": "declared here"
-      }
-    ]
-  },
-  {
-    "repo": "jellyfin/jellyfin",
-    "language": "csharp",
-    "check": "unused-dep",
-    "id": "unused-dep:src/Jellyfin.Database/Jellyfin.Database.Providers.Sqlite:1183b107",
-    "message": "`Microsoft.EntityFrameworkCore.Tools` is declared but never imported",
-    "evidence": [
-      {
-        "file": "src/Jellyfin.Database/Jellyfin.Database.Providers.Sqlite/Jellyfin.Database.Providers.Sqlite.csproj",
-        "line": 20,
-        "note": "declared here"
-      }
-    ]
-  },
-  {
     "repo": "AvaloniaUI/Avalonia",
     "language": "csharp",
     "check": "unused-dep",
-    "id": "unused-dep:tests/Avalonia.Wayland.UnitTests:ebe7b8dc",
-    "message": "`Avalonia.Wayland` is declared but never imported",
+    "id": "unused-dep:src/Android/Avalonia.Android:07b05149",
+    "message": "`Xamarin.AndroidX.AppCompat` is declared but never imported",
     "evidence": [
       {
-        "file": "tests/Avalonia.Wayland.UnitTests/Avalonia.Wayland.UnitTests.csproj",
+        "file": "src/Android/Avalonia.Android/Avalonia.Android.csproj",
         "line": 13,
         "note": "declared here"
       }
     ]
   },
   {
-    "repo": "AvaloniaUI/Avalonia",
+    "repo": "jellyfin/jellyfin",
     "language": "csharp",
     "check": "unused-dep",
-    "id": "unused-dep:src/Headless/Avalonia.Headless.NUnit:3d5b7a65",
-    "message": "`Avalonia.Headless` is declared but never imported",
+    "id": "unused-dep:Emby.Naming:e9c8bfee",
+    "message": "`IDisposableAnalyzers` is declared but never imported",
     "evidence": [
       {
-        "file": "src/Headless/Avalonia.Headless.NUnit/Avalonia.Headless.NUnit.csproj",
-        "line": 12,
+        "file": "Emby.Naming/Emby.Naming.csproj",
+        "line": 46,
         "note": "declared here"
       }
     ]
@@ -596,11 +590,11 @@
     "repo": "AvaloniaUI/Avalonia",
     "language": "csharp",
     "check": "unused-dep",
-    "id": "unused-dep:samples/Sandbox:9dd7fe6f",
-    "message": "`Avalonia.Themes.Simple` is declared but never imported",
+    "id": "unused-dep:tests/Avalonia.Markup.UnitTests:a24cc644",
+    "message": "`System.Reactive` is declared but never imported",
     "evidence": [
       {
-        "file": "samples/Sandbox/Sandbox.csproj",
+        "file": "tests/Avalonia.Markup.UnitTests/Avalonia.Markup.UnitTests.csproj",
         "line": 15,
         "note": "declared here"
       }
@@ -610,26 +604,264 @@
     "repo": "AvaloniaUI/Avalonia",
     "language": "csharp",
     "check": "unused-dep",
-    "id": "unused-dep:src/Avalonia.Fonts.Inter:17168c9c",
-    "message": "`Avalonia.Base` is declared but never imported",
+    "id": "unused-dep:samples/RenderDemo:52fd9eb6",
+    "message": "`Avalonia.Fonts.Inter` is declared but never imported",
     "evidence": [
       {
-        "file": "src/Avalonia.Fonts.Inter/Avalonia.Fonts.Inter.csproj",
-        "line": 9,
+        "file": "samples/RenderDemo/RenderDemo.csproj",
+        "line": 14,
         "note": "declared here"
       }
     ]
   },
   {
-    "repo": "jellyfin/jellyfin",
-    "language": "csharp",
+    "repo": "grafana/grafana",
+    "language": "go",
     "check": "unused-dep",
-    "id": "unused-dep:tests/Jellyfin.Extensions.Tests:13038335",
-    "message": "`coverlet.collector` is declared but never imported",
+    "id": "unused-dep:.:6d492435",
+    "message": "`github.com/grafana/grafana/apps/playlist` is declared but never imported",
     "evidence": [
       {
-        "file": "tests/Jellyfin.Extensions.Tests/Jellyfin.Extensions.Tests.csproj",
-        "line": 14,
+        "file": "go.mod",
+        "line": 253,
+        "note": "declared here"
+      }
+    ]
+  },
+  {
+    "repo": "grafana/grafana",
+    "language": "go",
+    "check": "unused-dep",
+    "id": "unused-dep:.:34a9b4e5",
+    "message": "`github.com/grafana/grafana/apps/folder` is declared but never imported",
+    "evidence": [
+      {
+        "file": "go.mod",
+        "line": 249,
+        "note": "declared here"
+      }
+    ]
+  },
+  {
+    "repo": "grafana/grafana",
+    "language": "go",
+    "check": "unused-dep",
+    "id": "unused-dep:.:7579bdc2",
+    "message": "`github.com/grafana/grafana/apps/alerting/alertenrichment` is declared but never imported",
+    "evidence": [
+      {
+        "file": "go.mod",
+        "line": 239,
+        "note": "declared here"
+      }
+    ]
+  },
+  {
+    "repo": "grafana/grafana",
+    "language": "go",
+    "check": "unused-dep",
+    "id": "unused-dep:.:a35b9464",
+    "message": "`github.com/grafana/grafana/apps/dashboard` is declared but never imported",
+    "evidence": [
+      {
+        "file": "go.mod",
+        "line": 246,
+        "note": "declared here"
+      }
+    ]
+  },
+  {
+    "repo": "grafana/grafana",
+    "language": "go",
+    "check": "unused-dep",
+    "id": "unused-dep:.:f0599b5e",
+    "message": "`github.com/grafana/grafana/pkg/storage/unified/resource/kv` is declared but never imported",
+    "evidence": [
+      {
+        "file": "go.mod",
+        "line": 265,
+        "note": "declared here"
+      }
+    ]
+  },
+  {
+    "repo": "grafana/grafana",
+    "language": "go",
+    "check": "unused-dep",
+    "id": "unused-dep:.:036462e4",
+    "message": "`github.com/grafana/grafana/pkg/apiserver` is declared but never imported",
+    "evidence": [
+      {
+        "file": "go.mod",
+        "line": 262,
+        "note": "declared here"
+      }
+    ]
+  },
+  {
+    "repo": "grafana/grafana",
+    "language": "go",
+    "check": "unused-dep",
+    "id": "unused-dep:.:e58f124b",
+    "message": "`github.com/grafana/grafana/pkg/infra/features` is declared but never imported",
+    "evidence": [
+      {
+        "file": "go.mod",
+        "line": 263,
+        "note": "declared here"
+      }
+    ]
+  },
+  {
+    "repo": "grafana/grafana",
+    "language": "go",
+    "check": "unused-dep",
+    "id": "unused-dep:.:2ee39309",
+    "message": "`github.com/grafana/grafana/pkg/plugins` is declared but never imported",
+    "evidence": [
+      {
+        "file": "go.mod",
+        "line": 264,
+        "note": "declared here"
+      }
+    ]
+  },
+  {
+    "repo": "grafana/grafana",
+    "language": "go",
+    "check": "unused-dep",
+    "id": "unused-dep:.:54da94a5",
+    "message": "`github.com/grafana/grafana/apps/live` is declared but never imported",
+    "evidence": [
+      {
+        "file": "go.mod",
+        "line": 251,
+        "note": "declared here"
+      }
+    ]
+  },
+  {
+    "repo": "grafana/grafana",
+    "language": "go",
+    "check": "unused-dep",
+    "id": "unused-dep:.:bb3e38e9",
+    "message": "`github.com/grafana/grafana/apps/annotation` is declared but never imported",
+    "evidence": [
+      {
+        "file": "go.mod",
+        "line": 243,
+        "note": "declared here"
+      }
+    ]
+  },
+  {
+    "repo": "grafana/grafana",
+    "language": "go",
+    "check": "unused-dep",
+    "id": "unused-dep:.:57114cdd",
+    "message": "`github.com/grafana/grafana/apps/example` is declared but never imported",
+    "evidence": [
+      {
+        "file": "go.mod",
+        "line": 248,
+        "note": "declared here"
+      }
+    ]
+  },
+  {
+    "repo": "prometheus/prometheus",
+    "language": "go",
+    "check": "unused-dep",
+    "id": "unused-dep:.:006a3658",
+    "message": "`github.com/prometheus/common/assets` is declared but never imported",
+    "evidence": [
+      {
+        "file": "go.mod",
+        "line": 70,
+        "note": "declared here"
+      }
+    ]
+  },
+  {
+    "repo": "grafana/grafana",
+    "language": "go",
+    "check": "unused-dep",
+    "id": "unused-dep:.:fcf7f8b6",
+    "message": "`github.com/grafana/grafana/apps/shorturl` is declared but never imported",
+    "evidence": [
+      {
+        "file": "go.mod",
+        "line": 260,
+        "note": "declared here"
+      }
+    ]
+  },
+  {
+    "repo": "grafana/grafana",
+    "language": "go",
+    "check": "unused-dep",
+    "id": "unused-dep:.:1d1acd55",
+    "message": "`github.com/grafana/grafana/apps/provisioning` is declared but never imported",
+    "evidence": [
+      {
+        "file": "go.mod",
+        "line": 256,
+        "note": "declared here"
+      }
+    ]
+  },
+  {
+    "repo": "grafana/grafana",
+    "language": "go",
+    "check": "unused-dep",
+    "id": "unused-dep:.:2325e71c",
+    "message": "`github.com/grafana/grafana/pkg/storage/unified/resourcepb` is declared but never imported",
+    "evidence": [
+      {
+        "file": "go.mod",
+        "line": 266,
+        "note": "declared here"
+      }
+    ]
+  },
+  {
+    "repo": "grafana/grafana",
+    "language": "go",
+    "check": "unused-dep",
+    "id": "unused-dep:.:58b1c972",
+    "message": "`github.com/grafana/grafana/apps/dashvalidator` is declared but never imported",
+    "evidence": [
+      {
+        "file": "go.mod",
+        "line": 247,
+        "note": "declared here"
+      }
+    ]
+  },
+  {
+    "repo": "grafana/grafana",
+    "language": "go",
+    "check": "unused-dep",
+    "id": "unused-dep:.:0fa41abb",
+    "message": "`github.com/grafana/grafana/pkg/apimachinery` is declared but never imported",
+    "evidence": [
+      {
+        "file": "go.mod",
+        "line": 261,
+        "note": "declared here"
+      }
+    ]
+  },
+  {
+    "repo": "grafana/grafana",
+    "language": "go",
+    "check": "unused-dep",
+    "id": "unused-dep:.:0e581e78",
+    "message": "`github.com/grafana/grafana/apps/iam` is declared but never imported",
+    "evidence": [
+      {
+        "file": "go.mod",
+        "line": 250,
         "note": "declared here"
       }
     ]
@@ -657,48 +889,6 @@
     "repo": "grafana/grafana",
     "language": "go",
     "check": "unused-dep",
-    "id": "unused-dep:.:e9c0e21f",
-    "message": "`github.com/grafana/grafana/apps/alerting/rules` is declared but never imported",
-    "evidence": [
-      {
-        "file": "go.mod",
-        "line": 242,
-        "note": "declared here"
-      }
-    ]
-  },
-  {
-    "repo": "grafana/grafana",
-    "language": "go",
-    "check": "unused-dep",
-    "id": "unused-dep:.:0e581e78",
-    "message": "`github.com/grafana/grafana/apps/iam` is declared but never imported",
-    "evidence": [
-      {
-        "file": "go.mod",
-        "line": 250,
-        "note": "declared here"
-      }
-    ]
-  },
-  {
-    "repo": "grafana/grafana",
-    "language": "go",
-    "check": "unused-dep",
-    "id": "unused-dep:.:6d492435",
-    "message": "`github.com/grafana/grafana/apps/playlist` is declared but never imported",
-    "evidence": [
-      {
-        "file": "go.mod",
-        "line": 253,
-        "note": "declared here"
-      }
-    ]
-  },
-  {
-    "repo": "grafana/grafana",
-    "language": "go",
-    "check": "unused-dep",
     "id": "unused-dep:.:a4cf6693",
     "message": "`github.com/grafana/grafana/apps/collections` is declared but never imported",
     "evidence": [
@@ -710,225 +900,15 @@
     ]
   },
   {
-    "repo": "grafana/grafana",
-    "language": "go",
-    "check": "unused-dep",
-    "id": "unused-dep:.:54da94a5",
-    "message": "`github.com/grafana/grafana/apps/live` is declared but never imported",
-    "evidence": [
-      {
-        "file": "go.mod",
-        "line": 251,
-        "note": "declared here"
-      }
-    ]
-  },
-  {
-    "repo": "grafana/grafana",
-    "language": "go",
-    "check": "unused-dep",
-    "id": "unused-dep:.:57114cdd",
-    "message": "`github.com/grafana/grafana/apps/example` is declared but never imported",
-    "evidence": [
-      {
-        "file": "go.mod",
-        "line": 248,
-        "note": "declared here"
-      }
-    ]
-  },
-  {
-    "repo": "grafana/grafana",
-    "language": "go",
-    "check": "unused-dep",
-    "id": "unused-dep:.:7579bdc2",
-    "message": "`github.com/grafana/grafana/apps/alerting/alertenrichment` is declared but never imported",
-    "evidence": [
-      {
-        "file": "go.mod",
-        "line": 239,
-        "note": "declared here"
-      }
-    ]
-  },
-  {
-    "repo": "grafana/grafana",
-    "language": "go",
-    "check": "unused-dep",
-    "id": "unused-dep:.:9bbbe95e",
-    "message": "`github.com/grafana/grafana/apps/preferences` is declared but never imported",
-    "evidence": [
-      {
-        "file": "go.mod",
-        "line": 255,
-        "note": "declared here"
-      }
-    ]
-  },
-  {
-    "repo": "grafana/grafana",
-    "language": "go",
-    "check": "unused-dep",
-    "id": "unused-dep:.:fcf7f8b6",
-    "message": "`github.com/grafana/grafana/apps/shorturl` is declared but never imported",
-    "evidence": [
-      {
-        "file": "go.mod",
-        "line": 260,
-        "note": "declared here"
-      }
-    ]
-  },
-  {
-    "repo": "grafana/grafana",
-    "language": "go",
-    "check": "unused-dep",
-    "id": "unused-dep:.:4df5ce8c",
-    "message": "`github.com/grafana/grafana/apps/plugins` is declared but never imported",
-    "evidence": [
-      {
-        "file": "go.mod",
-        "line": 254,
-        "note": "declared here"
-      }
-    ]
-  },
-  {
-    "repo": "grafana/grafana",
-    "language": "go",
-    "check": "unused-dep",
-    "id": "unused-dep:.:9fc30ba3",
-    "message": "`github.com/grafana/grafana/apps/logsdrilldown` is declared but never imported",
-    "evidence": [
-      {
-        "file": "go.mod",
-        "line": 252,
-        "note": "declared here"
-      }
-    ]
-  },
-  {
-    "repo": "grafana/grafana",
-    "language": "go",
-    "check": "unused-dep",
-    "id": "unused-dep:.:f0599b5e",
-    "message": "`github.com/grafana/grafana/pkg/storage/unified/resource/kv` is declared but never imported",
-    "evidence": [
-      {
-        "file": "go.mod",
-        "line": 265,
-        "note": "declared here"
-      }
-    ]
-  },
-  {
-    "repo": "grafana/grafana",
-    "language": "go",
-    "check": "missing-dep",
-    "id": "missing-dep:.:83490d23",
-    "message": "`github.com/grafana/cuetsy` is imported but not declared",
-    "evidence": [
-      {
-        "file": "public/app/plugins/gen.go",
-        "line": 22,
-        "note": "imports github.com/grafana/cuetsy"
-      }
-    ]
-  },
-  {
-    "repo": "grafana/grafana",
-    "language": "go",
-    "check": "unused-dep",
-    "id": "unused-dep:.:393200ef",
-    "message": "`github.com/grafana/grafana/apps/correlations` is declared but never imported",
-    "evidence": [
-      {
-        "file": "go.mod",
-        "line": 245,
-        "note": "declared here"
-      }
-    ]
-  },
-  {
-    "repo": "grafana/grafana",
-    "language": "go",
-    "check": "unused-dep",
-    "id": "unused-dep:.:2325e71c",
-    "message": "`github.com/grafana/grafana/pkg/storage/unified/resourcepb` is declared but never imported",
-    "evidence": [
-      {
-        "file": "go.mod",
-        "line": 266,
-        "note": "declared here"
-      }
-    ]
-  },
-  {
-    "repo": "prometheus/prometheus",
-    "language": "go",
-    "check": "unused-dep",
-    "id": "unused-dep:.:006a3658",
-    "message": "`github.com/prometheus/common/assets` is declared but never imported",
-    "evidence": [
-      {
-        "file": "go.mod",
-        "line": 70,
-        "note": "declared here"
-      }
-    ]
-  },
-  {
-    "repo": "grafana/grafana",
-    "language": "go",
-    "check": "unused-dep",
-    "id": "unused-dep:.:bb3e38e9",
-    "message": "`github.com/grafana/grafana/apps/annotation` is declared but never imported",
-    "evidence": [
-      {
-        "file": "go.mod",
-        "line": 243,
-        "note": "declared here"
-      }
-    ]
-  },
-  {
-    "repo": "grafana/grafana",
-    "language": "go",
-    "check": "unused-dep",
-    "id": "unused-dep:.:474118bb",
-    "message": "`github.com/grafana/grafana/apps/alerting/alertrulequality` is declared but never imported",
-    "evidence": [
-      {
-        "file": "go.mod",
-        "line": 240,
-        "note": "declared here"
-      }
-    ]
-  },
-  {
-    "repo": "grafana/grafana",
-    "language": "go",
-    "check": "unused-dep",
-    "id": "unused-dep:.:e58f124b",
-    "message": "`github.com/grafana/grafana/pkg/infra/features` is declared but never imported",
-    "evidence": [
-      {
-        "file": "go.mod",
-        "line": 263,
-        "note": "declared here"
-      }
-    ]
-  },
-  {
-    "repo": "elastic/elasticsearch",
+    "repo": "apache/airflow",
     "language": "java",
     "check": "unused-dep",
-    "id": "unused-dep:x-pack/plugin/identity-provider:a0f1f9aa",
-    "message": "`org.opensaml:opensaml-storage-impl` is declared but never imported",
+    "id": "unused-dep:providers/google/tests/system/google/cloud/dataflow/resources/non_python_src/java_streaming_src:022ebd56",
+    "message": "`org.apache.beam:beam-runners-google-cloud-dataflow-java` is declared but never imported",
     "evidence": [
       {
-        "file": "x-pack/plugin/identity-provider/build.gradle",
-        "line": 41,
+        "file": "providers/google/tests/system/google/cloud/dataflow/resources/non_python_src/java_streaming_src/pom.xml",
+        "line": 47,
         "note": "declared here"
       }
     ]
@@ -937,112 +917,18 @@
     "repo": "elastic/elasticsearch",
     "language": "java",
     "check": "missing-dep",
-    "id": "missing-dep:x-pack/plugin/repositories-metering-api/qa/azure:1f563d6a",
+    "id": "missing-dep:x-pack/plugin/esql-datasource-azure:851d127d",
     "message": "`junit:junit` is imported but not declared",
     "evidence": [
       {
-        "file": "x-pack/plugin/repositories-metering-api/qa/azure/src/javaRestTest/java/org/elasticsearch/xpack/repositories/metering/azure/AzureRepositoriesMeteringIT.java",
-        "line": 18,
-        "note": "imports org.junit.ClassRule"
+        "file": "x-pack/plugin/esql-datasource-azure/src/javaRestTest/java/org/elasticsearch/xpack/esql/qa/azure/AzureAksManagedIdentityAuthIT.java",
+        "line": 30,
+        "note": "imports org.junit.BeforeClass"
       },
       {
-        "file": "x-pack/plugin/repositories-metering-api/qa/azure/src/javaRestTest/java/org/elasticsearch/xpack/repositories/metering/azure/AzureRepositoriesMeteringIT.java",
-        "line": 19,
-        "note": "imports org.junit.rules.RuleChain"
-      }
-    ]
-  },
-  {
-    "repo": "elastic/elasticsearch",
-    "language": "java",
-    "check": "unused-dep",
-    "id": "unused-dep:x-pack/plugin/esql-datasource-orc:71c444ab",
-    "message": "`org.codehaus.woodstox:stax2-api` is declared but never imported",
-    "evidence": [
-      {
-        "file": "x-pack/plugin/esql-datasource-orc/build.gradle",
-        "line": 76,
-        "note": "declared here"
-      }
-    ]
-  },
-  {
-    "repo": "elastic/elasticsearch",
-    "language": "java",
-    "check": "unused-dep",
-    "id": "unused-dep:libs/entitlement/tools/common:dedab128",
-    "message": "`org.ow2.asm:asm` is declared but never imported",
-    "evidence": [
-      {
-        "file": "libs/entitlement/tools/common/build.gradle",
-        "line": 18,
-        "note": "declared here"
-      }
-    ]
-  },
-  {
-    "repo": "elastic/elasticsearch",
-    "language": "java",
-    "check": "missing-dep",
-    "id": "missing-dep:plugins/analysis-nori:4a00a2cd",
-    "message": "`junit:junit` is imported but not declared",
-    "evidence": [
-      {
-        "file": "plugins/analysis-nori/src/yamlRestTest/java/org/elasticsearch/index/analysis/NoriClientYamlTestSuiteIT.java",
-        "line": 18,
+        "file": "x-pack/plugin/esql-datasource-azure/src/javaRestTest/java/org/elasticsearch/xpack/esql/qa/azure/AzureAksManagedIdentityAuthIT.java",
+        "line": 31,
         "note": "imports org.junit.ClassRule"
-      }
-    ]
-  },
-  {
-    "repo": "elastic/elasticsearch",
-    "language": "java",
-    "check": "missing-dep",
-    "id": "missing-dep:plugins/analysis-smartcn:19c9347f",
-    "message": "`junit:junit` is imported but not declared",
-    "evidence": [
-      {
-        "file": "plugins/analysis-smartcn/src/yamlRestTest/java/org/elasticsearch/index/analysis/SmartCNClientYamlTestSuiteIT.java",
-        "line": 18,
-        "note": "imports org.junit.ClassRule"
-      }
-    ]
-  },
-  {
-    "repo": "elastic/elasticsearch",
-    "language": "java",
-    "check": "missing-dep",
-    "id": "missing-dep:modules/repository-s3:8ca68d69",
-    "message": "`junit:junit` is imported but not declared",
-    "evidence": [
-      {
-        "file": "modules/repository-s3/src/javaRestTest/java/org/elasticsearch/repositories/s3/RepositoryS3BasicCredentialsRestIT.java",
-        "line": 20,
-        "note": "imports org.junit.ClassRule"
-      },
-      {
-        "file": "modules/repository-s3/src/javaRestTest/java/org/elasticsearch/repositories/s3/RepositoryS3BasicCredentialsRestIT.java",
-        "line": 21,
-        "note": "imports org.junit.rules.RuleChain"
-      }
-    ]
-  },
-  {
-    "repo": "elastic/elasticsearch",
-    "language": "java",
-    "check": "missing-dep",
-    "id": "missing-dep:x-pack/plugin/esql/qa/server/multi-node:58aa0609",
-    "message": "`junit:junit` is imported but not declared",
-    "evidence": [
-      {
-        "file": "x-pack/plugin/esql/qa/server/multi-node/src/csvSpecTest/java/org/elasticsearch/xpack/esql/qa/multi_node/AbstractEsqlSpecIT.java",
-        "line": 18,
-        "note": "imports org.junit.ClassRule"
-      },
-      {
-        "file": "x-pack/plugin/esql/qa/server/multi-node/src/javaRestTest/java/org/elasticsearch/xpack/esql/qa/multi_node/AbstractExternalDistributedIT.java",
-        "line": 19,
-        "note": "imports org.junit.AfterClass"
       }
     ]
   },
@@ -1050,18 +936,18 @@
     "repo": "spring-projects/spring-boot",
     "language": "java",
     "check": "missing-dep",
-    "id": "missing-dep:smoke-test/spring-boot-smoke-test-actuator-log4j2:0d0e3625",
+    "id": "missing-dep:module/spring-boot-http-client:01e2a8d1",
     "message": "`org.junit.jupiter:junit-jupiter` is imported but not declared",
     "evidence": [
       {
-        "file": "smoke-test/spring-boot-smoke-test-actuator-log4j2/src/test/java/smoketest/actuator/log4j2/SampleActuatorLog4J2ApplicationTests.java",
-        "line": 23,
+        "file": "module/spring-boot-http-client/src/test/java/org/springframework/boot/http/client/AbstractClientHttpRequestFactoryBuilderTests.java",
+        "line": 34,
         "note": "imports org.junit.jupiter.api.Test"
       },
       {
-        "file": "smoke-test/spring-boot-smoke-test-actuator-log4j2/src/test/java/smoketest/actuator/log4j2/SampleActuatorLog4J2ApplicationTests.java",
-        "line": 24,
-        "note": "imports org.junit.jupiter.api.extension.ExtendWith"
+        "file": "module/spring-boot-http-client/src/test/java/org/springframework/boot/http/client/AbstractClientHttpRequestFactoryBuilderTests.java",
+        "line": 35,
+        "note": "imports org.junit.jupiter.params.ParameterizedTest"
       }
     ]
   },
@@ -1069,12 +955,12 @@
     "repo": "elastic/elasticsearch",
     "language": "java",
     "check": "unused-dep",
-    "id": "unused-dep:x-pack/plugin/security:68d5b0fd",
-    "message": "`org.apache.directory.server:apacheds-protocol-ldap` is declared but never imported",
+    "id": "unused-dep:x-pack/plugin/security/cli:165ece5e",
+    "message": "`org.bouncycastle:bcpkix-jdk18on` is declared but never imported",
     "evidence": [
       {
-        "file": "x-pack/plugin/security/build.gradle",
-        "line": 142,
+        "file": "x-pack/plugin/security/cli/build.gradle",
+        "line": 19,
         "note": "declared here"
       }
     ]
@@ -1083,12 +969,12 @@
     "repo": "elastic/elasticsearch",
     "language": "java",
     "check": "unused-dep",
-    "id": "unused-dep:test/fixtures/hdfs-fixture:6bf9e48e",
-    "message": "`org.apache.hadoop:hadoop-hdfs-client` is declared but never imported",
+    "id": "unused-dep:x-pack/plugin/esql-datasource-gcs:a157e2b5",
+    "message": "`com.google.api:api-common` is declared but never imported",
     "evidence": [
       {
-        "file": "test/fixtures/hdfs-fixture/build.gradle",
-        "line": 86,
+        "file": "x-pack/plugin/esql-datasource-gcs/build.gradle",
+        "line": 49,
         "note": "declared here"
       }
     ]
@@ -1097,12 +983,12 @@
     "repo": "elastic/elasticsearch",
     "language": "java",
     "check": "unused-dep",
-    "id": "unused-dep:modules/ingest-attachment:8a711a1b",
-    "message": "`org.apache.tika:tika-langdetect-tika` is declared but never imported",
+    "id": "unused-dep:x-pack/plugin/esql-datasource-netty-commons:81da6b2d",
+    "message": "`io.netty:netty-codec-socks` is declared but never imported",
     "evidence": [
       {
-        "file": "modules/ingest-attachment/build.gradle",
-        "line": 73,
+        "file": "x-pack/plugin/esql-datasource-netty-commons/build.gradle",
+        "line": 38,
         "note": "declared here"
       }
     ]
@@ -1111,100 +997,11 @@
     "repo": "apache/airflow",
     "language": "java",
     "check": "unused-dep",
-    "id": "unused-dep:java-sdk/log4j2:44284955",
-    "message": "`io.mockk:mockk` is declared but never imported",
+    "id": "unused-dep:java-sdk/scala_spark_example:f1b37884",
+    "message": "`org.apache.airflow:airflow-sdk` is declared but never imported",
     "evidence": [
       {
-        "file": "java-sdk/log4j2/build.gradle.kts",
-        "line": 39,
-        "note": "declared here"
-      }
-    ]
-  },
-  {
-    "repo": "elastic/elasticsearch",
-    "language": "java",
-    "check": "unused-dep",
-    "id": "unused-dep:plugins/discovery-ec2:6e03fe8b",
-    "message": "`software.amazon.awssdk:apache-client` is declared but never imported",
-    "evidence": [
-      {
-        "file": "plugins/discovery-ec2/build.gradle",
-        "line": 22,
-        "note": "declared here"
-      }
-    ]
-  },
-  {
-    "repo": "spring-projects/spring-boot",
-    "language": "java",
-    "check": "unused-dep",
-    "id": "unused-dep:documentation/spring-boot-docs:f4477509",
-    "message": "`org.mongodb:mongodb-driver-sync` is declared but never imported",
-    "evidence": [
-      {
-        "file": "documentation/spring-boot-docs/build.gradle",
-        "line": 194,
-        "note": "declared here"
-      }
-    ]
-  },
-  {
-    "repo": "elastic/elasticsearch",
-    "language": "java",
-    "check": "unused-dep",
-    "id": "unused-dep:modules/repository-azure:2303bee5",
-    "message": "`com.azure:azure-storage-common` is declared but never imported",
-    "evidence": [
-      {
-        "file": "modules/repository-azure/build.gradle",
-        "line": 34,
-        "note": "declared here"
-      }
-    ]
-  },
-  {
-    "repo": "elastic/elasticsearch",
-    "language": "java",
-    "check": "missing-dep",
-    "id": "missing-dep:x-pack/plugin:9f2857c2",
-    "message": "`junit:junit` is imported but not declared",
-    "evidence": [
-      {
-        "file": "x-pack/plugin/src/test/java/org/elasticsearch/xpack/test/rest/AbstractXPackRestTest.java",
-        "line": 29,
-        "note": "imports org.junit.After"
-      },
-      {
-        "file": "x-pack/plugin/src/test/java/org/elasticsearch/xpack/test/rest/AbstractXPackRestTest.java",
-        "line": 30,
-        "note": "imports org.junit.Before"
-      }
-    ]
-  },
-  {
-    "repo": "spring-projects/spring-boot",
-    "language": "java",
-    "check": "unused-dep",
-    "id": "unused-dep:starter/spring-boot-starter-test:3bb5926e",
-    "message": "`org.hamcrest:hamcrest` is declared but never imported",
-    "evidence": [
-      {
-        "file": "starter/spring-boot-starter-test/build.gradle",
-        "line": 35,
-        "note": "declared here"
-      }
-    ]
-  },
-  {
-    "repo": "elastic/elasticsearch",
-    "language": "java",
-    "check": "unused-dep",
-    "id": "unused-dep:x-pack/plugin/identity-provider:c9a8fe92",
-    "message": "`org.opensaml:opensaml-messaging-impl` is declared but never imported",
-    "evidence": [
-      {
-        "file": "x-pack/plugin/identity-provider/build.gradle",
+        "file": "java-sdk/scala_spark_example/build.gradle",
         "line": 31,
         "note": "declared here"
       }
@@ -1214,41 +1011,205 @@
     "repo": "elastic/elasticsearch",
     "language": "java",
     "check": "unused-dep",
-    "id": "unused-dep:x-pack/plugin/security:ac01bd04",
-    "message": "`com.nimbusds:nimbus-jose-jwt` is declared but never imported",
+    "id": "unused-dep:x-pack/plugin/security:6cdd7f7d",
+    "message": "`org.apache.directory.server:apacheds-jdbm-partition` is declared but never imported",
     "evidence": [
       {
         "file": "x-pack/plugin/security/build.gradle",
-        "line": 89,
+        "line": 145,
         "note": "declared here"
       }
     ]
   },
   {
-    "repo": "vercel/next.js",
-    "language": "javascript",
-    "check": "missing-dep",
-    "id": "missing-dep:.:7a480d7b",
-    "message": "`cjs-modern-syntax` is imported but not declared",
+    "repo": "spring-projects/spring-boot",
+    "language": "java",
+    "check": "unused-dep",
+    "id": "unused-dep:build-plugin/spring-boot-maven-plugin/src/intTest/projects/jar-with-kotlin-module:b5d9028c",
+    "message": "`org.jetbrains.kotlin:kotlin-compiler` is declared but never imported",
     "evidence": [
       {
-        "file": "test/e2e/app-dir/app-external/app/cjs/client/page.js",
-        "line": 3,
-        "note": "imports cjs-modern-syntax"
+        "file": "build-plugin/spring-boot-maven-plugin/src/intTest/projects/jar-with-kotlin-module/pom.xml",
+        "line": 63,
+        "note": "declared here"
       }
     ]
   },
   {
-    "repo": "vercel/next.js",
-    "language": "javascript",
+    "repo": "elastic/elasticsearch",
+    "language": "java",
     "check": "missing-dep",
-    "id": "missing-dep:turbopack/crates/turbopack-tests/tests/execution/turbopack/side-effects-optimization/node_modules/package-intermediate-side-effect:b926eab1",
-    "message": "`package-star` is imported but not declared",
+    "id": "missing-dep:qa/evil-tests:9df985d6",
+    "message": "`junit:junit` is imported but not declared",
     "evidence": [
       {
-        "file": "turbopack/crates/turbopack-tests/tests/execution/turbopack/side-effects-optimization/node_modules/package-intermediate-side-effect/side-effect.js",
+        "file": "qa/evil-tests/src/test/java/org/elasticsearch/bootstrap/EvilBootstrapChecksTests.java",
+        "line": 18,
+        "note": "imports org.junit.After"
+      },
+      {
+        "file": "qa/evil-tests/src/test/java/org/elasticsearch/bootstrap/EvilBootstrapChecksTests.java",
+        "line": 19,
+        "note": "imports org.junit.Before"
+      }
+    ]
+  },
+  {
+    "repo": "spring-projects/spring-boot",
+    "language": "java",
+    "check": "unused-dep",
+    "id": "unused-dep:starter/spring-boot-starter-tomcat-runtime:185c931e",
+    "message": "`org.apache.tomcat.embed:tomcat-embed-websocket` is declared but never imported",
+    "evidence": [
+      {
+        "file": "starter/spring-boot-starter-tomcat-runtime/build.gradle",
+        "line": 35,
+        "note": "declared here"
+      }
+    ]
+  },
+  {
+    "repo": "spring-projects/spring-boot",
+    "language": "java",
+    "check": "missing-dep",
+    "id": "missing-dep:core/spring-boot:b01d93c2",
+    "message": "`org.yaml:snakeyaml` is imported but not declared",
+    "evidence": [
+      {
+        "file": "core/spring-boot/src/main/java/org/springframework/boot/env/OriginTrackedYamlLoader.java",
+        "line": 26,
+        "note": "imports org.yaml.snakeyaml.DumperOptions"
+      },
+      {
+        "file": "core/spring-boot/src/main/java/org/springframework/boot/env/OriginTrackedYamlLoader.java",
+        "line": 27,
+        "note": "imports org.yaml.snakeyaml.LoaderOptions"
+      }
+    ]
+  },
+  {
+    "repo": "spring-projects/spring-boot",
+    "language": "java",
+    "check": "unused-dep",
+    "id": "unused-dep:smoke-test/spring-boot-smoke-test-reactive-oauth2-client:9dae4e57",
+    "message": "`org.apache.httpcomponents.client5:httpclient5` is declared but never imported",
+    "evidence": [
+      {
+        "file": "smoke-test/spring-boot-smoke-test-reactive-oauth2-client/build.gradle",
+        "line": 30,
+        "note": "declared here"
+      }
+    ]
+  },
+  {
+    "repo": "elastic/elasticsearch",
+    "language": "java",
+    "check": "unused-dep",
+    "id": "unused-dep:x-pack/plugin/security:8bcf8b62",
+    "message": "`org.apache.directory.api:api-ldap-codec-standalone` is declared but never imported",
+    "evidence": [
+      {
+        "file": "x-pack/plugin/security/build.gradle",
+        "line": 154,
+        "note": "declared here"
+      }
+    ]
+  },
+  {
+    "repo": "spring-projects/spring-boot",
+    "language": "java",
+    "check": "unused-dep",
+    "id": "unused-dep:smoke-test/spring-boot-smoke-test-webflux-coroutines:39bc5f0c",
+    "message": "`org.jetbrains.kotlinx:kotlinx-coroutines-reactor` is declared but never imported",
+    "evidence": [
+      {
+        "file": "smoke-test/spring-boot-smoke-test-webflux-coroutines/build.gradle",
+        "line": 29,
+        "note": "declared here"
+      }
+    ]
+  },
+  {
+    "repo": "spring-projects/spring-boot",
+    "language": "java",
+    "check": "unused-dep",
+    "id": "unused-dep:module/spring-boot-amqp-rabbitmq:2fc50b10",
+    "message": "`com.fasterxml.jackson.core:jackson-annotations` is declared but never imported",
+    "evidence": [
+      {
+        "file": "module/spring-boot-amqp-rabbitmq/build.gradle",
+        "line": 48,
+        "note": "declared here"
+      }
+    ]
+  },
+  {
+    "repo": "elastic/elasticsearch",
+    "language": "java",
+    "check": "unused-dep",
+    "id": "unused-dep:x-pack/plugin/esql-datasource-azure:8e545fe3",
+    "message": "`io.projectreactor.netty:reactor-netty-core` is declared but never imported",
+    "evidence": [
+      {
+        "file": "x-pack/plugin/esql-datasource-azure/build.gradle",
+        "line": 64,
+        "note": "declared here"
+      }
+    ]
+  },
+  {
+    "repo": "spring-projects/spring-boot",
+    "language": "java",
+    "check": "unused-dep",
+    "id": "unused-dep:module/spring-boot-hibernate:93be9645",
+    "message": "`org.springframework:spring-orm` is declared but never imported",
+    "evidence": [
+      {
+        "file": "module/spring-boot-hibernate/build.gradle",
+        "line": 30,
+        "note": "declared here"
+      }
+    ]
+  },
+  {
+    "repo": "spring-projects/spring-boot",
+    "language": "java",
+    "check": "unused-dep",
+    "id": "unused-dep:module/spring-boot-data-r2dbc:f460a18c",
+    "message": "`io.r2dbc:r2dbc-h2` is declared but never imported",
+    "evidence": [
+      {
+        "file": "module/spring-boot-data-r2dbc/build.gradle",
+        "line": 40,
+        "note": "declared here"
+      }
+    ]
+  },
+  {
+    "repo": "elastic/elasticsearch",
+    "language": "java",
+    "check": "missing-dep",
+    "id": "missing-dep:qa/smoke-test-ingest-disabled:f49f3e48",
+    "message": "`junit:junit` is imported but not declared",
+    "evidence": [
+      {
+        "file": "qa/smoke-test-ingest-disabled/src/yamlRestTest/java/org/elasticsearch/smoketest/SmokeTestIngestDisabledClientYamlTestSuiteIT.java",
+        "line": 18,
+        "note": "imports org.junit.ClassRule"
+      }
+    ]
+  },
+  {
+    "repo": "discourse/discourse",
+    "language": "javascript",
+    "check": "missing-dep",
+    "id": "missing-dep:plugins/discourse-calendar:a4e8d3fe",
+    "message": "`@glimmer/component` is imported but not declared",
+    "evidence": [
+      {
+        "file": "plugins/discourse-calendar/assets/javascripts/discourse/lib/livestream-rsvp.js",
         "line": 1,
-        "note": "imports package-star"
+        "note": "imports @glimmer/component"
       }
     ]
   },
@@ -1256,12 +1217,26 @@
     "repo": "vercel/next.js",
     "language": "javascript",
     "check": "unused-dep",
-    "id": "unused-dep:turbopack/crates/turbopack-tests/tests/execution:b8b2cbc5",
-    "message": "`expect` is declared but never imported",
+    "id": "unused-dep:examples/with-next-ui:4d29b80c",
+    "message": "`react-dom` is declared but never imported",
     "evidence": [
       {
-        "file": "turbopack/crates/turbopack-tests/tests/execution/package.json",
-        "line": 5,
+        "file": "examples/with-next-ui/package.json",
+        "line": 12,
+        "note": "declared here"
+      }
+    ]
+  },
+  {
+    "repo": "microsoft/vscode",
+    "language": "javascript",
+    "check": "unused-dep",
+    "id": "unused-dep:extensions/copilot/test/simulation/fixtures/tests/simple-ts-proj:7f0f1b6a",
+    "message": "`express` is declared but never imported",
+    "evidence": [
+      {
+        "file": "extensions/copilot/test/simulation/fixtures/tests/simple-ts-proj/package.json",
+        "line": 3,
         "note": "declared here"
       }
     ]
@@ -1269,47 +1244,126 @@
   {
     "repo": "facebook/react",
     "language": "javascript",
-    "check": "missing-dep",
-    "id": "missing-dep:compiler:c95e6ce6",
-    "message": "`invariant` is imported but not declared",
+    "check": "unused-dep",
+    "id": "unused-dep:fixtures/flight:56159459",
+    "message": "`compression` is declared but never imported",
     "evidence": [
       {
-        "file": "compiler/scripts/anonymize.js",
-        "line": 14,
-        "note": "imports invariant"
+        "file": "fixtures/flight/package.json",
+        "line": 28,
+        "note": "declared here"
       }
     ]
   },
   {
-    "repo": "discourse/discourse",
+    "repo": "vercel/next.js",
     "language": "javascript",
-    "check": "missing-dep",
-    "id": "missing-dep:plugins/discourse-solved:92205fac",
-    "message": "`@ember/service` is imported but not declared",
+    "check": "unused-dep",
+    "id": "unused-dep:packages/next:35935d06",
+    "message": "`stream-http` is declared but never imported",
     "evidence": [
       {
-        "file": "plugins/discourse-solved/assets/javascripts/discourse/routes/user-activity/solved.js",
-        "line": 3,
-        "note": "imports @ember/service"
+        "file": "packages/next/package.json",
+        "line": 332,
+        "note": "declared here"
       }
     ]
   },
   {
-    "repo": "microsoft/vscode",
+    "repo": "vercel/next.js",
     "language": "javascript",
-    "check": "missing-dep",
-    "id": "missing-dep:extensions/copilot/test/simulation/fixtures/multiFileEdit/fsprovider:9354cce1",
-    "message": "`vscode` is imported but not declared",
+    "check": "unused-dep",
+    "id": "unused-dep:examples/with-linaria:068ba23c",
+    "message": "`@linaria/babel-preset` is declared but never imported",
     "evidence": [
       {
-        "file": "extensions/copilot/test/simulation/fixtures/multiFileEdit/fsprovider/src/extension.ts",
-        "line": 3,
-        "note": "imports vscode"
-      },
+        "file": "examples/with-linaria/package.json",
+        "line": 17,
+        "note": "declared here"
+      }
+    ]
+  },
+  {
+    "repo": "vercel/next.js",
+    "language": "javascript",
+    "check": "unused-dep",
+    "id": "unused-dep:examples/cms-enterspeed:dead64c5",
+    "message": "`postcss` is declared but never imported",
+    "evidence": [
       {
-        "file": "extensions/copilot/test/simulation/fixtures/multiFileEdit/fsprovider/src/fileSystemProvider.ts",
-        "line": 8,
-        "note": "imports vscode"
+        "file": "examples/cms-enterspeed/package.json",
+        "line": 19,
+        "note": "declared here"
+      }
+    ]
+  },
+  {
+    "repo": "vercel/next.js",
+    "language": "javascript",
+    "check": "unused-dep",
+    "id": "unused-dep:.:14929544",
+    "message": "`eslint-plugin-eslint-plugin` is declared but never imported",
+    "evidence": [
+      {
+        "file": "package.json",
+        "line": 197,
+        "note": "declared here"
+      }
+    ]
+  },
+  {
+    "repo": "facebook/react",
+    "language": "javascript",
+    "check": "unused-dep",
+    "id": "unused-dep:packages/react-devtools-shell:38238389",
+    "message": "`babel-loader` is declared but never imported",
+    "evidence": [
+      {
+        "file": "packages/react-devtools-shell/package.json",
+        "line": 23,
+        "note": "declared here"
+      }
+    ]
+  },
+  {
+    "repo": "vercel/next.js",
+    "language": "javascript",
+    "check": "unused-dep",
+    "id": "unused-dep:examples/with-rbx-bulma-pro:2ba09c68",
+    "message": "`react-dom` is declared but never imported",
+    "evidence": [
+      {
+        "file": "examples/with-rbx-bulma-pro/package.json",
+        "line": 13,
+        "note": "declared here"
+      }
+    ]
+  },
+  {
+    "repo": "vercel/next.js",
+    "language": "javascript",
+    "check": "missing-dep",
+    "id": "missing-dep:rspack/crates/binding:a0b56566",
+    "message": "`@next/rspack-binding-linux-arm-musleabihf` is imported but not declared",
+    "evidence": [
+      {
+        "file": "rspack/crates/binding/index.js",
+        "line": 265,
+        "note": "imports @next/rspack-binding-linux-arm-musleabihf"
+      }
+    ]
+  },
+  {
+    "repo": "vercel/next.js",
+    "language": "javascript",
+    "check": "missing-dep",
+    "id": "missing-dep:.:4364a1d3",
+    "message": "`twoslash` is imported but not declared",
+    "evidence": [
+      {
+        "file": "test/e2e/twoslash/app/route.js",
+        "line": 1,
+        "note": "imports twoslash"
       }
     ]
   },
@@ -1317,46 +1371,41 @@
     "repo": "prometheus/prometheus",
     "language": "javascript",
     "check": "unused-dep",
-    "id": "unused-dep:web/ui/mantine-ui:469ea891",
-    "message": "`eslint-plugin-react-hooks` is declared but never imported",
+    "id": "unused-dep:web/ui/mantine-ui:1fc8a527",
+    "message": "`@typescript-eslint/eslint-plugin` is declared but never imported",
     "evidence": [
       {
         "file": "web/ui/mantine-ui/package.json",
-        "line": 66,
+        "line": 62,
         "note": "declared here"
       }
     ]
   },
   {
-    "repo": "vercel/next.js",
+    "repo": "facebook/react",
     "language": "javascript",
     "check": "unused-dep",
-    "id": "unused-dep:test/e2e/next-test/first-time-setup-ts:63d13add",
-    "message": "`react` is declared but never imported",
+    "id": "unused-dep:packages/react-devtools-inline:cc80d947",
+    "message": "`@babel/plugin-proposal-class-properties` is declared but never imported",
     "evidence": [
       {
-        "file": "test/e2e/next-test/first-time-setup-ts/package.json",
-        "line": 11,
+        "file": "packages/react-devtools-inline/package.json",
+        "line": 30,
         "note": "declared here"
       }
     ]
   },
   {
-    "repo": "vercel/next.js",
+    "repo": "microsoft/vscode",
     "language": "javascript",
     "check": "missing-dep",
-    "id": "missing-dep:turbopack/crates/turbopack-tracing/tests/node-file-trace/integration/package-exports:b314063c",
-    "message": "`fixtures` is imported but not declared",
+    "id": "missing-dep:build:57552040",
+    "message": "`gulp-vinyl-zip` is imported but not declared",
     "evidence": [
       {
-        "file": "turbopack/crates/turbopack-tracing/tests/node-file-trace/integration/package-exports/fail/alt-folders-multiple.js",
-        "line": 1,
-        "note": "imports fixtures/alt-folders/alt1.js"
-      },
-      {
-        "file": "turbopack/crates/turbopack-tracing/tests/node-file-trace/integration/package-exports/fail/alt-folders-multiple.js",
-        "line": 2,
-        "note": "imports fixtures/alt-folders/alt2.js"
+        "file": "build/lib/gulp/facade.ts",
+        "line": 27,
+        "note": "imports gulp-vinyl-zip"
       }
     ]
   },
@@ -1364,78 +1413,12 @@
     "repo": "vercel/next.js",
     "language": "javascript",
     "check": "unused-dep",
-    "id": "unused-dep:examples/cms-prepr:f9c82330",
-    "message": "`postcss` is declared but never imported",
+    "id": "unused-dep:.:5153f215",
+    "message": "`satori` is declared but never imported",
     "evidence": [
       {
-        "file": "examples/cms-prepr/package.json",
-        "line": 17,
-        "note": "declared here"
-      }
-    ]
-  },
-  {
-    "repo": "discourse/discourse",
-    "language": "javascript",
-    "check": "missing-dep",
-    "id": "missing-dep:plugins/chat:683308e2",
-    "message": "`@ember/test-helpers` is imported but not declared",
-    "evidence": [
-      {
-        "file": "plugins/chat/test/javascripts/acceptance/chat-channel-reactions-test.js",
-        "line": 1,
-        "note": "imports @ember/test-helpers"
-      },
-      {
-        "file": "plugins/chat/test/javascripts/acceptance/chat-disabled-test.js",
-        "line": 6,
-        "note": "imports @ember/test-helpers"
-      }
-    ]
-  },
-  {
-    "repo": "vercel/next.js",
-    "language": "javascript",
-    "check": "missing-dep",
-    "id": "missing-dep:.:ec2c916d",
-    "message": "`data:text` is imported but not declared",
-    "evidence": [
-      {
-        "file": "test/e2e/app-dir/css-modules-data-urls/app/client.tsx",
-        "line": 3,
-        "note": "imports data:text/css+module,.client{font-weight:700}"
-      },
-      {
-        "file": "test/e2e/app-dir/css-modules-data-urls/app/page.tsx",
-        "line": 2,
-        "note": "imports data:text/css+module,.home{font-weight:700}"
-      }
-    ]
-  },
-  {
-    "repo": "vercel/next.js",
-    "language": "javascript",
-    "check": "unused-dep",
-    "id": "unused-dep:examples/cms-sitecore-xmcloud:658e2ef0",
-    "message": "`@graphql-codegen/import-types-preset` is declared but never imported",
-    "evidence": [
-      {
-        "file": "examples/cms-sitecore-xmcloud/package.json",
-        "line": 40,
-        "note": "declared here"
-      }
-    ]
-  },
-  {
-    "repo": "vercel/next.js",
-    "language": "javascript",
-    "check": "unused-dep",
-    "id": "unused-dep:packages/next-codemod/bin/__testfixtures__/pnpm-v11-overrides:195fdc0f",
-    "message": "`react-dom` is declared but never imported",
-    "evidence": [
-      {
-        "file": "packages/next-codemod/bin/__testfixtures__/pnpm-v11-overrides/package.json",
-        "line": 10,
+        "file": "package.json",
+        "line": 279,
         "note": "declared here"
       }
     ]
@@ -1443,28 +1426,28 @@
   {
     "repo": "denoland/deno",
     "language": "javascript",
-    "check": "missing-dep",
-    "id": "missing-dep:tests/specs/run/workspaces/explicit_import_map:38a09851",
-    "message": "`chalk` is imported but not declared",
+    "check": "unused-dep",
+    "id": "unused-dep:tests/bench/testdata/npm/hono:0b299663",
+    "message": "`eslint-config-prettier` is declared but never imported",
     "evidence": [
       {
-        "file": "tests/specs/run/workspaces/explicit_import_map/main.ts",
-        "line": 1,
-        "note": "imports chalk"
+        "file": "tests/bench/testdata/npm/hono/package.json",
+        "line": 149,
+        "note": "declared here"
       }
     ]
   },
   {
-    "repo": "grafana/grafana",
+    "repo": "vercel/next.js",
     "language": "javascript",
-    "check": "missing-dep",
-    "id": "missing-dep:.:04158318",
-    "message": "`@rollup/plugin-node-resolve` is imported but not declared",
+    "check": "unused-dep",
+    "id": "unused-dep:examples/with-supabase:8899e081",
+    "message": "`eslint-config-next` is declared but never imported",
     "evidence": [
       {
-        "file": "packages/rollup.config.parts.ts",
-        "line": 3,
-        "note": "imports @rollup/plugin-node-resolve"
+        "file": "examples/with-supabase/package.json",
+        "line": 32,
+        "note": "declared here"
       }
     ]
   },
@@ -1472,12 +1455,12 @@
     "repo": "microsoft/vscode",
     "language": "javascript",
     "check": "unused-dep",
-    "id": "unused-dep:.:177c5ba9",
-    "message": "`lazy.js` is declared but never imported",
+    "id": "unused-dep:remote:cd7025ea",
+    "message": "`ssh2` is declared but never imported",
     "evidence": [
       {
-        "file": "package.json",
-        "line": 251,
+        "file": "remote/package.json",
+        "line": 46,
         "note": "declared here"
       }
     ]
@@ -1486,135 +1469,32 @@
     "repo": "vercel/next.js",
     "language": "javascript",
     "check": "unused-dep",
-    "id": "unused-dep:examples/with-next-translate:4f7d8acf",
-    "message": "`react` is declared but never imported",
+    "id": "unused-dep:examples/with-docker:e9bb3d6c",
+    "message": "`react-dom` is declared but never imported",
     "evidence": [
       {
-        "file": "examples/with-next-translate/package.json",
+        "file": "examples/with-docker/package.json",
         "line": 11,
         "note": "declared here"
       }
     ]
   },
   {
-    "repo": "discourse/discourse",
-    "language": "javascript",
+    "repo": "apache/airflow",
+    "language": "python",
     "check": "missing-dep",
-    "id": "missing-dep:plugins/discourse-presence:3d637b1d",
-    "message": "`qunit` is imported but not declared",
+    "id": "missing-dep:providers/common/ai:79428b71",
+    "message": "`pydantic` is imported but not declared",
     "evidence": [
       {
-        "file": "plugins/discourse-presence/test/javascripts/acceptance/discourse-presence-new-test.js",
-        "line": 2,
-        "note": "imports qunit"
+        "file": "providers/common/ai/src/airflow/providers/common/ai/durable/fingerprint.py",
+        "line": 49,
+        "note": "imports pydantic"
       },
       {
-        "file": "plugins/discourse-presence/test/javascripts/acceptance/discourse-presence-test.js",
-        "line": 3,
-        "note": "imports qunit"
-      }
-    ]
-  },
-  {
-    "repo": "denoland/deno",
-    "language": "javascript",
-    "check": "unused-dep",
-    "id": "unused-dep:tests/specs/npm/packument_etag:9067fed1",
-    "message": "`@denotest/add` is declared but never imported",
-    "evidence": [
-      {
-        "file": "tests/specs/npm/packument_etag/package.json",
-        "line": 3,
-        "note": "declared here"
-      }
-    ]
-  },
-  {
-    "repo": "apache/airflow",
-    "language": "python",
-    "check": "unused-dep",
-    "id": "unused-dep:providers/airbyte:dc62f243",
-    "message": "`apache-airflow` is declared but never imported",
-    "evidence": [
-      {
-        "file": "providers/airbyte/pyproject.toml",
-        "line": 27,
-        "note": "declared here"
-      }
-    ]
-  },
-  {
-    "repo": "apache/airflow",
-    "language": "python",
-    "check": "unused-dep",
-    "id": "unused-dep:providers/facebook:3dee2b4f",
-    "message": "`apache-airflow-devel-common` is declared but never imported",
-    "evidence": [
-      {
-        "file": "providers/facebook/pyproject.toml",
-        "line": 71,
-        "note": "declared here"
-      }
-    ]
-  },
-  {
-    "repo": "apache/airflow",
-    "language": "python",
-    "check": "unused-dep",
-    "id": "unused-dep:.:12296bc4",
-    "message": "`apache-airflow-ctl` is declared but never imported",
-    "evidence": [
-      {
-        "file": "pyproject.toml",
-        "line": 1361,
-        "note": "declared here"
-      }
-    ]
-  },
-  {
-    "repo": "apache/airflow",
-    "language": "python",
-    "check": "unused-dep",
-    "id": "unused-dep:providers/apache/hive:03e91cf6",
-    "message": "`apache-airflow-providers-amazon` is declared but never imported",
-    "evidence": [
-      {
-        "file": "providers/apache/hive/pyproject.toml",
-        "line": 77,
-        "note": "declared here"
-      }
-    ]
-  },
-  {
-    "repo": "apache/airflow",
-    "language": "python",
-    "check": "unused-dep",
-    "id": "unused-dep:providers/apache/spark:ada3bb62",
-    "message": "`apache-airflow-providers-openlineage` is declared but never imported",
-    "evidence": [
-      {
-        "file": "providers/apache/spark/pyproject.toml",
-        "line": 77,
-        "note": "declared here"
-      }
-    ]
-  },
-  {
-    "repo": "astral-sh/ruff",
-    "language": "python",
-    "check": "missing-dep",
-    "id": "missing-dep:crates/ruff_linter/resources/test/fixtures/isort:c33a2f39",
-    "message": "`foo` is imported but not declared",
-    "evidence": [
-      {
-        "file": "crates/ruff_linter/resources/test/fixtures/isort/as_imports_comments.py",
-        "line": 1,
-        "note": "imports foo"
-      },
-      {
-        "file": "crates/ruff_linter/resources/test/fixtures/isort/bom_sorted.py",
-        "line": 2,
-        "note": "imports foo"
+        "file": "providers/common/ai/src/airflow/providers/common/ai/example_dags/example_agent.py",
+        "line": 23,
+        "note": "imports pydantic"
       }
     ]
   },
@@ -1622,13 +1502,13 @@
     "repo": "apache/airflow",
     "language": "python",
     "check": "missing-dep",
-    "id": "missing-dep:providers/pagerduty:645b62d9",
-    "message": "`flask-appbuilder` is imported but not declared",
+    "id": "missing-dep:dev/breeze:94b0a46e",
+    "message": "`cryptography` is imported but not declared",
     "evidence": [
       {
-        "file": "providers/pagerduty/src/airflow/providers/pagerduty/hooks/pagerduty.py",
-        "line": 64,
-        "note": "imports flask_appbuilder.fieldwidgets"
+        "file": "dev/breeze/src/airflow_breeze/utils/docker_compose_utils.py",
+        "line": 32,
+        "note": "imports cryptography.fernet"
       }
     ]
   },
@@ -1636,12 +1516,26 @@
     "repo": "apache/airflow",
     "language": "python",
     "check": "unused-dep",
-    "id": "unused-dep:providers/openfaas:c6f4ab39",
-    "message": "`apache-airflow` is declared but never imported",
+    "id": "unused-dep:devel-common:986894be",
+    "message": "`types-paramiko` is declared but never imported",
     "evidence": [
       {
-        "file": "providers/openfaas/pyproject.toml",
-        "line": 27,
+        "file": "devel-common/pyproject.toml",
+        "line": 121,
+        "note": "declared here"
+      }
+    ]
+  },
+  {
+    "repo": "apache/airflow",
+    "language": "python",
+    "check": "unused-dep",
+    "id": "unused-dep:providers/tableau:e915b446",
+    "message": "`apache-airflow-providers-common-compat` is declared but never imported",
+    "evidence": [
+      {
+        "file": "providers/tableau/pyproject.toml",
+        "line": 63,
         "note": "declared here"
       }
     ]
@@ -1650,74 +1544,17 @@
     "repo": "apache/airflow",
     "language": "python",
     "check": "missing-dep",
-    "id": "missing-dep:providers/openlineage:5bc32d2a",
-    "message": "`pendulum` is imported but not declared",
-    "evidence": [
-      {
-        "file": "providers/openlineage/tests/system/openlineage/example_openlineage_schedule_timetable_dag.py",
-        "line": 28,
-        "note": "imports pendulum"
-      },
-      {
-        "file": "providers/openlineage/tests/unit/openlineage/api/test_emission_policy.py",
-        "line": 21,
-        "note": "imports pendulum"
-      }
-    ]
-  },
-  {
-    "repo": "apache/airflow",
-    "language": "python",
-    "check": "missing-dep",
-    "id": "missing-dep:providers/microsoft/azure:279ffe61",
-    "message": "`wtforms` is imported but not declared",
-    "evidence": [
-      {
-        "file": "providers/microsoft/azure/src/airflow/providers/microsoft/azure/hooks/adx.py",
-        "line": 91,
-        "note": "imports wtforms"
-      },
-      {
-        "file": "providers/microsoft/azure/src/airflow/providers/microsoft/azure/hooks/ai_agents.py",
-        "line": 105,
-        "note": "imports wtforms"
-      }
-    ]
-  },
-  {
-    "repo": "apache/airflow",
-    "language": "python",
-    "check": "missing-dep",
-    "id": "missing-dep:providers/salesforce:cbbffd56",
-    "message": "`tests-common` is imported but not declared",
-    "evidence": [
-      {
-        "file": "providers/salesforce/tests/system/salesforce/example_bulk.py",
-        "line": 93,
-        "note": "imports tests_common.test_utils.system_tests"
-      },
-      {
-        "file": "providers/salesforce/tests/system/salesforce/example_salesforce_apex_rest.py",
-        "line": 44,
-        "note": "imports tests_common.test_utils.system_tests"
-      }
-    ]
-  },
-  {
-    "repo": "apache/airflow",
-    "language": "python",
-    "check": "missing-dep",
-    "id": "missing-dep:providers/microsoft/psrp:e4b04a25",
+    "id": "missing-dep:providers/fab:ec29321a",
     "message": "`pytest` is imported but not declared",
     "evidence": [
       {
-        "file": "providers/microsoft/psrp/tests/unit/microsoft/psrp/hooks/test_psrp.py",
-        "line": 23,
+        "file": "providers/fab/tests/unit/fab/auth_manager/api/auth/backend/test_basic_auth.py",
+        "line": 21,
         "note": "imports pytest"
       },
       {
-        "file": "providers/microsoft/psrp/tests/unit/microsoft/psrp/operators/test_psrp.py",
-        "line": 23,
+        "file": "providers/fab/tests/unit/fab/auth_manager/api/auth/backend/test_session.py",
+        "line": 21,
         "note": "imports pytest"
       }
     ]
@@ -1726,12 +1563,12 @@
     "repo": "apache/airflow",
     "language": "python",
     "check": "unused-dep",
-    "id": "unused-dep:providers/openai:fdf276f0",
-    "message": "`apache-airflow` is declared but never imported",
+    "id": "unused-dep:providers/salesforce:fd5742b4",
+    "message": "`apache-airflow-providers-common-compat` is declared but never imported",
     "evidence": [
       {
-        "file": "providers/openai/pyproject.toml",
-        "line": 27,
+        "file": "providers/salesforce/pyproject.toml",
+        "line": 63,
         "note": "declared here"
       }
     ]
@@ -1740,70 +1577,18 @@
     "repo": "apache/airflow",
     "language": "python",
     "check": "missing-dep",
-    "id": "missing-dep:providers/tableau:78c60edf",
-    "message": "`packaging` is imported but not declared",
+    "id": "missing-dep:providers/git:2a4eb758",
+    "message": "`tests-common` is imported but not declared",
     "evidence": [
       {
-        "file": "providers/tableau/src/airflow/providers/tableau/__init__.py",
-        "line": 26,
-        "note": "imports packaging.version"
-      },
-      {
-        "file": "providers/tableau/src/airflow/providers/tableau/version_compat.py",
-        "line": 27,
-        "note": "imports packaging.version"
-      }
-    ]
-  },
-  {
-    "repo": "apache/airflow",
-    "language": "python",
-    "check": "missing-dep",
-    "id": "missing-dep:providers/celery:9a9a8d92",
-    "message": "`kombu` is imported but not declared",
-    "evidence": [
-      {
-        "file": "providers/celery/src/airflow/providers/celery/cli/celery_command.py",
-        "line": 28,
-        "note": "imports kombu.pools"
-      },
-      {
-        "file": "providers/celery/tests/integration/celery/test_celery_executor.py",
+        "file": "providers/git/tests/unit/git/bundles/test_git.py",
         "line": 38,
-        "note": "imports kombu.asynchronous"
-      }
-    ]
-  },
-  {
-    "repo": "apache/airflow",
-    "language": "python",
-    "check": "missing-dep",
-    "id": "missing-dep:docker-tests:85dafc5a",
-    "message": "`tests-common` is imported but not declared",
-    "evidence": [
-      {
-        "file": "docker-tests/tests/docker_tests/test_docker_compose_quick_start.py",
-        "line": 34,
-        "note": "imports tests_common.test_utils.api_client_helpers"
-      }
-    ]
-  },
-  {
-    "repo": "apache/airflow",
-    "language": "python",
-    "check": "missing-dep",
-    "id": "missing-dep:providers/mysql:0efa288c",
-    "message": "`tests-common` is imported but not declared",
-    "evidence": [
-      {
-        "file": "providers/mysql/tests/system/mysql/example_mysql.py",
-        "line": 62,
-        "note": "imports tests_common.test_utils.system_tests"
+        "note": "imports tests_common.test_utils.config"
       },
       {
-        "file": "providers/mysql/tests/unit/mysql/hooks/test_mysql.py",
-        "line": 32,
-        "note": "imports tests_common.test_utils.asserts"
+        "file": "providers/git/tests/unit/git/bundles/test_git.py",
+        "line": 39,
+        "note": "imports tests_common.test_utils.version_compat"
       }
     ]
   },
@@ -1811,32 +1596,13 @@
     "repo": "apache/airflow",
     "language": "python",
     "check": "unused-dep",
-    "id": "unused-dep:.:2e4fe9a1",
-    "message": "`apache-airflow-providers-cohere` is declared but never imported",
+    "id": "unused-dep:.:7d7c82f4",
+    "message": "`apache-airflow-providers-microsoft-psrp` is declared but never imported",
     "evidence": [
       {
         "file": "pyproject.toml",
-        "line": 186,
+        "line": 282,
         "note": "declared here"
-      }
-    ]
-  },
-  {
-    "repo": "astral-sh/ruff",
-    "language": "python",
-    "check": "missing-dep",
-    "id": "missing-dep:crates/ruff_linter/resources/test/fixtures/isort:2d7caa1d",
-    "message": "`setuptools` is imported but not declared",
-    "evidence": [
-      {
-        "file": "crates/ruff_linter/resources/test/fixtures/isort/if_elif_else.py",
-        "line": 4,
-        "note": "imports setuptools.command.sdist"
-      },
-      {
-        "file": "crates/ruff_linter/resources/test/fixtures/isort/if_elif_else.py",
-        "line": 6,
-        "note": "imports setuptools.command.sdist"
       }
     ]
   },
@@ -1844,134 +1610,191 @@
     "repo": "apache/airflow",
     "language": "python",
     "check": "missing-dep",
-    "id": "missing-dep:providers/ssh:79dab961",
-    "message": "`tenacity` is imported but not declared",
+    "id": "missing-dep:providers/openlineage:6890bdbb",
+    "message": "`tests-common` is imported but not declared",
     "evidence": [
       {
-        "file": "providers/ssh/src/airflow/providers/ssh/hooks/ssh.py",
-        "line": 32,
-        "note": "imports tenacity"
+        "file": "providers/openlineage/tests/system/openlineage/example_openlineage_all_facets_dag.py",
+        "line": 507,
+        "note": "imports tests_common.test_utils.system_tests"
+      },
+      {
+        "file": "providers/openlineage/tests/system/openlineage/example_openlineage_base_complex_dag.py",
+        "line": 148,
+        "note": "imports tests_common.test_utils.system_tests"
       }
     ]
   },
   {
-    "repo": "apache/arrow",
-    "language": "ruby",
+    "repo": "apache/airflow",
+    "language": "python",
     "check": "missing-dep",
-    "id": "missing-dep:ruby/red-parquet:bde551cb",
-    "message": "`test-unit` is imported but not declared",
+    "id": "missing-dep:providers/standard:2619fe35",
+    "message": "`dill` is imported but not declared",
     "evidence": [
       {
-        "file": "ruby/red-parquet/test/helper.rb",
-        "line": 22,
-        "note": "imports test-unit"
+        "file": "providers/standard/src/airflow/providers/standard/operators/python.py",
+        "line": 405,
+        "note": "imports dill"
+      },
+      {
+        "file": "providers/standard/tests/unit/standard/decorators/test_external_python.py",
+        "line": 91,
+        "note": "imports dill"
       }
     ]
   },
   {
-    "repo": "discourse/discourse",
-    "language": "ruby",
+    "repo": "apache/airflow",
+    "language": "python",
     "check": "unused-dep",
-    "id": "unused-dep:.:12b4855f",
-    "message": "`capybara-playwright-driver` is declared but never imported",
+    "id": "unused-dep:.:b0277302",
+    "message": "`apache-airflow-providers-postgres` is declared but never imported",
     "evidence": [
       {
-        "file": "Gemfile",
+        "file": "pyproject.toml",
+        "line": 330,
+        "note": "declared here"
+      }
+    ]
+  },
+  {
+    "repo": "apache/airflow",
+    "language": "python",
+    "check": "missing-dep",
+    "id": "missing-dep:providers/fab:415a12d2",
+    "message": "`alembic` is imported but not declared",
+    "evidence": [
+      {
+        "file": "providers/fab/src/airflow/providers/fab/auth_manager/models/db.py",
+        "line": 100,
+        "note": "imports alembic"
+      },
+      {
+        "file": "providers/fab/src/airflow/providers/fab/auth_manager/models/db.py",
         "line": 132,
-        "note": "declared here"
+        "note": "imports alembic"
       }
     ]
   },
   {
-    "repo": "mastodon/mastodon",
-    "language": "ruby",
+    "repo": "apache/airflow",
+    "language": "python",
     "check": "unused-dep",
-    "id": "unused-dep:.:bd2f9faa",
-    "message": "`stackprof` is declared but never imported",
+    "id": "unused-dep:providers/google:c280343b",
+    "message": "`google-api-core` is declared but never imported",
     "evidence": [
       {
-        "file": "Gemfile",
-        "line": 212,
+        "file": "providers/google/pyproject.toml",
+        "line": 74,
         "note": "declared here"
       }
     ]
   },
   {
-    "repo": "rails/rails",
-    "language": "ruby",
-    "check": "missing-dep",
-    "id": "missing-dep:.:88f003f7",
-    "message": "`bundler` is imported but not declared",
+    "repo": "apache/airflow",
+    "language": "python",
+    "check": "unused-dep",
+    "id": "unused-dep:providers/google:a643607b",
+    "message": "`google-cloud-monitoring` is declared but never imported",
     "evidence": [
       {
-        "file": "actionmailbox/test/dummy/config/boot.rb",
-        "line": 4,
-        "note": "imports bundler/setup"
+        "file": "providers/google/pyproject.toml",
+        "line": 125,
+        "note": "declared here"
+      }
+    ]
+  },
+  {
+    "repo": "apache/airflow",
+    "language": "python",
+    "check": "missing-dep",
+    "id": "missing-dep:providers/edge3:ffd095c3",
+    "message": "`tests-common` is imported but not declared",
+    "evidence": [
+      {
+        "file": "providers/edge3/tests/unit/edge3/cli/test_api_client.py",
+        "line": 28,
+        "note": "imports tests_common.test_utils.aiohttp"
       },
       {
-        "file": "activerecord/test/support/tools.rb",
-        "line": 5,
-        "note": "imports bundler/setup"
+        "file": "providers/edge3/tests/unit/edge3/cli/test_api_client.py",
+        "line": 29,
+        "note": "imports tests_common.test_utils.config"
       }
     ]
   },
   {
-    "repo": "discourse/discourse",
-    "language": "ruby",
+    "repo": "apache/airflow",
+    "language": "python",
     "check": "unused-dep",
-    "id": "unused-dep:.:bb6d1e2d",
-    "message": "`excon` is declared but never imported",
+    "id": "unused-dep:providers/google:3266c08e",
+    "message": "`google-cloud-secret-manager` is declared but never imported",
     "evidence": [
       {
-        "file": "Gemfile",
-        "line": 69,
+        "file": "providers/google/pyproject.toml",
+        "line": 130,
         "note": "declared here"
       }
     ]
   },
   {
-    "repo": "rails/rails",
-    "language": "ruby",
+    "repo": "apache/airflow",
+    "language": "python",
     "check": "missing-dep",
-    "id": "missing-dep:.:56f9b834",
-    "message": "`concurrent` is imported but not declared",
+    "id": "missing-dep:airflow-core:911d0995",
+    "message": "`fake-datetime` is imported but not declared",
     "evidence": [
       {
-        "file": "actionpack/test/controller/live_stream_test.rb",
-        "line": 5,
-        "note": "imports concurrent/atomic/count_down_latch"
+        "file": "airflow-core/tests/unit/dags_corrupted/test_impersonation_custom.py",
+        "line": 29,
+        "note": "imports fake_datetime"
+      }
+    ]
+  },
+  {
+    "repo": "apache/airflow",
+    "language": "python",
+    "check": "missing-dep",
+    "id": "missing-dep:providers/imap:1bf425a2",
+    "message": "`docs` is imported but not declared",
+    "evidence": [
+      {
+        "file": "providers/imap/docs/conf.py",
+        "line": 27,
+        "note": "imports docs.provider_conf"
+      }
+    ]
+  },
+  {
+    "repo": "apache/airflow",
+    "language": "python",
+    "check": "missing-dep",
+    "id": "missing-dep:providers/common/sql:89308685",
+    "message": "`typeshed` is imported but not declared",
+    "evidence": [
+      {
+        "file": "providers/common/sql/src/airflow/providers/common/sql/dialects/dialect.pyi",
+        "line": 38,
+        "note": "imports _typeshed"
       },
       {
-        "file": "actionpack/test/dispatch/live_response_test.rb",
-        "line": 4,
-        "note": "imports concurrent/atomic/count_down_latch"
+        "file": "providers/common/sql/src/airflow/providers/common/sql/hooks/sql.pyi",
+        "line": 39,
+        "note": "imports _typeshed"
       }
     ]
   },
   {
-    "repo": "mastodon/mastodon",
-    "language": "ruby",
+    "repo": "apache/airflow",
+    "language": "python",
     "check": "unused-dep",
-    "id": "unused-dep:.:b7b3b03a",
-    "message": "`sidekiq-bulk` is declared but never imported",
+    "id": "unused-dep:providers/cloudant:950f4bb1",
+    "message": "`apache-airflow` is declared but never imported",
     "evidence": [
       {
-        "file": "Gemfile",
-        "line": 86,
-        "note": "declared here"
-      }
-    ]
-  },
-  {
-    "repo": "discourse/discourse",
-    "language": "ruby",
-    "check": "unused-dep",
-    "id": "unused-dep:.:5e4bb89b",
-    "message": "`tiktoken_ruby` is declared but never imported",
-    "evidence": [
-      {
-        "file": "Gemfile",
-        "line": 307,
+        "file": "providers/cloudant/pyproject.toml",
+        "line": 27,
         "note": "declared here"
       }
     ]
@@ -1980,96 +1803,31 @@
     "repo": "rails/rails",
     "language": "ruby",
     "check": "missing-dep",
-    "id": "missing-dep:.:af41fdf8",
-    "message": "`rails-html-sanitizer` is imported but not declared",
+    "id": "missing-dep:.:543f2f96",
+    "message": "`activerecord` is imported but not declared",
     "evidence": [
       {
-        "file": "actionview/lib/action_view/helpers/sanitize_helper.rb",
-        "line": 3,
-        "note": "imports rails-html-sanitizer"
+        "file": "actionmailbox/lib/action_mailbox/engine.rb",
+        "line": 6,
+        "note": "imports active_record/railtie"
+      },
+      {
+        "file": "actionview/test/active_record_unit.rb",
+        "line": 21,
+        "note": "imports active_record"
       }
     ]
   },
   {
     "repo": "mastodon/mastodon",
     "language": "ruby",
-    "check": "missing-dep",
-    "id": "missing-dep:.:88f003f7",
-    "message": "`bundler` is imported but not declared",
-    "evidence": [
-      {
-        "file": "config/boot.rb",
-        "line": 17,
-        "note": "imports bundler/setup"
-      }
-    ]
-  },
-  {
-    "repo": "rails/rails",
-    "language": "ruby",
     "check": "unused-dep",
-    "id": "unused-dep:.:cee9334e",
-    "message": "`terser` is declared but never imported",
+    "id": "unused-dep:.:14f04155",
+    "message": "`active_model_serializers` is declared but never imported",
     "evidence": [
       {
         "file": "Gemfile",
-        "line": 37,
-        "note": "declared here"
-      }
-    ]
-  },
-  {
-    "repo": "discourse/discourse",
-    "language": "ruby",
-    "check": "unused-dep",
-    "id": "unused-dep:.:fbf1a3f2",
-    "message": "`discourse-fonts` is declared but never imported",
-    "evidence": [
-      {
-        "file": "Gemfile",
-        "line": 54,
-        "note": "declared here"
-      }
-    ]
-  },
-  {
-    "repo": "discourse/discourse",
-    "language": "ruby",
-    "check": "unused-dep",
-    "id": "unused-dep:.:868eded8",
-    "message": "`omniauth-twitter` is declared but never imported",
-    "evidence": [
-      {
-        "file": "Gemfile",
-        "line": 84,
-        "note": "declared here"
-      }
-    ]
-  },
-  {
-    "repo": "apache/arrow",
-    "language": "ruby",
-    "check": "unused-dep",
-    "id": "unused-dep:ruby/red-gandiva:2b020cd0",
-    "message": "`red-arrow` is declared but never imported",
-    "evidence": [
-      {
-        "file": "ruby/red-gandiva/Gemfile",
-        "line": 24,
-        "note": "declared here"
-      }
-    ]
-  },
-  {
-    "repo": "discourse/discourse",
-    "language": "ruby",
-    "check": "unused-dep",
-    "id": "unused-dep:.:c952315a",
-    "message": "`lru_redux` is declared but never imported",
-    "evidence": [
-      {
-        "file": "Gemfile",
-        "line": 189,
+        "line": 25,
         "note": "declared here"
       }
     ]
@@ -2089,16 +1847,124 @@
     ]
   },
   {
-    "repo": "discourse/discourse",
+    "repo": "rails/rails",
+    "language": "ruby",
+    "check": "missing-dep",
+    "id": "missing-dep:.:af41fdf8",
+    "message": "`rails-html-sanitizer` is imported but not declared",
+    "evidence": [
+      {
+        "file": "actionview/lib/action_view/helpers/sanitize_helper.rb",
+        "line": 3,
+        "note": "imports rails-html-sanitizer"
+      }
+    ]
+  },
+  {
+    "repo": "rails/rails",
     "language": "ruby",
     "check": "unused-dep",
-    "id": "unused-dep:.:3612cc72",
-    "message": "`discourse-seed-fu` is declared but never imported",
+    "id": "unused-dep:.:44c24936",
+    "message": "`debug` is declared but never imported",
     "evidence": [
       {
         "file": "Gemfile",
-        "line": 26,
+        "line": 139,
         "note": "declared here"
+      }
+    ]
+  },
+  {
+    "repo": "rails/rails",
+    "language": "ruby",
+    "check": "missing-dep",
+    "id": "missing-dep:.:549ce570",
+    "message": "`zeitwerk` is imported but not declared",
+    "evidence": [
+      {
+        "file": "actionpack/test/abstract_unit.rb",
+        "line": 27,
+        "note": "imports zeitwerk"
+      },
+      {
+        "file": "actionpack/test/controller/live_stream_test.rb",
+        "line": 6,
+        "note": "imports zeitwerk"
+      }
+    ]
+  },
+  {
+    "repo": "discourse/discourse",
+    "language": "ruby",
+    "check": "unused-dep",
+    "id": "unused-dep:docs/developer-guides:7b46c482",
+    "message": "`faraday` is declared but never imported",
+    "evidence": [
+      {
+        "file": "docs/developer-guides/Gemfile",
+        "line": 4,
+        "note": "declared here"
+      }
+    ]
+  },
+  {
+    "repo": "mastodon/mastodon",
+    "language": "ruby",
+    "check": "unused-dep",
+    "id": "unused-dep:.:44c24936",
+    "message": "`debug` is declared but never imported",
+    "evidence": [
+      {
+        "file": "Gemfile",
+        "line": 201,
+        "note": "declared here"
+      }
+    ]
+  },
+  {
+    "repo": "rails/rails",
+    "language": "ruby",
+    "check": "missing-dep",
+    "id": "missing-dep:.:0e15aa29",
+    "message": "`action_text` is imported but not declared",
+    "evidence": [
+      {
+        "file": "railties/test/isolation/abstract_unit.rb",
+        "line": 732,
+        "note": "imports action_text"
+      }
+    ]
+  },
+  {
+    "repo": "mastodon/mastodon",
+    "language": "ruby",
+    "check": "unused-dep",
+    "id": "unused-dep:.:f2207810",
+    "message": "`climate_control` is declared but never imported",
+    "evidence": [
+      {
+        "file": "Gemfile",
+        "line": 146,
+        "note": "declared here"
+      }
+    ]
+  },
+  {
+    "repo": "rails/rails",
+    "language": "ruby",
+    "check": "missing-dep",
+    "id": "missing-dep:.:64f09f99",
+    "message": "`actionmailer` is imported but not declared",
+    "evidence": [
+      {
+        "file": "actionmailer/lib/action_mailer/base.rb",
+        "line": 4,
+        "note": "imports action_mailer/collector"
+      },
+      {
+        "file": "actionmailer/lib/action_mailer/base.rb",
+        "line": 9,
+        "note": "imports action_mailer/log_subscriber"
       }
     ]
   },
@@ -2120,25 +1986,395 @@
     "repo": "mastodon/mastodon",
     "language": "ruby",
     "check": "unused-dep",
-    "id": "unused-dep:.:924a9906",
-    "message": "`kt-paperclip` is declared but never imported",
+    "id": "unused-dep:.:0326bab6",
+    "message": "`json-ld-preloaded` is declared but never imported",
     "evidence": [
       {
         "file": "Gemfile",
-        "line": 22,
+        "line": 102,
         "note": "declared here"
       }
     ]
   },
   {
-    "repo": "mastodon/mastodon",
+    "repo": "apache/arrow",
     "language": "ruby",
     "check": "unused-dep",
-    "id": "unused-dep:.:64b05110",
-    "message": "`json-canonicalization` is declared but never imported",
+    "id": "unused-dep:ruby/red-gandiva:2b020cd0",
+    "message": "`red-arrow` is declared but never imported",
+    "evidence": [
+      {
+        "file": "ruby/red-gandiva/Gemfile",
+        "line": 24,
+        "note": "declared here"
+      }
+    ]
+  },
+  {
+    "repo": "discourse/discourse",
+    "language": "ruby",
+    "check": "missing-dep",
+    "id": "missing-dep:.:88f003f7",
+    "message": "`bundler` is imported but not declared",
+    "evidence": [
+      {
+        "file": "config/boot.rb",
+        "line": 16,
+        "note": "imports bundler/setup"
+      },
+      {
+        "file": "lib/turbo_tests.rb",
+        "line": 3,
+        "note": "imports bundler/setup"
+      }
+    ]
+  },
+  {
+    "repo": "discourse/discourse",
+    "language": "ruby",
+    "check": "missing-dep",
+    "id": "missing-dep:migrations/importer:58600b7f",
+    "message": "`zeitwerk` is imported but not declared",
+    "evidence": [
+      {
+        "file": "migrations/importer/lib/migrations/importer.rb",
+        "line": 3,
+        "note": "imports zeitwerk"
+      }
+    ]
+  },
+  {
+    "repo": "discourse/discourse",
+    "language": "ruby",
+    "check": "unused-dep",
+    "id": "unused-dep:.:fa4ab6ce",
+    "message": "`discourse_dev_assets` is declared but never imported",
     "evidence": [
       {
         "file": "Gemfile",
+        "line": 174,
+        "note": "declared here"
+      }
+    ]
+  },
+  {
+    "repo": "apache/arrow",
+    "language": "ruby",
+    "check": "missing-dep",
+    "id": "missing-dep:ruby/red-parquet:c4acf031",
+    "message": "`arrow` is imported but not declared",
+    "evidence": [
+      {
+        "file": "ruby/red-parquet/lib/parquet.rb",
+        "line": 18,
+        "note": "imports arrow"
+      }
+    ]
+  },
+  {
+    "repo": "discourse/discourse",
+    "language": "ruby",
+    "check": "unused-dep",
+    "id": "unused-dep:.:92f29938",
+    "message": "`fast_blank` is declared but never imported",
+    "evidence": [
+      {
+        "file": "Gemfile",
+        "line": 186,
+        "note": "declared here"
+      }
+    ]
+  },
+  {
+    "repo": "rails/rails",
+    "language": "ruby",
+    "check": "missing-dep",
+    "id": "missing-dep:.:8a455bf7",
+    "message": "`delayed_job_active_record` is imported but not declared",
+    "evidence": [
+      {
+        "file": "activejob/test/support/integration/adapters/delayed_job.rb",
+        "line": 4,
+        "note": "imports delayed_job_active_record"
+      }
+    ]
+  },
+  {
+    "repo": "denoland/deno",
+    "language": "rust",
+    "check": "missing-dep",
+    "id": "missing-dep:cli:05730752",
+    "message": "`lsp_tracing_info` is imported but not declared",
+    "evidence": [
+      {
+        "file": "cli/lsp/logging.rs",
+        "line": 189,
+        "note": "imports lsp_tracing_info"
+      }
+    ]
+  },
+  {
+    "repo": "vercel/next.js",
+    "language": "rust",
+    "check": "unused-dep",
+    "id": "unused-dep:rspack/crates/binding:54712b6a",
+    "message": "`anyhow` is declared but never imported",
+    "evidence": [
+      {
+        "file": "rspack/crates/binding/Cargo.toml",
+        "line": 26,
+        "note": "declared here"
+      }
+    ]
+  },
+  {
+    "repo": "microsoft/vscode",
+    "language": "rust",
+    "check": "unused-dep",
+    "id": "unused-dep:build/win32:10ec9ef7",
+    "message": "`tempfile` is declared but never imported",
+    "evidence": [
+      {
+        "file": "build/win32/Cargo.toml",
+        "line": 14,
+        "note": "declared here"
+      }
+    ]
+  },
+  {
+    "repo": "denoland/deno",
+    "language": "rust",
+    "check": "unused-dep",
+    "id": "unused-dep:ext/tls:86a31c9f",
+    "message": "`rustls-webpki` is declared but never imported",
+    "evidence": [
+      {
+        "file": "ext/tls/Cargo.toml",
+        "line": 24,
+        "note": "declared here"
+      }
+    ]
+  },
+  {
+    "repo": "denoland/deno",
+    "language": "rust",
+    "check": "unused-dep",
+    "id": "unused-dep:libs/ops/compile_test_runner:534f9aaf",
+    "message": "`bytes` is declared but never imported",
+    "evidence": [
+      {
+        "file": "libs/ops/compile_test_runner/Cargo.toml",
+        "line": 16,
+        "note": "declared here"
+      }
+    ]
+  },
+  {
+    "repo": "BurntSushi/ripgrep",
+    "language": "rust",
+    "check": "missing-dep",
+    "id": "missing-dep:crates/searcher:e5fc0a13",
+    "message": "`FastMatchResult` is imported but not declared",
+    "evidence": [
+      {
+        "file": "crates/searcher/src/searcher/core.rs",
+        "line": 389,
+        "note": "imports FastMatchResult"
+      }
+    ]
+  },
+  {
+    "repo": "vercel/next.js",
+    "language": "rust",
+    "check": "unused-dep",
+    "id": "unused-dep:turbopack/crates/turbo-tasks-env:4a7a6a47",
+    "message": "`turbo-bincode` is declared but never imported",
+    "evidence": [
+      {
+        "file": "turbopack/crates/turbo-tasks-env/Cargo.toml",
+        "line": 17,
+        "note": "declared here"
+      }
+    ]
+  },
+  {
+    "repo": "denoland/deno",
+    "language": "rust",
+    "check": "missing-dep",
+    "id": "missing-dep:ext/webgpu:fd1c6a38",
+    "message": "`GPUDeviceLostReason` is imported but not declared",
+    "evidence": [
+      {
+        "file": "ext/webgpu/device.rs",
+        "line": 1013,
+        "note": "imports GPUDeviceLostReason"
+      }
+    ]
+  },
+  {
+    "repo": "denoland/deno",
+    "language": "rust",
+    "check": "missing-dep",
+    "id": "missing-dep:cli:bf03ad75",
+    "message": "`PackageOrSpecifier` is imported but not declared",
+    "evidence": [
+      {
+        "file": "cli/tools/info.rs",
+        "line": 649,
+        "note": "imports PackageOrSpecifier"
+      }
+    ]
+  },
+  {
+    "repo": "denoland/deno",
+    "language": "rust",
+    "check": "missing-dep",
+    "id": "missing-dep:ext/net:f0ab5635",
+    "message": "`rustls` is imported but not declared",
+    "evidence": [
+      {
+        "file": "ext/net/quic.rs",
+        "line": 1099,
+        "note": "imports rustls::client::danger::ServerCertVerifier"
+      },
+      {
+        "file": "ext/net/quic.rs",
+        "line": 1100,
+        "note": "imports rustls::crypto::CryptoProvider"
+      }
+    ]
+  },
+  {
+    "repo": "vercel/next.js",
+    "language": "rust",
+    "check": "unused-dep",
+    "id": "unused-dep:crates/next-api:ad8aa32a",
+    "message": "`turbo-bincode` is declared but never imported",
+    "evidence": [
+      {
+        "file": "crates/next-api/Cargo.toml",
+        "line": 36,
+        "note": "declared here"
+      }
+    ]
+  },
+  {
+    "repo": "astral-sh/ruff",
+    "language": "rust",
+    "check": "missing-dep",
+    "id": "missing-dep:crates/ruff_linter:0f0d2aff",
+    "message": "`Applicability` is imported but not declared",
+    "evidence": [
+      {
+        "file": "crates/ruff_linter/src/settings/fix_safety_table.rs",
+        "line": 196,
+        "note": "imports Applicability"
+      },
+      {
+        "file": "crates/ruff_linter/src/settings/fix_safety_table.rs",
+        "line": 211,
+        "note": "imports Applicability"
+      }
+    ]
+  },
+  {
+    "repo": "astral-sh/ruff",
+    "language": "rust",
+    "check": "missing-dep",
+    "id": "missing-dep:crates/ruff_text_size:d710a88f",
+    "message": "`priv_in_pub` is imported but not declared",
+    "evidence": [
+      {
+        "file": "crates/ruff_text_size/src/traits.rs",
+        "line": 4,
+        "note": "imports priv_in_pub::Sealed"
+      }
+    ]
+  },
+  {
+    "repo": "vercel/next.js",
+    "language": "rust",
+    "check": "unused-dep",
+    "id": "unused-dep:turbopack/crates/turbopack-analyze:f7a90134",
+    "message": "`serde` is declared but never imported",
+    "evidence": [
+      {
+        "file": "turbopack/crates/turbopack-analyze/Cargo.toml",
+        "line": 16,
+        "note": "declared here"
+      }
+    ]
+  },
+  {
+    "repo": "vercel/next.js",
+    "language": "rust",
+    "check": "unused-dep",
+    "id": "unused-dep:turbopack/crates/turbopack-nodejs:1bce476f",
+    "message": "`bincode` is declared but never imported",
+    "evidence": [
+      {
+        "file": "turbopack/crates/turbopack-nodejs/Cargo.toml",
+        "line": 23,
+        "note": "declared here"
+      }
+    ]
+  },
+  {
+    "repo": "denoland/deno",
+    "language": "rust",
+    "check": "missing-dep",
+    "id": "missing-dep:cli:0bf8c392",
+    "message": "`rusqlite` is imported but not declared",
+    "evidence": [
+      {
+        "file": "cli/cache/cache_db.rs",
+        "line": 800,
+        "note": "imports rusqlite::ToSql"
+      },
+      {
+        "file": "cli/cache/cache_db.rs",
+        "line": 801,
+        "note": "imports rusqlite::types::FromSql"
+      }
+    ]
+  },
+  {
+    "repo": "denoland/deno",
+    "language": "rust",
+    "check": "missing-dep",
+    "id": "missing-dep:cli:31af023f",
+    "message": "`lsp_warn` is imported but not declared",
+    "evidence": [
+      {
+        "file": "cli/lsp/logging.rs",
+        "line": 191,
+        "note": "imports lsp_warn"
+      }
+    ]
+  },
+  {
+    "repo": "vercel/next.js",
+    "language": "rust",
+    "check": "unused-dep",
+    "id": "unused-dep:turbopack/crates/turbopack-browser:7e45e8d2",
+    "message": "`urlencoding` is declared but never imported",
+    "evidence": [
+      {
+        "file": "turbopack/crates/turbopack-browser/Cargo.toml",
+        "line": 31,
+        "note": "declared here"
+      }
+    ]
+  },
+  {
+    "repo": "vercel/next.js",
+    "language": "rust",
+    "check": "unused-dep",
+    "id": "unused-dep:crates/next-napi-bindings:9f193efb",
+    "message": "`next-api` is declared but never imported",
+    "evidence": [
+      {
+        "file": "crates/next-napi-bindings/Cargo.toml",
         "line": 100,
         "note": "declared here"
       }
@@ -2148,279 +2384,32 @@
     "repo": "astral-sh/ruff",
     "language": "rust",
     "check": "missing-dep",
-    "id": "missing-dep:crates/ruff_linter:d4174a67",
-    "message": "`ast_with` is imported but not declared",
+    "id": "missing-dep:crates/ruff_linter:213a9eef",
+    "message": "`libcst_native` is imported but not declared",
     "evidence": [
       {
-        "file": "crates/ruff_linter/src/rules/flake8_simplify/rules/mod.rs",
-        "line": 5,
-        "note": "imports ast_with"
-      }
-    ]
-  },
-  {
-    "repo": "astral-sh/ruff",
-    "language": "rust",
-    "check": "missing-dep",
-    "id": "missing-dep:crates/ruff_linter:9be3ab67",
-    "message": "`property_with_parameters` is imported but not declared",
-    "evidence": [
-      {
-        "file": "crates/ruff_linter/src/rules/pylint/rules/mod.rs",
-        "line": 63,
-        "note": "imports property_with_parameters"
-      }
-    ]
-  },
-  {
-    "repo": "denoland/deno",
-    "language": "rust",
-    "check": "missing-dep",
-    "id": "missing-dep:cli:269e9267",
-    "message": "`list` is imported but not declared",
-    "evidence": [
-      {
-        "file": "cli/tools/pm/mod.rs",
-        "line": 54,
-        "note": "imports list::list"
-      }
-    ]
-  },
-  {
-    "repo": "astral-sh/ruff",
-    "language": "rust",
-    "check": "missing-dep",
-    "id": "missing-dep:crates/ruff_linter:496ebcdd",
-    "message": "`named_expr_without_context` is imported but not declared",
-    "evidence": [
-      {
-        "file": "crates/ruff_linter/src/rules/pylint/rules/mod.rs",
-        "line": 51,
-        "note": "imports named_expr_without_context"
-      }
-    ]
-  },
-  {
-    "repo": "astral-sh/ruff",
-    "language": "rust",
-    "check": "missing-dep",
-    "id": "missing-dep:crates/ruff_linter:7c91a3d4",
-    "message": "`numpy_2_0_deprecation` is imported but not declared",
-    "evidence": [
-      {
-        "file": "crates/ruff_linter/src/rules/numpy/rules/mod.rs",
-        "line": 4,
-        "note": "imports numpy_2_0_deprecation"
-      }
-    ]
-  },
-  {
-    "repo": "astral-sh/ruff",
-    "language": "rust",
-    "check": "missing-dep",
-    "id": "missing-dep:crates/ruff_linter:3614cd5a",
-    "message": "`os_getcwd` is imported but not declared",
-    "evidence": [
-      {
-        "file": "crates/ruff_linter/src/rules/flake8_use_pathlib/rules/mod.rs",
-        "line": 5,
-        "note": "imports os_getcwd"
-      }
-    ]
-  },
-  {
-    "repo": "astral-sh/ruff",
-    "language": "rust",
-    "check": "missing-dep",
-    "id": "missing-dep:crates/ruff_linter:b723df76",
-    "message": "`all_with_model_form` is imported but not declared",
-    "evidence": [
-      {
-        "file": "crates/ruff_linter/src/rules/flake8_django/rules/mod.rs",
+        "file": "crates/ruff_linter/src/cst/helpers.rs",
         "line": 1,
-        "note": "imports all_with_model_form"
-      }
-    ]
-  },
-  {
-    "repo": "astral-sh/ruff",
-    "language": "rust",
-    "check": "missing-dep",
-    "id": "missing-dep:crates/ruff_python_literal:65753c25",
-    "message": "`CNumberType` is imported but not declared",
-    "evidence": [
+        "note": "imports libcst_native"
+      },
       {
-        "file": "crates/ruff_python_literal/src/cformat.rs",
-        "line": 213,
-        "note": "imports CNumberType"
-      }
-    ]
-  },
-  {
-    "repo": "astral-sh/ruff",
-    "language": "rust",
-    "check": "missing-dep",
-    "id": "missing-dep:crates/ruff_linter:54b27968",
-    "message": "`invalid_string_characters` is imported but not declared",
-    "evidence": [
-      {
-        "file": "crates/ruff_linter/src/rules/pylint/rules/mod.rs",
-        "line": 40,
-        "note": "imports invalid_string_characters"
-      }
-    ]
-  },
-  {
-    "repo": "astral-sh/ruff",
-    "language": "rust",
-    "check": "missing-dep",
-    "id": "missing-dep:crates/ruff_linter:806ce5ea",
-    "message": "`ast_bool_op` is imported but not declared",
-    "evidence": [
-      {
-        "file": "crates/ruff_linter/src/rules/flake8_simplify/rules/mod.rs",
-        "line": 1,
-        "note": "imports ast_bool_op"
-      }
-    ]
-  },
-  {
-    "repo": "tokio-rs/tokio",
-    "language": "rust",
-    "check": "unused-dep",
-    "id": "unused-dep:examples:0503b5b5",
-    "message": "`serde` is declared but never imported",
-    "evidence": [
-      {
-        "file": "examples/Cargo.toml",
-        "line": 20,
-        "note": "declared here"
-      }
-    ]
-  },
-  {
-    "repo": "denoland/deno",
-    "language": "rust",
-    "check": "unused-dep",
-    "id": "unused-dep:ext/node_crypto:2c005b8d",
-    "message": "`ripemd` is declared but never imported",
-    "evidence": [
-      {
-        "file": "ext/node_crypto/Cargo.toml",
-        "line": 56,
-        "note": "declared here"
-      }
-    ]
-  },
-  {
-    "repo": "vercel/next.js",
-    "language": "rust",
-    "check": "unused-dep",
-    "id": "unused-dep:turbopack/crates/turbo-tasks-backend/fuzz:54e16150",
-    "message": "`serde` is declared but never imported",
-    "evidence": [
-      {
-        "file": "turbopack/crates/turbo-tasks-backend/fuzz/Cargo.toml",
-        "line": 16,
-        "note": "declared here"
-      }
-    ]
-  },
-  {
-    "repo": "tokio-rs/tokio",
-    "language": "rust",
-    "check": "missing-dep",
-    "id": "missing-dep:tokio-stream:f2040a98",
-    "message": "`any` is imported but not declared",
-    "evidence": [
-      {
-        "file": "tokio-stream/src/stream_ext.rs",
-        "line": 8,
-        "note": "imports any::AnyFuture"
-      }
-    ]
-  },
-  {
-    "repo": "vercel/next.js",
-    "language": "rust",
-    "check": "missing-dep",
-    "id": "missing-dep:crates/next-core:c209f294",
-    "message": "`next_track_dynamic_imports` is imported but not declared",
-    "evidence": [
-      {
-        "file": "crates/next-core/src/next_shared/transforms/mod.rs",
-        "line": 34,
-        "note": "imports next_track_dynamic_imports::get_next_track_dynamic_imports_transform_rule"
-      }
-    ]
-  },
-  {
-    "repo": "denoland/deno",
-    "language": "rust",
-    "check": "missing-dep",
-    "id": "missing-dep:cli:154d62eb",
-    "message": "`collectors` is imported but not declared",
-    "evidence": [
-      {
-        "file": "cli/lsp/testing/mod.rs",
-        "line": 9,
-        "note": "imports collectors::TestCollector"
-      }
-    ]
-  },
-  {
-    "repo": "astral-sh/ruff",
-    "language": "rust",
-    "check": "missing-dep",
-    "id": "missing-dep:crates/ruff_linter:338770df",
-    "message": "`legacy_random` is imported but not declared",
-    "evidence": [
-      {
-        "file": "crates/ruff_linter/src/rules/numpy/rules/mod.rs",
+        "file": "crates/ruff_linter/src/cst/matchers.rs",
         "line": 3,
-        "note": "imports legacy_random"
+        "note": "imports libcst_native"
       }
     ]
   },
   {
-    "repo": "astral-sh/ruff",
-    "language": "rust",
-    "check": "missing-dep",
-    "id": "missing-dep:crates/ruff_linter:4b24f99e",
-    "message": "`type_check_without_type_error` is imported but not declared",
+    "repo": "pointfreeco/swift-composable-architecture",
+    "language": "swift",
+    "check": "unused-dep",
+    "id": "unused-dep:.:2f35ba38",
+    "message": "`swift-docc-plugin` is declared but never imported",
     "evidence": [
       {
-        "file": "crates/ruff_linter/src/rules/tryceratops/rules/mod.rs",
-        "line": 7,
-        "note": "imports type_check_without_type_error"
-      }
-    ]
-  },
-  {
-    "repo": "astral-sh/ruff",
-    "language": "rust",
-    "check": "missing-dep",
-    "id": "missing-dep:crates/ruff_linter:8dcefed2",
-    "message": "`mutable_argument_default` is imported but not declared",
-    "evidence": [
-      {
-        "file": "crates/ruff_linter/src/rules/flake8_bugbear/rules/mod.rs",
-        "line": 21,
-        "note": "imports mutable_argument_default"
-      }
-    ]
-  },
-  {
-    "repo": "astral-sh/ruff",
-    "language": "rust",
-    "check": "missing-dep",
-    "id": "missing-dep:crates/ruff_linter:02903063",
-    "message": "`in_empty_collection` is imported but not declared",
-    "evidence": [
-      {
-        "file": "crates/ruff_linter/src/rules/ruff/rules/mod.rs",
-        "line": 21,
-        "note": "imports in_empty_collection"
+        "file": "Package.swift",
+        "line": 51,
+        "note": "declared here"
       }
     ]
   },
@@ -2428,32 +2417,84 @@
     "repo": "pointfreeco/swift-composable-architecture",
     "language": "swift",
     "check": "missing-dep",
-    "id": "missing-dep:Examples:a5a9187c",
-    "message": "`AppCore` is imported but not declared",
+    "id": "missing-dep:Examples:5c98f8c6",
+    "message": "`Integration` is imported but not declared",
     "evidence": [
       {
-        "file": "Examples/TicTacToe/App/RootView.swift",
+        "file": "Examples/Integration/IntegrationUITests/Legacy/EscapedWithViewStoreTests.swift",
         "line": 1,
-        "note": "imports AppCore"
+        "note": "imports Integration"
+      },
+      {
+        "file": "Examples/Integration/IntegrationUITests/Legacy/LegacyNavigationTests.swift",
+        "line": 1,
+        "note": "imports Integration"
+      }
+    ]
+  },
+  {
+    "repo": "pointfreeco/swift-composable-architecture",
+    "language": "swift",
+    "check": "missing-dep",
+    "id": "missing-dep:.:990b3796",
+    "message": "`OSLog` is imported but not declared",
+    "evidence": [
+      {
+        "file": "Sources/ComposableArchitecture/Internal/Logger.swift",
+        "line": 2,
+        "note": "imports OSLog"
+      },
+      {
+        "file": "Sources/ComposableArchitecture/Reducer/Reducers/SignpostReducer.swift",
+        "line": 1,
+        "note": "imports OSLog"
+      }
+    ]
+  },
+  {
+    "repo": "pointfreeco/swift-composable-architecture",
+    "language": "swift",
+    "check": "missing-dep",
+    "id": "missing-dep:Examples:f009cd21",
+    "message": "`Todos` is imported but not declared",
+    "evidence": [
+      {
+        "file": "Examples/Todos/TodosTests/TodosTests.swift",
+        "line": 5,
+        "note": "imports Todos"
+      }
+    ]
+  },
+  {
+    "repo": "pointfreeco/swift-composable-architecture",
+    "language": "swift",
+    "check": "missing-dep",
+    "id": "missing-dep:Examples:b9f89b61",
+    "message": "`SwiftUICaseStudies` is imported but not declared",
+    "evidence": [
+      {
+        "file": "Examples/CaseStudies/SwiftUICaseStudiesTests/01-GettingStarted-AlertsAndConfirmationDialogsTests.swift",
+        "line": 4,
+        "note": "imports SwiftUICaseStudies"
+      },
+      {
+        "file": "Examples/CaseStudies/SwiftUICaseStudiesTests/01-GettingStarted-AnimationsTests.swift",
+        "line": 5,
+        "note": "imports SwiftUICaseStudies"
       }
     ]
   },
   {
     "repo": "apple/swift-nio",
     "language": "swift",
-    "check": "missing-dep",
-    "id": "missing-dep:.:20d59a5e",
-    "message": "`Musl` is imported but not declared",
+    "check": "unused-dep",
+    "id": "unused-dep:IntegrationTests/allocation-counter-tests-framework/template/HookedFunctionsDoNotHook:1edbae6c",
+    "message": "`AtomicCounter` is declared but never imported",
     "evidence": [
       {
-        "file": "Sources/NIOConcurrencyHelpers/NIOLock.swift",
-        "line": 23,
-        "note": "imports Musl"
-      },
-      {
-        "file": "Sources/NIOConcurrencyHelpers/NIOThreadPoolWorkAvailable.swift",
-        "line": 23,
-        "note": "imports Musl"
+        "file": "IntegrationTests/allocation-counter-tests-framework/template/HookedFunctionsDoNotHook/Package.swift",
+        "line": 28,
+        "note": "declared here"
       }
     ]
   },
@@ -2461,13 +2502,13 @@
     "repo": "pointfreeco/swift-composable-architecture",
     "language": "swift",
     "check": "missing-dep",
-    "id": "missing-dep:Examples:583fd9f3",
-    "message": "`UIKitCaseStudies` is imported but not declared",
+    "id": "missing-dep:Examples:3dd2749d",
+    "message": "`Search` is imported but not declared",
     "evidence": [
       {
-        "file": "Examples/CaseStudies/UIKitCaseStudiesTests/UIKitCaseStudiesTests.swift",
-        "line": 4,
-        "note": "imports UIKitCaseStudies"
+        "file": "Examples/Search/SearchTests/SearchTests.swift",
+        "line": 5,
+        "note": "imports Search"
       }
     ]
   },
@@ -2475,31 +2516,50 @@
     "repo": "pointfreeco/swift-composable-architecture",
     "language": "swift",
     "check": "missing-dep",
-    "id": "missing-dep:.:3e44aed1",
-    "message": "`SwiftOperators` is imported but not declared",
+    "id": "missing-dep:.:7bf365e6",
+    "message": "`SwiftSyntaxBuilder` is imported but not declared",
     "evidence": [
       {
         "file": "Sources/ComposableArchitectureMacros/Availability.swift",
-        "line": 13,
-        "note": "imports SwiftOperators"
+        "line": 15,
+        "note": "imports SwiftSyntaxBuilder"
       },
       {
         "file": "Sources/ComposableArchitectureMacros/Extensions.swift",
-        "line": 13,
-        "note": "imports SwiftOperators"
+        "line": 15,
+        "note": "imports SwiftSyntaxBuilder"
       }
     ]
   },
   {
-    "repo": "pointfreeco/swift-composable-architecture",
+    "repo": "apple/swift-nio",
     "language": "swift",
-    "check": "unused-dep",
-    "id": "unused-dep:Examples/TicTacToe/tic-tac-toe:f2bc44be",
-    "message": "`..` is declared but never imported",
+    "check": "missing-dep",
+    "id": "missing-dep:.:f67a79a3",
+    "message": "`Atomics` is imported but not declared",
     "evidence": [
       {
-        "file": "Examples/TicTacToe/tic-tac-toe/Package.swift",
-        "line": 30,
+        "file": "Sources/NIOCore/AsyncSequences/NIOAsyncWriter.swift",
+        "line": 15,
+        "note": "imports Atomics"
+      },
+      {
+        "file": "Sources/NIOCore/FileHandle.swift",
+        "line": 15,
+        "note": "imports Atomics"
+      }
+    ]
+  },
+  {
+    "repo": "apple/swift-nio",
+    "language": "swift",
+    "check": "unused-dep",
+    "id": "unused-dep:.:13068362",
+    "message": "`swift-atomics` is declared but never imported",
+    "evidence": [
+      {
+        "file": "Package.swift",
+        "line": 629,
         "note": "declared here"
       }
     ]
@@ -2508,13 +2568,37 @@
     "repo": "apple/swift-nio",
     "language": "swift",
     "check": "missing-dep",
-    "id": "missing-dep:dev/stackdiff:49d93340",
-    "message": "`Musl` is imported but not declared",
+    "id": "missing-dep:.:3bb3b4ba",
+    "message": "`CNIOAtomics` is imported but not declared",
     "evidence": [
       {
-        "file": "dev/stackdiff/Sources/stackdiff/Stackdiff+Merge.swift",
-        "line": 23,
-        "note": "imports Musl"
+        "file": "Sources/NIOConcurrencyHelpers/NIOAtomic.swift",
+        "line": 15,
+        "note": "imports CNIOAtomics"
+      },
+      {
+        "file": "Sources/NIOConcurrencyHelpers/atomics.swift",
+        "line": 15,
+        "note": "imports CNIOAtomics"
+      }
+    ]
+  },
+  {
+    "repo": "apple/swift-nio",
+    "language": "swift",
+    "check": "missing-dep",
+    "id": "missing-dep:.:7eeb95d2",
+    "message": "`Bionic` is imported but not declared",
+    "evidence": [
+      {
+        "file": "Sources/NIOConcurrencyHelpers/NIOLock.swift",
+        "line": 25,
+        "note": "imports Bionic"
+      },
+      {
+        "file": "Sources/NIOConcurrencyHelpers/NIOThreadPoolWorkAvailable.swift",
+        "line": 25,
+        "note": "imports Bionic"
       }
     ]
   },
@@ -2522,13 +2606,18 @@
     "repo": "pointfreeco/swift-composable-architecture",
     "language": "swift",
     "check": "missing-dep",
-    "id": "missing-dep:Examples:c3746868",
-    "message": "`SpeechRecognition` is imported but not declared",
+    "id": "missing-dep:.:5a30d1a4",
+    "message": "`SyncUps` is imported but not declared",
     "evidence": [
       {
-        "file": "Examples/SpeechRecognition/SpeechRecognitionTests/SpeechRecognitionTests.swift",
+        "file": "Sources/ComposableArchitecture/Documentation.docc/Tutorials/BuildingSyncUps/02-ListsOfSyncUps/TestingListOfSyncUps-01-code-0001.swift",
         "line": 4,
-        "note": "imports SpeechRecognition"
+        "note": "imports SyncUps"
+      },
+      {
+        "file": "Sources/ComposableArchitecture/Documentation.docc/Tutorials/BuildingSyncUps/02-ListsOfSyncUps/TestingListOfSyncUps-01-code-0002.swift",
+        "line": 4,
+        "note": "imports SyncUps"
       }
     ]
   },
@@ -2555,18 +2644,18 @@
     "repo": "apple/swift-nio",
     "language": "swift",
     "check": "missing-dep",
-    "id": "missing-dep:.:29ae8d02",
-    "message": "`CNIOLinux` is imported but not declared",
+    "id": "missing-dep:.:fd9ebb6e",
+    "message": "`ucrt` is imported but not declared",
     "evidence": [
       {
-        "file": "Sources/NIOCore/BSDSocketAPI.swift",
-        "line": 74,
-        "note": "imports CNIOLinux"
+        "file": "Sources/NIOConcurrencyHelpers/NIOLock.swift",
+        "line": 18,
+        "note": "imports ucrt"
       },
       {
-        "file": "Sources/NIOCore/EventLoop.swift",
-        "line": 27,
-        "note": "imports CNIOLinux"
+        "file": "Sources/NIOConcurrencyHelpers/NIOThreadPoolWorkAvailable.swift",
+        "line": 18,
+        "note": "imports ucrt"
       }
     ]
   },
@@ -2574,18 +2663,70 @@
     "repo": "pointfreeco/swift-composable-architecture",
     "language": "swift",
     "check": "missing-dep",
-    "id": "missing-dep:.:d18faf8f",
-    "message": "`SwiftSyntax` is imported but not declared",
+    "id": "missing-dep:Examples:b5c5a83e",
+    "message": "`Speech` is imported but not declared",
     "evidence": [
       {
-        "file": "Sources/ComposableArchitectureMacros/Availability.swift",
-        "line": 14,
-        "note": "imports SwiftSyntax"
+        "file": "Examples/SpeechRecognition/SpeechRecognition/SpeechClient/Client.swift",
+        "line": 2,
+        "note": "imports Speech"
       },
       {
-        "file": "Sources/ComposableArchitectureMacros/Extensions.swift",
-        "line": 14,
-        "note": "imports SwiftSyntax"
+        "file": "Examples/SpeechRecognition/SpeechRecognition/SpeechClient/Live.swift",
+        "line": 2,
+        "note": "imports Speech"
+      }
+    ]
+  },
+  {
+    "repo": "apple/swift-nio",
+    "language": "swift",
+    "check": "missing-dep",
+    "id": "missing-dep:.:e6879441",
+    "message": "`FoundationEssentials` is imported but not declared",
+    "evidence": [
+      {
+        "file": "Sources/NIOFSFoundationCompat/Data+FileSystem.swift",
+        "line": 20,
+        "note": "imports FoundationEssentials"
+      },
+      {
+        "file": "Sources/NIOFSFoundationCompat/Date+FileInfo.swift",
+        "line": 18,
+        "note": "imports FoundationEssentials"
+      }
+    ]
+  },
+  {
+    "repo": "apple/swift-nio",
+    "language": "swift",
+    "check": "unused-dep",
+    "id": "unused-dep:.:bbb2b767",
+    "message": "`swift-system` is declared but never imported",
+    "evidence": [
+      {
+        "file": "Package.swift",
+        "line": 631,
+        "note": "declared here"
+      }
+    ]
+  },
+  {
+    "repo": "pointfreeco/swift-composable-architecture",
+    "language": "swift",
+    "check": "missing-dep",
+    "id": "missing-dep:.:0305e11d",
+    "message": "`SwiftSyntaxMacrosTestSupport` is imported but not declared",
+    "evidence": [
+      {
+        "file": "Tests/ComposableArchitectureMacrosTests/MacroBaseTestCase.swift",
+        "line": 5,
+        "note": "imports SwiftSyntaxMacrosTestSupport"
+      },
+      {
+        "file": "Tests/ComposableArchitectureMacrosTests/ObservableStateMacroTests.swift",
+        "line": 5,
+        "note": "imports SwiftSyntaxMacrosTestSupport"
       }
     ]
   },
@@ -2605,142 +2746,6 @@
         "file": "Sources/NIOWebSocket/SHA1.swift",
         "line": 15,
         "note": "imports CNIOSHA1"
-      }
-    ]
-  },
-  {
-    "repo": "pointfreeco/swift-composable-architecture",
-    "language": "swift",
-    "check": "missing-dep",
-    "id": "missing-dep:Examples:baad7ad7",
-    "message": "`AppSwiftUI` is imported but not declared",
-    "evidence": [
-      {
-        "file": "Examples/TicTacToe/App/RootView.swift",
-        "line": 2,
-        "note": "imports AppSwiftUI"
-      }
-    ]
-  },
-  {
-    "repo": "pointfreeco/swift-composable-architecture",
-    "language": "swift",
-    "check": "unused-dep",
-    "id": "unused-dep:.:171bb5dd",
-    "message": "`IssueReportingTestSupport` is declared but never imported",
-    "evidence": [
-      {
-        "file": "Package.swift",
-        "line": 82,
-        "note": "declared here"
-      }
-    ]
-  },
-  {
-    "repo": "pointfreeco/swift-composable-architecture",
-    "language": "swift",
-    "check": "missing-dep",
-    "id": "missing-dep:Examples:63bbc5c6",
-    "message": "`VoiceMemos` is imported but not declared",
-    "evidence": [
-      {
-        "file": "Examples/VoiceMemos/VoiceMemosTests/VoiceMemosTests.swift",
-        "line": 5,
-        "note": "imports VoiceMemos"
-      }
-    ]
-  },
-  {
-    "repo": "pointfreeco/swift-composable-architecture",
-    "language": "swift",
-    "check": "unused-dep",
-    "id": "unused-dep:.:2f35ba38",
-    "message": "`swift-docc-plugin` is declared but never imported",
-    "evidence": [
-      {
-        "file": "Package.swift",
-        "line": 51,
-        "note": "declared here"
-      }
-    ]
-  },
-  {
-    "repo": "apple/swift-nio",
-    "language": "swift",
-    "check": "missing-dep",
-    "id": "missing-dep:.:3bb3b4ba",
-    "message": "`CNIOAtomics` is imported but not declared",
-    "evidence": [
-      {
-        "file": "Sources/NIOConcurrencyHelpers/NIOAtomic.swift",
-        "line": 15,
-        "note": "imports CNIOAtomics"
-      },
-      {
-        "file": "Sources/NIOConcurrencyHelpers/atomics.swift",
-        "line": 15,
-        "note": "imports CNIOAtomics"
-      }
-    ]
-  },
-  {
-    "repo": "pointfreeco/swift-composable-architecture",
-    "language": "swift",
-    "check": "unused-dep",
-    "id": "unused-dep:Benchmarks:da119f10",
-    "message": "`..` is declared but never imported",
-    "evidence": [
-      {
-        "file": "Benchmarks/Package.swift",
-        "line": 11,
-        "note": "declared here"
-      }
-    ]
-  },
-  {
-    "repo": "pointfreeco/swift-composable-architecture",
-    "language": "swift",
-    "check": "missing-dep",
-    "id": "missing-dep:.:a2d1e896",
-    "message": "`CounterApp` is imported but not declared",
-    "evidence": [
-      {
-        "file": "Sources/ComposableArchitecture/Documentation.docc/Tutorials/MeetTheComposableArchitecture/01-Essentials/03-TestingYourFeatures/01-03-01-code-0001.swift",
-        "line": 4,
-        "note": "imports CounterApp"
-      },
-      {
-        "file": "Sources/ComposableArchitecture/Documentation.docc/Tutorials/MeetTheComposableArchitecture/01-Essentials/03-TestingYourFeatures/01-03-01-code-0002.swift",
-        "line": 4,
-        "note": "imports CounterApp"
-      }
-    ]
-  },
-  {
-    "repo": "pointfreeco/swift-composable-architecture",
-    "language": "swift",
-    "check": "missing-dep",
-    "id": "missing-dep:Examples:c8bed65d",
-    "message": "`Tagged` is imported but not declared",
-    "evidence": [
-      {
-        "file": "Examples/SyncUps/SyncUps/Models.swift",
-        "line": 3,
-        "note": "imports Tagged"
-      }
-    ]
-  },
-  {
-    "repo": "pointfreeco/swift-composable-architecture",
-    "language": "swift",
-    "check": "missing-dep",
-    "id": "missing-dep:Examples:3ee33d9e",
-    "message": "`AppUIKit` is imported but not declared",
-    "evidence": [
-      {
-        "file": "Examples/TicTacToe/App/RootView.swift",
-        "line": 3,
-        "note": "imports AppUIKit"
       }
     ]
   }

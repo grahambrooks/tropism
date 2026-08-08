@@ -38,6 +38,12 @@ const SOURCE_ROOTS: &[&str] = &["include", "src", "source", "sources", "inc", "l
 /// C and POSIX headers that need no package. The C++ standard headers are
 /// recognised structurally instead — see [`is_standard_header`].
 const SYSTEM_HEADERS: &[&str] = &[
+    // Kernel and toolchain include roots. `linux/limits.h` and `asm/unistd.h` are
+    // supplied by the system, never by a package.
+    "asm",
+    "asm-generic",
+    "bits",
+    "linux",
     "aio.h",
     "arpa",
     "assert.h",
@@ -266,12 +272,19 @@ impl LanguageProvider for CppProvider {
         ImportTarget::External(candidate)
     }
 
+    /// Platform headers are matched **case-insensitively**.
+    ///
+    /// Windows filesystems are case-insensitive, so real code writes `<Windows.h>`
+    /// and `<windows.h>` interchangeably — `microsoft/terminal` and
+    /// `AvaloniaUI/Avalonia` both do. A case-sensitive list matched one spelling and
+    /// reported the other as a missing dependency on a package called `Windows`.
     fn is_stdlib(&self, header: &str) -> bool {
+        let lower = header.to_ascii_lowercase();
         is_standard_header(header)
-            || is_compiler_intrinsics(header)
-            || SYSTEM_HEADERS.contains(&header)
-            || WINDOWS_SDK_HEADERS.contains(&header)
-            || SYSTEM_HEADERS.contains(&first_segment(header))
+            || is_compiler_intrinsics(&lower)
+            || SYSTEM_HEADERS.contains(&lower.as_str())
+            || WINDOWS_SDK_HEADERS.contains(&lower.as_str())
+            || SYSTEM_HEADERS.contains(&first_segment(&lower))
     }
 
     fn version_ops(&self) -> &dyn VersionOps {
@@ -309,6 +322,8 @@ fn is_compiler_intrinsics(header: &str) -> bool {
 const WINDOWS_SDK_HEADERS: &[&str] = &[
     "commctrl.h",
     "commdlg.h",
+    "msctf.h",
+    "securityappcontainer.h",
     "d2d1.h",
     "d3d11.h",
     "d3d11_1.h",
@@ -778,6 +793,35 @@ fn collect_includes(node: tree_sitter::Node<'_>, source: &[u8], out: &mut Vec<Im
 
 #[cfg(test)]
 mod tests {
+
+    /// Windows filesystems are case-insensitive and real code writes both
+    /// spellings, so a case-sensitive list matched one and reported the other as a
+    /// missing dependency on a package called `Windows`.
+    #[test]
+    fn platform_headers_match_regardless_of_case() {
+        for header in ["Windows.h", "windows.h", "WINDOWS.H", "Msctf.h", "ShlObj.h"] {
+            assert!(
+                CppProvider.is_stdlib(header),
+                "`{header}` is a platform header"
+            );
+        }
+    }
+
+    /// Kernel and toolchain include roots are supplied by the system.
+    #[test]
+    fn kernel_include_roots_are_platform() {
+        for header in [
+            "linux/limits.h",
+            "asm/unistd.h",
+            "bits/types.h",
+            "sys/stat.h",
+        ] {
+            assert!(
+                CppProvider.is_stdlib(header),
+                "`{header}` is a platform header"
+            );
+        }
+    }
 
     /// The ten C++ `missing-dep` findings the evaluation audit turned up, once
     /// generated headers are set aside. Every one is a platform header or a
