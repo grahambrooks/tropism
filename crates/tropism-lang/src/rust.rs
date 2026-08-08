@@ -151,14 +151,31 @@ impl LanguageProvider for RustProvider {
             }
             _ if BUILTIN_ROOTS.contains(&root) => ImportTarget::Stdlib,
             _ => {
-                // Rust 2018 uniform paths: `pub use model::Thing` at the crate root
-                // names a *local* module, with no `crate::` prefix to say so. Missing
-                // this reported tropism-core's own modules as undeclared dependencies.
+                // Rust 2018 uniform paths: `pub use model::Thing` names a *local*
+                // module, with no `crate::` prefix to say so. Missing this reported
+                // tropism-core's own modules as undeclared dependencies.
+                //
+                // **The bare root is resolved against the importing file's own module
+                // first** — D42. A uniform path names something in scope *here*, so in
+                // `a::b` a bare `use x` means `a::b::x`. Checking only the crate root
+                // made this work at the top level and nowhere else, and
+                // `rules/mod.rs` writing `pub(crate) use ast_with::*;` for a sibling
+                // declared `mod ast_with;` two lines later was reported as a missing
+                // dependency — 15 of 20 Rust findings in the evaluation audit, and the
+                // dominant Rust false positive on ruff, tokio-stream and deno.
                 let modules = ctx.local_modules(|| module_set(ctx));
-                if modules.contains(root) {
-                    let mut full = vec![root.to_owned()];
-                    full.extend(rest.iter().map(|s| (*s).to_owned()));
-                    return contain(resolve_internal_owned(&full, ctx), &current);
+                let mut scoped = split_module(&current);
+                scoped.push(root.to_owned());
+                let sibling = join_module(&scoped);
+
+                // Innermost wins: a module in scope here shadows a crate-root module
+                // of the same name, exactly as Rust resolves it.
+                for candidate in [sibling.as_str(), root] {
+                    if modules.contains(candidate) {
+                        let mut full = split_module(candidate);
+                        full.extend(rest.iter().map(|s| (*s).to_owned()));
+                        return contain(resolve_internal_owned(&full, ctx), &current);
+                    }
                 }
 
                 // Cargo lets a dependency be named `tree-sitter-go` and imported as
@@ -1045,6 +1062,75 @@ version = "2.0.0"
                 &[]
             ),
             ImportTarget::Internal("render::text".to_owned())
+        );
+    }
+
+    /// D42. Rust 2018 uniform paths name something in scope *here*, so a bare
+    /// `use ast_with::*` inside `rules/mod.rs` means `rules::ast_with` — the sibling
+    /// declared `mod ast_with;` two lines below it.
+    ///
+    /// Resolving the bare root only against the crate root made this work at the top
+    /// level and nowhere else, and reported ruff's entire `rules/mod.rs` pattern as
+    /// missing dependencies: 15 of 20 Rust findings in the evaluation audit.
+    #[test]
+    fn a_bare_use_names_a_sibling_module_of_the_importing_file() {
+        assert_eq!(
+            resolve(
+                "src/rules/mod.rs",
+                "ast_with",
+                &["src/lib.rs", "src/rules/mod.rs", "src/rules/ast_with.rs"],
+                &[]
+            ),
+            ImportTarget::Internal("rules::ast_with".to_owned())
+        );
+    }
+
+    /// The crate-root case that already worked must keep working.
+    #[test]
+    fn a_bare_use_still_names_a_crate_root_module() {
+        assert_eq!(
+            resolve(
+                "src/lib.rs",
+                "model::Thing",
+                &["src/lib.rs", "src/model.rs"],
+                &[]
+            ),
+            ImportTarget::Internal("model".to_owned())
+        );
+    }
+
+    /// A module in scope shadows a crate-root module of the same name, which is how
+    /// Rust itself resolves it — so the nearer one has to be tried first.
+    #[test]
+    fn a_local_module_shadows_a_crate_root_module_of_the_same_name() {
+        assert_eq!(
+            resolve(
+                "src/rules/mod.rs",
+                "helpers",
+                &[
+                    "src/lib.rs",
+                    "src/helpers.rs",
+                    "src/rules/mod.rs",
+                    "src/rules/helpers.rs",
+                ],
+                &[]
+            ),
+            ImportTarget::Internal("rules::helpers".to_owned())
+        );
+    }
+
+    /// The fix must not start claiming external crates are local. A declared
+    /// dependency wins over a module that does not exist.
+    #[test]
+    fn a_declared_crate_is_still_external_from_a_nested_module() {
+        assert_eq!(
+            resolve(
+                "src/rules/mod.rs",
+                "serde::Serialize",
+                &["src/lib.rs", "src/rules/mod.rs"],
+                &["serde"]
+            ),
+            ImportTarget::External("serde".to_owned())
         );
     }
 

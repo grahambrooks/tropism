@@ -379,6 +379,29 @@ pub struct UnresolvedReason {
     pub count: usize,
 }
 
+/// A path tropism suggests excluding, and what excluding it would cost.
+///
+/// A first run on a real repository has no `tropism.toml`, so it reports on every
+/// manifest it finds — including the fixture packages under `tests/` that exist to
+/// be broken. Measured across the 24-repository evaluation corpus, **19% of hygiene
+/// findings sat inside a test fixture, example or sample**, and 725 of deno's 797
+/// "projects" were fixtures. That is not a discovery bug, and it is not something a
+/// provider can fix: those really are manifests.
+///
+/// So tropism offers the block rather than applying it. `projects` and `findings`
+/// are on the suggestion because an exclusion is a **deliberate blind spot** — the
+/// user has to be told what it hides before adopting it, which is the same reason
+/// [`Exclusion`] carries a match count.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct SuggestedExclusion {
+    /// A glob ready to paste into `tropism.toml`'s `exclude`.
+    pub pattern: String,
+    /// Projects it would remove from the analysis.
+    pub projects: usize,
+    /// Findings it would remove with them.
+    pub findings: usize,
+}
+
 /// A path deliberately kept out of the analysis.
 ///
 /// Disclosed for the same reason `CheckStatus` exists: a repository that excluded
@@ -407,6 +430,10 @@ pub struct Report {
     pub skipped: Vec<SkippedFile>,
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub excluded: Vec<Exclusion>,
+    /// Paths worth excluding, offered rather than applied. Empty when the ruleset
+    /// already excludes them, since they are filtered before discovery.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub suggested_excludes: Vec<SuggestedExclusion>,
 }
 
 impl Report {
@@ -418,6 +445,7 @@ impl Report {
             projects: Vec::new(),
             skipped: Vec::new(),
             excluded: Vec::new(),
+            suggested_excludes: Vec::new(),
         }
     }
 

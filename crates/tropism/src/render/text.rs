@@ -414,6 +414,56 @@ pub fn render_with(report: &Report, styled: bool) -> String {
         out.push('\n');
     }
 
+    // Offered, never applied — and the counts come with it, because an exclusion is
+    // a deliberate blind spot and the reader has to know what it hides before
+    // pasting it. Never phrased as a way to make a gate pass.
+    if !report.suggested_excludes.is_empty() {
+        let (bold, dim) = (palette.bold, palette.dim);
+        let projects: usize = report.suggested_excludes.iter().map(|s| s.projects).sum();
+        let findings: usize = report.suggested_excludes.iter().map(|s| s.findings).sum();
+
+        let _ = writeln!(
+            out,
+            "{bold}{findings} finding(s) come from {projects} fixture project(s){bold:#}"
+        );
+        for line in [
+            "Manifests under test, example and sample paths are real projects, so tropism",
+            "analyzes them — but they usually exist to be broken, and findings about them",
+            "are not about your code. To leave them out, add this to tropism.toml:",
+        ] {
+            let _ = writeln!(out, "{dim}{line}{dim:#}");
+        }
+        out.push('\n');
+
+        let _ = writeln!(out, "{dim}exclude = [{dim:#}");
+        let widest = report
+            .suggested_excludes
+            .iter()
+            .map(|s| s.pattern.len())
+            .max()
+            .unwrap_or(0);
+        for suggestion in &report.suggested_excludes {
+            let quoted = format!("\"{}\",", suggestion.pattern);
+            let _ = writeln!(
+                out,
+                "{dim}  {quoted:<width$}  # hides {} project(s), {} finding(s){dim:#}",
+                suggestion.projects,
+                suggestion.findings,
+                width = widest + 3,
+            );
+        }
+        let _ = writeln!(out, "{dim}]{dim:#}\n");
+
+        for line in [
+            "Every exclusion is a blind spot, so each is reported with a match count on",
+            "every run and can never become a silent one. Exclude what you do not ship —",
+            "never what is merely failing.",
+        ] {
+            let _ = writeln!(out, "{dim}{line}{dim:#}");
+        }
+        out.push('\n');
+    }
+
     if !report.skipped.is_empty() {
         let (warn, dim) = (palette.warn, palette.dim);
         let _ = writeln!(

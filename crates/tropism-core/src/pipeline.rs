@@ -586,6 +586,89 @@ fn read_path_aliases(
         .collect()
 }
 
+/// Path segments that mark a project as a fixture rather than shipped code.
+///
+/// Deliberately conservative. `demo` and `sample` are here because a package under
+/// them is a shop window; `test` and `spec` because a manifest under them exists to
+/// be installed by a test, not by a user. `src` and `lib` are obviously absent —
+/// a false suggestion costs a user their real code, so the list errs toward
+/// suggesting nothing.
+const FIXTURE_SEGMENTS: &[&str] = &[
+    "__testfixtures__",
+    "demo",
+    "demos",
+    "e2e",
+    "example",
+    "examples",
+    "fixture",
+    "fixtures",
+    "sample",
+    "samples",
+    "spec",
+    "specs",
+    "test",
+    "testdata",
+    "tests",
+    "testing",
+];
+
+/// Excludes worth offering, with what each would hide.
+///
+/// A first run has no `tropism.toml`, so it reports on every manifest — including
+/// the fixture packages that exist to be broken. Across the evaluation corpus that
+/// was 19% of hygiene findings and, for deno, 725 of 797 projects.
+///
+/// **Offered, never applied.** An exclusion is a deliberate blind spot, so the
+/// counts travel with the suggestion and the user decides. Nothing here changes
+/// what this run reported.
+fn suggest_excludes(report: &Report) -> Vec<crate::report::SuggestedExclusion> {
+    use crate::report::SuggestedExclusion;
+
+    // Group by the prefix up to and including the *first* fixture segment, so one
+    // suggestion covers a whole tree — `tests/**` rather than 725 separate globs.
+    let mut grouped: BTreeMap<String, (usize, usize)> = BTreeMap::new();
+    for project in &report.projects {
+        let segments: Vec<&str> = project
+            .project
+            .root
+            .as_str()
+            .split('/')
+            .filter(|s| !s.is_empty())
+            .collect();
+        let Some(at) = segments
+            .iter()
+            .position(|s| FIXTURE_SEGMENTS.contains(&s.to_ascii_lowercase().as_str()))
+        else {
+            continue;
+        };
+        let prefix = segments[..=at].join("/");
+        let entry = grouped.entry(prefix).or_default();
+        entry.0 += 1;
+        entry.1 += project.findings.len();
+    }
+
+    // One project under `tests/` is not a pattern worth a config change; a
+    // suggestion nobody would act on is noise in every future run.
+    let mut suggestions: Vec<SuggestedExclusion> = grouped
+        .into_iter()
+        .filter(|(_, (projects, findings))| *projects >= 3 && *findings > 0)
+        .map(|(prefix, (projects, findings))| SuggestedExclusion {
+            pattern: format!("{prefix}/**"),
+            projects,
+            findings,
+        })
+        .collect();
+
+    // Largest first: the one worth acting on should be the one read first.
+    suggestions.sort_by(|a, b| {
+        b.findings
+            .cmp(&a.findings)
+            .then_with(|| a.pattern.cmp(&b.pattern))
+    });
+    suggestions.truncate(5);
+    suggestions
+}
+
 /// Parses every project's manifest. A project whose manifest will not parse is
 /// dropped here and reported by the pass that tries to analyze it.
 fn parse_manifests<'a>(
@@ -876,6 +959,10 @@ fn analyze_scoped(
     }
 
     apply_rules(scan_root, &mut report, &rule_input, options, &workspaces);
+
+    // After the rules, so the counts include every finding the run produced.
+    report.suggested_excludes = suggest_excludes(&report);
+
     report.finalize();
     Ok(report)
 }
@@ -1605,6 +1692,7 @@ fn module_id(project_root: &Utf8Path, file: &Utf8Path) -> String {
 mod tests {
     use super::*;
     use crate::model::Language;
+    use crate::report::{Confidence, Severity};
 
     fn project(root: &str) -> Project {
         Project {
@@ -1613,6 +1701,76 @@ mod tests {
             manifests: vec![],
             lockfile: None,
         }
+    }
+
+    fn project_report(root: &str, findings: usize) -> ProjectReport {
+        let mut report = ProjectReport::new(project(root));
+        for i in 0..findings {
+            report.findings.push(Finding::new(
+                CheckId::UnusedDep,
+                &Utf8PathBuf::from(root),
+                &[&i.to_string()],
+                Severity::Warning,
+                Confidence::Low,
+                "x",
+            ));
+        }
+        report
+    }
+
+    /// One suggestion per fixture tree, not one per fixture package. deno has 725
+    /// of them; 725 globs is not advice.
+    #[test]
+    fn fixture_projects_collapse_into_one_suggestion_per_tree() {
+        let mut report = Report::new(".");
+        for i in 0..4 {
+            report
+                .projects
+                .push(project_report(&format!("tests/specs/case{i}"), 2));
+        }
+        report.projects.push(project_report("src/app", 1));
+
+        let suggestions = suggest_excludes(&report);
+        assert_eq!(suggestions.len(), 1);
+        assert_eq!(suggestions[0].pattern, "tests/**");
+        assert_eq!(suggestions[0].projects, 4);
+        // The count is the point: an exclusion is a blind spot, and the reader has
+        // to know what it hides before pasting it.
+        assert_eq!(suggestions[0].findings, 8);
+    }
+
+    /// Shipped code is never suggested, however it is laid out. A false suggestion
+    /// costs a user their real analysis.
+    #[test]
+    fn shipped_code_is_never_suggested() {
+        let mut report = Report::new(".");
+        for root in ["src/app", "crates/core", "lib/util", "packages/web"] {
+            report.projects.push(project_report(root, 3));
+        }
+        assert!(suggest_excludes(&report).is_empty());
+    }
+
+    /// A single fixture package is not a pattern worth a config change, and a
+    /// suggestion nobody would act on is noise on every future run.
+    #[test]
+    fn a_lone_fixture_project_is_not_worth_suggesting() {
+        let mut report = Report::new(".");
+        report.projects.push(project_report("tests/only", 5));
+        report.projects.push(project_report("src/app", 1));
+        assert!(suggest_excludes(&report).is_empty());
+    }
+
+    /// A fixture tree that produced no findings is not worth excluding either —
+    /// excluding it would buy nothing and cost a blind spot.
+    #[test]
+    fn a_quiet_fixture_tree_is_not_suggested() {
+        let mut report = Report::new(".");
+        for i in 0..5 {
+            report
+                .projects
+                .push(project_report(&format!("tests/case{i}"), 0));
+        }
+        assert!(suggest_excludes(&report).is_empty());
     }
 
     #[test]

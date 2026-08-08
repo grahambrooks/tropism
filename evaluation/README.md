@@ -194,6 +194,10 @@ same set. Classified by cause, it is not one problem — it is six, and they wan
 | **3%** | Java: test deps injected by a Gradle convention plugin | tropism reads `build.gradle`, not the plugin that rewrites it |
 | **1%** | **Swift: `.package(path: "..")` named `..`** | **D43 — a verified bug** |
 
+**Fixed since:** D42 (Rust sibling modules), D44 (C++ platform headers), and D45 — `analyze` now
+offers an `exclude` block for fixture trees, annotated with what each glob would hide. Re-run the
+corpus to measure what they were worth; the shares above are from before.
+
 **What to fix, in the order the evidence supports:**
 
 1. **D42, Rust sibling modules.** A real bug, the largest single Rust cause, and it fires on exactly

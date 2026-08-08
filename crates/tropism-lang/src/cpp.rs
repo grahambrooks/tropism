@@ -268,7 +268,9 @@ impl LanguageProvider for CppProvider {
 
     fn is_stdlib(&self, header: &str) -> bool {
         is_standard_header(header)
+            || is_compiler_intrinsics(header)
             || SYSTEM_HEADERS.contains(&header)
+            || WINDOWS_SDK_HEADERS.contains(&header)
             || SYSTEM_HEADERS.contains(&first_segment(header))
     }
 
@@ -276,6 +278,102 @@ impl LanguageProvider for CppProvider {
         &ConanVersionOps
     }
 }
+
+/// Compiler-provided SIMD intrinsics: `immintrin.h`, `arm_neon.h`, `lsxintrin.h`.
+///
+/// A structural rule rather than a list, because the set grows with every
+/// architecture — `lsxintrin.h` (LoongArch) is what surfaced this — and none of them
+/// is ever a package. `*intrin.h` covers the x86, ARM64EC and LoongArch families;
+/// the rest are named individually because they do not share a suffix.
+fn is_compiler_intrinsics(header: &str) -> bool {
+    let name = last_segment(header);
+    name.ends_with("intrin.h")
+        || matches!(
+            name,
+            "arm_neon.h" | "arm_acle.h" | "arm_sve.h" | "altivec.h" | "s390intrin.h"
+        )
+}
+
+/// Windows SDK headers. Not packages, and not reachable by any structural rule.
+///
+/// The list is deliberately partial: the SDK ships thousands of headers and
+/// enumerating them is neither possible nor useful. These are the ones that actually
+/// appeared — ten findings across `microsoft/terminal` and `apache/arrow` in the
+/// evaluation audit, which is the whole of C++ `missing-dep` in that sample after
+/// generated headers are set aside.
+///
+/// The trade is the same one `System.*` makes in the C# provider, and it is made the
+/// same way: treating these as platform can hide a package that genuinely vendors a
+/// header of the same name, while the alternative reports a missing dependency on
+/// `windows.h` for every Windows codebase, which is worse.
+const WINDOWS_SDK_HEADERS: &[&str] = &[
+    "commctrl.h",
+    "commdlg.h",
+    "d2d1.h",
+    "d3d11.h",
+    "d3d11_1.h",
+    "d3d11_2.h",
+    "d3d11_3.h",
+    "d3d12.h",
+    "d3dcompiler.h",
+    "dcomp.h",
+    "direct.h",
+    "dsound.h",
+    "dwmapi.h",
+    "dwrite.h",
+    "dwrite_1.h",
+    "dwrite_2.h",
+    "dwrite_3.h",
+    "dxgi.h",
+    "dxgi1_2.h",
+    "dxgi1_3.h",
+    "dxgi1_6.h",
+    "io.h",
+    "knownfolders.h",
+    "lmcons.h",
+    "mmsystem.h",
+    "namedpipeapi.h",
+    "ntstatus.h",
+    "nturtl.h",
+    "objbase.h",
+    "objidl.h",
+    "ole2.h",
+    "oleauto.h",
+    "olectl.h",
+    "pathcch.h",
+    "process.h",
+    "propkey.h",
+    "propvarutil.h",
+    "psapi.h",
+    "rpc.h",
+    "shellapi.h",
+    "shellscalingapi.h",
+    "shlobj.h",
+    "shlwapi.h",
+    "shobjidl.h",
+    "strsafe.h",
+    "tchar.h",
+    "unknwn.h",
+    "userenv.h",
+    "uxtheme.h",
+    "versionhelpers.h",
+    "wincodec.h",
+    "wincon.h",
+    "wincontypes.h",
+    "wincrypt.h",
+    "windowsx.h",
+    "winerror.h",
+    "wininet.h",
+    "winioctl.h",
+    "winnls.h",
+    "winnt.h",
+    "winreg.h",
+    "winsock2.h",
+    "winspool.h",
+    "winuser.h",
+    "wtypes.h",
+    "ws2tcpip.h",
+];
 
 /// A C++ standard header has neither a directory nor an extension: `<vector>`,
 /// `<string_view>`, `<cstdio>`. A structural rule rather than a list, which is what
@@ -680,6 +778,56 @@ fn collect_includes(node: tree_sitter::Node<'_>, source: &[u8], out: &mut Vec<Im
 
 #[cfg(test)]
 mod tests {
+
+    /// The ten C++ `missing-dep` findings the evaluation audit turned up, once
+    /// generated headers are set aside. Every one is a platform header or a
+    /// compiler intrinsic, and none is a package anyone could declare.
+    #[test]
+    fn platform_headers_from_the_audit_are_not_missing_dependencies() {
+        for header in [
+            "dsound.h",
+            "uxtheme.h",
+            "dwrite.h",
+            "nturtl.h",
+            "d3d11_2.h",
+            "wincontypes.h",
+            "commctrl.h",
+            "direct.h",
+        ] {
+            assert!(
+                CppProvider.is_stdlib(header),
+                "`{header}` is a Windows SDK header, not a package"
+            );
+        }
+        for header in ["lsxintrin.h", "immintrin.h", "arm_neon.h", "xmmintrin.h"] {
+            assert!(
+                CppProvider.is_stdlib(header),
+                "`{header}` is compiler-provided, not a package"
+            );
+        }
+    }
+
+    /// The intrinsics rule is structural so it survives the next architecture, but
+    /// it must not swallow a package that merely ends in the same letters.
+    #[test]
+    fn the_intrinsics_rule_matches_on_the_whole_suffix() {
+        assert!(is_compiler_intrinsics("emmintrin.h"));
+        assert!(is_compiler_intrinsics("x86/immintrin.h"));
+        assert!(!is_compiler_intrinsics("mylib/matrin.h"));
+        assert!(!is_compiler_intrinsics("intrinsics.h"));
+    }
+
+    /// Widening the platform list must not start hiding real packages. `fmt/core.h`
+    /// and `spdlog/spdlog.h` are the shape most C++ dependencies have.
+    #[test]
+    fn a_real_package_header_is_still_external() {
+        for header in ["fmt/core.h", "spdlog/spdlog.h", "nlohmann/json.hpp"] {
+            assert!(
+                !CppProvider.is_stdlib(header),
+                "`{header}` is a package header and must stay resolvable to a package"
+            );
+        }
+    }
 
     /// D39 turned a scan of every component into a range query grouped by final
     /// segment. A component only matches on a whole-segment suffix.

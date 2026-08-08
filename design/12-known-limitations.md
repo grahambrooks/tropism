@@ -396,7 +396,26 @@ hygiene at 63% false positives on the one ecosystem anyone has checked.
 **Decide with D4 in hand:** either cap on `statement_rate`, or keep the current cap and document that
 `Low` on Rust means "path references dominate" rather than "resolution is poor".
 
-### D42. A bare `use <sibling module>` in a nested Rust module is reported as a missing dependency
+### D44. ~~Windows SDK and compiler intrinsics headers are reported as missing dependencies~~ — RESOLVED
+
+`SYSTEM_HEADERS` covered POSIX and C but not the Windows SDK, so `dsound.h`, `uxtheme.h`,
+`d3d11_2.h`, `commctrl.h`, `nturtl.h` and `direct.h` were reported as undeclared packages — and
+every large open-source C++ repository that ships a manifest at all is a Windows codebase. Ten
+findings in the evaluation audit, which was the whole of C++ `missing-dep` once generated headers
+were set aside.
+
+**Fixed two ways, matching how each family is actually shaped.** Compiler intrinsics get a
+*structural* rule — `*intrin.h`, plus the handful that do not share a suffix — because the set grows
+with every architecture and `lsxintrin.h` (LoongArch) is what surfaced it. The Windows SDK gets a
+curated list, because no structural rule fits and the SDK ships thousands of headers; it is
+deliberately partial and covers what appeared.
+
+Same trade as `System.*` in the C# provider, made the same way: treating these as platform can hide a
+package that vendors a header of the same name, while the alternative reports a missing dependency
+on `windows.h` for every Windows codebase. A test pins that `fmt/core.h` and `nlohmann/json.hpp` stay
+external, because widening the platform list must not start hiding real packages.
+
+### D42. ~~A bare `use <sibling module>` in a nested Rust module is reported as a missing dependency~~ — RESOLVED
 
 Rust 2018 uniform paths let a module write `pub(crate) use ast_with::*;` for a sibling declared
 `mod ast_with;` in the same file. `rust.rs` handles this — the comment "Rust 2018 uniform paths"
@@ -411,8 +430,14 @@ declared``.
 It fires hardest on exactly the codebases most likely to adopt tropism — ruff's `rules/mod.rs`
 pattern, `tokio-stream/src`, `deno`'s `cli/tools`.
 
-**Fix:** resolve a bare root against the *importing file's* module path first — a bare `use X` in
-module `a::b` may mean `a::b::X` — before falling through to the declared-crate check.
+**Fixed.** The bare root is now resolved against the importing file's own module first — a bare
+`use X` in `a::b` means `a::b::X` — and only then against the crate root, so a module in scope
+shadows a crate-root module of the same name exactly as Rust resolves it. Four tests pin it,
+including that a declared crate is still external from a nested module: the fix must not start
+claiming external crates are local.
+
+It resolves rather than suppresses. `tropism explain` on the reproduction now reports
+`resolves to module \`rules::ast_with\``, so the edge exists and a rule can see it.
 
 ### D43. `.package(path: "..")` yields a Swift dependency named `..`
 
@@ -430,7 +455,27 @@ finding a reader cannot even parse is worse than a wrong one they can.
 sibling and resolve it through the target's `.product(name:package:)` entries, as the registry case
 already is. Failing that, drop it rather than name it after a directory.
 
-### D9. No sub-ruleset inheritance in a monorepo
+### D45. A first run is dominated by test fixtures, and now says so
+
+19% of the hygiene findings in the evaluation audit sat inside a test fixture, example or sample —
+725 of deno's 797 "projects", 583 of next.js's 746. Not a discovery bug: those really are manifests,
+and tropism cannot know they exist to be broken.
+
+**Addressed by offering the exclusion, not by applying it.** `analyze` now ends with a
+copy-pasteable `exclude` block, one glob per fixture *tree* rather than per package, each annotated
+with the projects and findings it would hide. `Report::suggested_excludes` carries the same in JSON,
+so an agent gets it too.
+
+Offering rather than applying is the whole point. An exclusion is a deliberate blind spot, so the
+cost travels with the suggestion and the user decides — and the wording never presents it as a way
+to make a gate pass, because *"never widen an exclusion to make the gate pass"* is the rule this
+feature is most likely to be misread as contradicting.
+
+Conservative by construction: three or more projects, at least one finding, and a segment list that
+contains `test` and `demo` but nothing resembling shipped code. A false suggestion costs a user
+their real analysis, so it errs toward suggesting nothing.
+
+
 
 Whether `packages/web/tropism.toml` extends or replaces the root ruleset is undecided
 ([11-dependency-rules.md](11-dependency-rules.md), open question 2).
