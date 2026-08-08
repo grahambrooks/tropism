@@ -130,6 +130,28 @@ enforce mechanically, rather than by remembering.
 | `report.py` | the report; `--json` and `--audit-sample` too |
 | `results/`, `oracles/results/`, `.checkouts/` | gitignored, reproducible |
 
+## What the report answers
+
+`REPORT.md` opens with **Where tropism does well** and **Where it is deficient**, computed
+mechanically from the numbers below them so a reader can argue with a threshold rather than with an
+adjective. Every criterion is stated inline.
+
+Beneath that, the sections that make the verdicts checkable:
+
+| | |
+| --- | --- |
+| **D1 Discovery** | plus *fixture-shaped* and *empty* project counts — a manifest under `tests/` is a real project and inflates every number below it |
+| **Per-language** | the split design/19 asks for: tropism is ten providers of different maturity, and a mean over them describes none of them |
+| **D2 Resolution** | statement resolution *and* the raw rate, because they mean different things — see below — with the unresolved reasons ranked |
+| **D3/D5 Findings** | normalised per 1,000 source files, since elasticsearch has 31,458 files and flask has 83 |
+| **Confidence** | a High-confidence rule violation and a Low-confidence `unused-dep` are different claims and must not be summed |
+
+**Read the statement column in D2, not the raw rate.** The raw rate counts bare path references as
+failures, and Rust leaves an unrecognised path root unresolved *by design*. On this repository that
+is the difference between 28% and 100%. The raw rate is still what caps hygiene confidence, which is
+D41 — the report flags any project where the two diverge, because there every hygiene finding is
+pinned to Low for a reason unrelated to whether tropism understood the code.
+
 ## What the report will not do
 
 It computes what is computable and **lists the rest as outstanding**, with the sample already drawn.

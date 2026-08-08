@@ -10,7 +10,7 @@ use camino::Utf8PathBuf;
 
 use crate::graph::{ModuleGraph, ModuleId};
 use crate::model::{DeclaredDep, Project, ResolvedDep};
-use crate::provider::ImportTarget;
+use crate::provider::{ImportForm, ImportTarget};
 use crate::report::{CheckId, CheckStatus, Confidence, Evidence, Finding, Severity};
 
 /// One import site, after resolution.
@@ -23,6 +23,14 @@ pub struct ResolvedImport {
     pub owner: ModuleId,
     pub line: u32,
     pub raw: String,
+    /// Whether this was an import *statement* or a bare path reference.
+    ///
+    /// The distinction matters to the resolution rate. Rust deliberately leaves an
+    /// unrecognised path root `Unresolved` — `Palette::plain()` is a local type, and
+    /// treating it as external would invent a missing dependency in every file — so
+    /// counting path references as failed resolutions measures a design decision
+    /// rather than a provider gap.
+    pub form: ImportForm,
     pub target: ImportTarget,
 }
 
@@ -59,6 +67,54 @@ impl AnalysisContext {
             .filter(|i| matches!(i.target, ImportTarget::Unresolved { .. }))
             .count();
         1.0 - (unresolved as f64 / self.imports.len() as f64)
+    }
+
+    /// The resolution picture, for the report. Same numerator and denominator as
+    /// [`Self::resolution_rate`], so what a reader sees is what capped the
+    /// confidence.
+    pub fn resolution(&self) -> crate::report::Resolution {
+        use crate::report::{Resolution, UnresolvedReason};
+        let mut reasons: BTreeMap<&str, usize> = BTreeMap::new();
+        let mut unresolved = 0;
+        let mut statements = 0;
+        let mut unresolved_statements = 0;
+        for import in &self.imports {
+            let is_statement = import.form == ImportForm::Statement;
+            if is_statement {
+                statements += 1;
+            }
+            if let ImportTarget::Unresolved { reason } = &import.target {
+                unresolved += 1;
+                if is_statement {
+                    unresolved_statements += 1;
+                }
+                *reasons.entry(reason.as_str()).or_default() += 1;
+            }
+        }
+        let mut reasons: Vec<UnresolvedReason> = reasons
+            .into_iter()
+            .map(|(reason, count)| UnresolvedReason {
+                reason: reason.to_owned(),
+                count,
+            })
+            .collect();
+        // Most frequent first, then alphabetically, so the list is deterministic.
+        reasons.sort_by(|a, b| b.count.cmp(&a.count).then_with(|| a.reason.cmp(&b.reason)));
+        reasons.truncate(10);
+
+        Resolution {
+            imports: self.imports.len(),
+            resolved: self.imports.len() - unresolved,
+            unresolved,
+            rate: self.resolution_rate(),
+            statements,
+            statement_rate: if statements == 0 {
+                1.0
+            } else {
+                1.0 - (unresolved_statements as f64 / statements as f64)
+            },
+            reasons,
+        }
     }
 
     /// Confidence ceiling for checks that compare declarations against imports.
@@ -497,6 +553,7 @@ mod tests {
 
     fn import(file: &str, line: u32, raw: &str, target: ImportTarget) -> ResolvedImport {
         ResolvedImport {
+            form: ImportForm::Statement,
             file: file.into(),
             owner: ModuleId::module("."),
             line,
@@ -640,6 +697,91 @@ mod tests {
 
     /// Hygiene findings are capped at Medium even with perfect resolution: an
     /// import tropism cannot see is invisible by construction.
+    /// The reported number must be the one that capped the confidence, or a reader
+    /// sees a Low-confidence finding and a resolution figure that does not explain
+    /// it.
+    #[test]
+    fn reported_resolution_matches_the_rate_that_caps_confidence() {
+        let ctx = context(
+            vec![dep("github.com/a/b", DepKind::Runtime)],
+            vec![
+                import(
+                    "svc/a.go",
+                    1,
+                    "github.com/a/b",
+                    ImportTarget::External("github.com/a/b".to_owned()),
+                ),
+                import(
+                    "svc/b.go",
+                    1,
+                    "mystery",
+                    ImportTarget::Unresolved {
+                        reason: "no idea".to_owned(),
+                    },
+                ),
+                import(
+                    "svc/c.go",
+                    1,
+                    "mystery",
+                    ImportTarget::Unresolved {
+                        reason: "no idea".to_owned(),
+                    },
+                ),
+            ],
+        );
+
+        let resolution = ctx.resolution();
+        assert_eq!(resolution.imports, 3);
+        assert_eq!(resolution.resolved, 1);
+        assert_eq!(resolution.unresolved, 2);
+        assert!((resolution.rate - ctx.resolution_rate()).abs() < f64::EPSILON);
+        // The reasons are what name the next provider gap.
+        assert_eq!(resolution.reasons.len(), 1);
+        assert_eq!(resolution.reasons[0].count, 2);
+    }
+
+    /// Ordering is by frequency then alphabetically, so two runs over the same
+    /// input produce the same bytes.
+    #[test]
+    fn unresolved_reasons_are_ordered_deterministically() {
+        let ctx = context(
+            vec![],
+            vec![
+                import(
+                    "svc/a.go",
+                    1,
+                    "z",
+                    ImportTarget::Unresolved {
+                        reason: "zebra".to_owned(),
+                    },
+                ),
+                import(
+                    "svc/b.go",
+                    1,
+                    "a",
+                    ImportTarget::Unresolved {
+                        reason: "apple".to_owned(),
+                    },
+                ),
+                import(
+                    "svc/c.go",
+                    1,
+                    "a",
+                    ImportTarget::Unresolved {
+                        reason: "apple".to_owned(),
+                    },
+                ),
+            ],
+        );
+        let resolution = ctx.resolution();
+        let reasons: Vec<&str> = resolution
+            .reasons
+            .iter()
+            .map(|r| r.reason.as_str())
+            .collect();
+        assert_eq!(reasons, vec!["apple", "zebra"]);
+    }
+
     #[test]
     fn hygiene_confidence_is_never_high() {
         let ctx = context(vec![dep("github.com/a/b", DepKind::Runtime)], vec![]);

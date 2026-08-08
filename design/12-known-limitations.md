@@ -371,6 +371,31 @@ vocabularies in the contract, which is the defect rather than the fix.
 top of `report.rs`, and the rule was applied even though nothing has been published — a version that
 does not move when the contract moves tells a consumer nothing.
 
+### D41. The confidence cap counts deliberately-unresolved path references as failures
+
+`AnalysisContext::resolution_rate` divides unresolved imports by *all* imports, and drops
+`unused-dep` and `missing-dep` to `Low` below 90%. But Rust leaves an unrecognised path root
+`Unresolved` **by design** — S2, and `Palette::plain()` is the motivating case — so on a Rust project
+the denominator is dominated by references the provider was never meant to resolve.
+
+Measured on this repository: **22–29% of imports resolve, and 100% of import *statements* do.**
+`Vec`, `String`, `CheckId` and every local type land in the unresolved bucket. So every Rust hygiene
+finding is pinned to `Low` for a reason that has nothing to do with whether tropism understood the
+code.
+
+**Found by** the evaluation harness in [19-analysis-evaluation.md](19-analysis-evaluation.md), which
+could not measure its own D2 until `resolution` was added to the report contract — and then showed
+the number meant something different from what D2 assumed.
+
+**Half-fixed.** `Resolution` now reports `statements` and `statement_rate` beside `rate`, so the two
+are distinguishable and the evaluation judges providers on the honest one. `resolution_rate` itself
+is unchanged, so **no finding's confidence moved**: raising Rust hygiene from `Low` to `Medium` is a
+product decision that should follow the D4 audit rather than precede it, since design/10 measured
+hygiene at 63% false positives on the one ecosystem anyone has checked.
+
+**Decide with D4 in hand:** either cap on `statement_rate`, or keep the current cap and document that
+`Low` on Rust means "path references dominate" rather than "resolution is poor".
+
 ### D9. No sub-ruleset inheritance in a monorepo
 
 Whether `packages/web/tropism.toml` extends or replaces the root ruleset is undecided

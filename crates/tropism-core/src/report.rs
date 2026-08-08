@@ -270,6 +270,11 @@ pub struct ProjectReport {
     /// nothing at all in the output, which reads exactly like a clean project.
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub sibling_exemptions: Vec<SiblingExemption>,
+    /// How much of this project's source resolved. `None` for a rules-only run,
+    /// which does not resolve imports at all — absent rather than zero, so nobody
+    /// reads "did not look" as "understood nothing".
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub resolution: Option<Resolution>,
 }
 
 impl ProjectReport {
@@ -280,6 +285,7 @@ impl ProjectReport {
             findings: Vec::new(),
             source_file_count: 0,
             sibling_exemptions: Vec::new(),
+            resolution: None,
         }
     }
 
@@ -332,6 +338,45 @@ pub struct SiblingExemption {
     pub provided_by: Option<Utf8PathBuf>,
     /// How many import sites this exemption covered.
     pub imports: usize,
+}
+
+/// How much of a project's source tropism actually understood.
+///
+/// **The best available proxy for provider completeness**, and already the thing
+/// that caps every hygiene finding's confidence — `unused-dep` and `missing-dep`
+/// drop to `Low` below 90%. It was computed and then thrown away, so a reader could
+/// see a Low-confidence finding without being able to see *why*, and an evaluation
+/// could not measure the number its own conclusions depend on.
+///
+/// `reasons` is the actionable part: it names the next provider gap directly, in
+/// the project's own vocabulary. An `Unresolved` import is never a silent drop.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct Resolution {
+    pub imports: usize,
+    pub resolved: usize,
+    pub unresolved: usize,
+    /// `resolved / imports`, or 1.0 for a project with no imports at all. **This is
+    /// the number that caps hygiene confidence.**
+    pub rate: f64,
+    /// Import *statements* only, excluding bare path references.
+    pub statements: usize,
+    /// Resolution over statements alone.
+    ///
+    /// The honest measure of provider completeness, and usually very different from
+    /// [`Self::rate`]. Rust leaves an unrecognised path root `Unresolved` by
+    /// design — `Vec`, `String` and every local type land there — so `rate` on a
+    /// Rust project largely counts a deliberate decision, while this counts imports
+    /// tropism was asked to resolve and could not.
+    pub statement_rate: f64,
+    /// The most common reasons an import did not resolve, most frequent first.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub reasons: Vec<UnresolvedReason>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct UnresolvedReason {
+    pub reason: String,
+    pub count: usize,
 }
 
 /// A path deliberately kept out of the analysis.

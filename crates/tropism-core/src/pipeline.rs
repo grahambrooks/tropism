@@ -1412,6 +1412,7 @@ fn analyze_project(
                 owner: owner.clone(),
                 line: import.line,
                 raw: import.raw,
+                form: import.form,
                 target,
             });
         }
@@ -1483,6 +1484,7 @@ fn analyze_project(
         let (checks, findings) = analysis::run_all(&context);
         project_report.checks = checks;
         project_report.findings = findings;
+        project_report.resolution = Some(context.resolution());
     }
     project_report.finalize();
 

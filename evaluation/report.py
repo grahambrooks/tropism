@@ -98,6 +98,35 @@ def summarise(report: dict) -> dict:
 
     exemptions = [e for p in projects for e in p.get("sibling_exemptions", [])]
 
+    # Resolution: the share of imports tropism understood. Absent from results
+    # produced before it was added to the contract, and absent (not zero) on a
+    # rules-only run — "did not look" must not read as "understood nothing".
+    res = [p["resolution"] for p in projects if p.get("resolution")]
+    imports = sum(r["imports"] for r in res)
+    unresolved = sum(r["unresolved"] for r in res)
+    statements = sum(r.get("statements", 0) for r in res)
+    unresolved_statements = sum(
+        round(r.get("statements", 0) * (1 - r.get("statement_rate", 1.0))) for r in res
+    )
+    reasons = collections.Counter()
+    for r in res:
+        for entry in r.get("reasons", []):
+            reasons[entry["reason"]] += entry["count"]
+
+    # A project with no source files is a manifest with nothing under it — a test
+    # fixture, a package stub, a vendored descriptor. They inflate every count
+    # below D1 without being code anyone wants findings about.
+    empty = sum(1 for p in projects if p.get("source_file_count", 0) == 0)
+    fixtures = sum(
+        1 for p in projects
+        if any(seg in p["root"].lower().split("/")
+               for seg in ("test", "tests", "testdata", "fixture", "fixtures",
+                           "spec", "specs", "example", "examples", "registry"))
+    )
+
+    confidence = collections.Counter(f["confidence"] for f in findings)
+    severity = collections.Counter(f["severity"] for f in findings)
+
     return {
         "projects": len(projects),
         "languages": sorted({p["language"] for p in projects}),
@@ -113,6 +142,25 @@ def summarise(report: dict) -> dict:
         "unavailable_reasons": unavailable_reasons,
         "sibling_exemptions": len(exemptions),
         "exempted_imports": sum(e.get("imports", 0) for e in exemptions),
+        "has_resolution": bool(res),
+        "imports": imports,
+        "unresolved": unresolved,
+        "resolution_rate": (imports - unresolved) / imports if imports else None,
+        "statements": statements,
+        "statement_rate": (statements - unresolved_statements) / statements if statements else None,
+        "unresolved_reasons": reasons,
+        "empty_projects": empty,
+        "fixture_projects": fixtures,
+        "confidence": confidence,
+        "severity": severity,
+        "per_project": [
+            {"language": p["language"],
+             "files": p.get("source_file_count", 0),
+             "findings": len(p.get("findings", [])),
+             "by_check": collections.Counter(f["check"] for f in p.get("findings", [])),
+             "resolution": p.get("resolution")}
+            for p in projects
+        ],
     }
 
 
@@ -159,6 +207,169 @@ def draw_audit_sample(corpus, size: int, seed: int = 20260808) -> list[dict]:
     return sample
 
 
+
+def by_language(done) -> dict:
+    """Rolls per-project facts up by language.
+
+    design/19 asks for the per-language split for a reason: an aggregate across ten
+    languages hides exactly the variation that matters. tropism is not one tool with
+    one accuracy — it is ten providers of visibly different maturity, and a mean
+    over them describes none of them.
+    """
+    langs: dict[str, dict] = collections.defaultdict(
+        lambda: {"repos": set(), "projects": 0, "files": 0, "findings": 0,
+                 "by_check": collections.Counter(), "imports": 0, "unresolved": 0,
+                 "statements": 0, "unresolved_statements": 0}
+    )
+    for row, data in done:
+        for project in summarise(data)["per_project"]:
+            entry = langs[project["language"]]
+            entry["repos"].add(row["repo"])
+            entry["projects"] += 1
+            entry["files"] += project["files"]
+            entry["findings"] += project["findings"]
+            entry["by_check"].update(project["by_check"])
+            if project["resolution"]:
+                r = project["resolution"]
+                entry["imports"] += r["imports"]
+                entry["unresolved"] += r["unresolved"]
+                entry["statements"] += r.get("statements", 0)
+                entry["unresolved_statements"] += round(
+                    r.get("statements", 0) * (1 - r.get("statement_rate", 1.0))
+                )
+    return langs
+
+
+def per_thousand(count: int, files: int) -> str:
+    """Findings per 1,000 source files.
+
+    Raw counts across repositories of wildly different size are not comparable:
+    elasticsearch has 31,458 files and flask has 83. Density is what says whether a
+    check is quiet or noisy.
+    """
+    return f"{1000 * count / files:.1f}" if files else "—"
+
+
+def verdicts(done) -> tuple[list[str], list[str]]:
+    """What the numbers support saying, and what they do not.
+
+    Deliberately mechanical. The criteria are stated in the report so a reader can
+    disagree with the threshold rather than with an unexplained adjective, and so
+    the same input always produces the same verdict.
+    """
+    good: list[str] = []
+    bad: list[str] = []
+    langs = by_language(done)
+
+    failures = [row["repo"] for row, data in done if data.get("error")]
+    if not failures:
+        good.append(f"**No run failures.** {len(done)} repositories analyzed, none errored.")
+
+    skipped = sum(summarise(d)["skipped_files"] for _, d in done)
+    total_files = sum(summarise(d)["source_files"] for _, d in done)
+    if total_files and skipped / total_files < 0.001:
+        good.append(
+            f"**Parsing is near-total.** {skipped} of {total_files:,} files unreadable "
+            f"({100 * skipped / total_files:.3f}%)."
+        )
+
+    slowest = max(((summarise(d)["seconds"] or 0, summarise(d)["source_files"], row["repo"])
+                   for row, d in done), default=(0, 0, ""))
+    if slowest[0] and slowest[1]:
+        good.append(
+            f"**Scale holds.** Largest run {slowest[2]} — {slowest[1]:,} files in "
+            f"{slowest[0]}s ({slowest[1] // max(slowest[0], 1):,} files/sec)."
+        )
+
+    # Resolution, per language, is the clearest maturity signal available.
+    # Judged on *statements*, which is what provider completeness means. The raw
+    # rate is reported too, because it is what caps confidence — but it counts
+    # deliberately-unresolved path references as failures and would otherwise
+    # condemn a provider that resolved everything it was asked to.
+    measured = {k: v for k, v in langs.items() if v["statements"]}
+    for language, entry in sorted(measured.items()):
+        srate = (entry["statements"] - entry["unresolved_statements"]) / entry["statements"]
+        if srate >= 0.95:
+            good.append(
+                f"**{language}: {100 * srate:.1f}% of import statements resolved** "
+                f"({entry['statements']:,} statements)."
+            )
+        elif srate < 0.80:
+            bad.append(
+                f"**{language}: only {100 * srate:.1f}% of import statements resolved.** "
+                f"Below 80%, design/19 says that language's findings should not be "
+                f"trusted. The unresolved reasons below name the gap."
+            )
+        else:
+            bad.append(
+                f"**{language}: {100 * srate:.1f}% of import statements resolved.** Under "
+                f"the 95% target; the unresolved reasons below name the gap."
+            )
+    if not measured:
+        bad.append(
+            "**Resolution rate not measurable.** These results predate the `resolution` "
+            "field in the report contract. Re-run with `FORCE=1 ./run.sh` to measure "
+            "D2 at all."
+        )
+
+    # The confidence cap is driven by `rate`, which counts path references as
+    # failures. Where the two measures diverge, the cap is measuring a design
+    # decision rather than provider completeness — and it pins every hygiene
+    # finding in that project to Low for the wrong reason.
+    for row, data in done:
+        s = summarise(data)
+        rate, srate = s.get("resolution_rate"), s.get("statement_rate")
+        if rate is None or srate is None or not s["imports"]:
+            continue
+        if srate - rate > 0.25 and rate < 0.9:
+            bad.append(
+                f"**{row['repo']}: {100 * rate:.0f}% of imports resolve but "
+                f"{100 * srate:.0f}% of import *statements* do.** The gap is bare path "
+                f"references, which are deliberately left unresolved. Because the "
+                f"confidence cap keys on the first number, every hygiene finding here "
+                f"is pinned to Low for a reason unrelated to whether tropism understood "
+                f"the code."
+            )
+
+    # Discovery inflation gates every number below it.
+    for row, data in done:
+        s = summarise(data)
+        if s["projects"] >= 50 and s["fixture_projects"] / s["projects"] > 0.5:
+            bad.append(
+                f"**{row['repo']}: {s['fixture_projects']} of {s['projects']} projects "
+                f"are under test or fixture paths.** Discovery gates every other number, "
+                f"and a first run here is dominated by packages nobody wants findings "
+                f"about. This is what `exclude` in tropism.toml is for."
+            )
+
+    # A check that never runs anywhere is a claim tropism cannot make.
+    #
+    # Counted **per repository, not per project**: a lockfile resolves a whole
+    # workspace, so a monorepo of 700 members reports `version-conflict` unavailable
+    # 699 times and available once, and that is correct behaviour rather than a gap
+    # (D2). The honest question is whether tropism got a resolved tree for the
+    # repository at all.
+    reached = collections.Counter()
+    for _, data in done:
+        for check in ("cycle", "unused-dep", "missing-dep",
+                      "version-conflict", "diamond-dep"):
+            if any(p.get("checks", {}).get(check, {}).get("status") == "ran"
+                   for p in data.get("projects", [])):
+                reached[check] += 1
+    for check in ("cycle", "unused-dep", "missing-dep", "version-conflict", "diamond-dep"):
+        missing_in = len(done) - reached[check]
+        if missing_in > len(done) / 2:
+            bad.append(
+                f"**`{check}` never ran in {missing_in} of {len(done)} repositories.** "
+                f"Honest where no resolved tree exists (S3), but it caps what tropism "
+                f"can claim in those ecosystems."
+            )
+        elif missing_in == 0:
+            good.append(f"**`{check}` ran in every repository.**")
+
+    return good, bad
+
+
 def markdown(corpus) -> str:
     out: list[str] = []
     w = out.append
@@ -188,6 +399,22 @@ def markdown(corpus) -> str:
     w("Generated by `evaluation/report.py`; regenerate after any run. Dimensions follow "
       "[design/19-analysis-evaluation.md](../design/19-analysis-evaluation.md).\n")
 
+    good, bad = verdicts(done)
+    w("## Summary\n")
+    w("Mechanical, from the numbers below, so a reader can argue with a threshold "
+      "rather than with an adjective. Criteria are named inline.\n")
+    w("### Where tropism does well\n")
+    for line in good or ["_Nothing met the criteria._"]:
+        w(f"- {line}")
+    w("")
+    w("### Where it is deficient\n")
+    for line in bad or ["_Nothing met the criteria._"]:
+        w(f"- {line}")
+    w("")
+    w("**Not answered here.** Accuracy. Every count below is what tropism *said*, not "
+      "what was true — that needs the oracle pass and the D4 hand audit, both of which "
+      "this report marks as outstanding rather than quietly omitting.\n")
+
     if errored:
         w("## D7 — Robustness: failures\n")
         w("Any non-finding failure is a P1 regardless of every other number.\n")
@@ -199,35 +426,135 @@ def markdown(corpus) -> str:
     w("## D1 — Discovery\n")
     w("Gates everything below: a missed project silently removes code from every "
       "other number.\n")
-    w("| Repository | Shape | Projects | Languages found | Expected | Source files |")
-    w("| --- | --- | --- | --- | --- | --- |")
+    w("| Repository | Shape | Projects | Fixture-shaped | Empty | Languages found | Source files |")
+    w("| --- | --- | --- | --- | --- | --- | --- |")
     for row, data in done:
         s = summarise(data)
-        expected = ", ".join(sorted(row["languages"]))
         found = ", ".join(s["languages"]) or "**none**"
         flag = "" if set(s["languages"]) >= set(row["languages"]) else " ⚠"
-        w(f"| {row['repo']} | {row['shape']} | {s['projects']} | {found}{flag} "
-          f"| {expected} | {s['source_files']:,} |")
-    w("\n⚠ marks a language the corpus expects and discovery did not find. For C++ "
-      "this is expected on most repositories and is a property of the ecosystem, "
-      "not a defect — see design/19.\n")
+        share = f"{s['fixture_projects']} ({100 * s['fixture_projects'] // max(s['projects'], 1)}%)"
+        heavy = " ⚠" if s["projects"] >= 50 and s["fixture_projects"] / s["projects"] > 0.5 else ""
+        w(f"| {row['repo']} | {row['shape']} | {s['projects']} | {share}{heavy} "
+          f"| {s['empty_projects']} | {found}{flag} | {s['source_files']:,} |")
+    w("\n**Fixture-shaped** counts projects whose path contains a `test`, `spec`, "
+      "`fixture`, `example` or `registry` segment; **Empty** counts manifests with no "
+      "source file under them at all. Neither is a discovery bug — they are real "
+      "manifests — but both inflate every number below, and a ⚠ marks a repository "
+      "where most of what tropism found is not the code anyone wants reported on. "
+      "`exclude` in `tropism.toml` is the answer, and none of these repositories has "
+      "one.\n")
+    w("A ⚠ beside a language means the corpus expected it and discovery did not find "
+      "it. For C++ that is a property of the ecosystem rather than a defect — most "
+      "open-source C++ ships no Conan or vcpkg manifest at all (design/19).\n")
 
     # ---------------------------------------------------------------- D5/D3
     w("## D3/D5 — Findings by check\n")
     w("Counts only. Soundness needs the oracle columns and the hand audit below; "
       "a count is not a verdict.\n")
-    w("| Repository | " + " | ".join(INFERRED) + " | Oracles available |")
-    w("| --- | " + " | ".join("---" for _ in INFERRED) + " | --- |")
+    w("| Repository | " + " | ".join(INFERRED) + " | per 1k | Oracles available |")
+    w("| --- | " + " | ".join("---" for _ in INFERRED) + " | --- | --- |")
     for row, data in done:
         s = summarise(data)
         cells = [str(s["by_check"].get(check, 0)) for check in INFERRED]
         oracles = oracle_status(row["slug"])
         got = ", ".join(k for k, ok in sorted(oracles.items()) if ok) or "—"
-        w(f"| {row['repo']} | " + " | ".join(cells) + f" | {got} |")
+        density = per_thousand(s["findings"], s["source_files"])
+        w(f"| {row['repo']} | " + " | ".join(cells) + f" | {density} | {got} |")
     w("")
+    w("**per 1k** normalises by source files, because raw counts across repositories "
+      "of wildly different size are not comparable — elasticsearch has 31,458 files "
+      "and flask has 83. Density is what says whether a check is quiet or noisy.\n")
+
+    confidence = collections.Counter()
+    severity = collections.Counter()
+    for _, data in done:
+        s = summarise(data)
+        confidence.update(s["confidence"])
+        severity.update(s["severity"])
+    if confidence:
+        w("**Confidence, across every finding.** A High-confidence rule violation and a "
+          "Low-confidence `unused-dep` are different claims and should never be counted "
+          "together.\n")
+        total = sum(confidence.values())
+        w("| Confidence | Findings | Share |")
+        w("| --- | --- | --- |")
+        for level in ("high", "medium", "low"):
+            n = confidence.get(level, 0)
+            w(f"| {level} | {n:,} | {100 * n // max(total, 1)}% |")
+        w("")
 
     # ---------------------------------------------------------------- D2
-    w("## D2 — Check availability\n")
+    w("## Per-language\n")
+    w("The split design/19 asks for. tropism is not one tool with one accuracy — it is "
+      "ten providers of visibly different maturity, and a mean over them describes "
+      "none of them.\n")
+    langs = by_language(done)
+    w("| Language | Repos | Projects | Files | Statements resolved | All imports | "
+      "Findings | per 1k files |")
+    w("| --- | --- | --- | --- | --- | --- | --- | --- |")
+    for language, entry in sorted(langs.items()):
+        if entry["statements"]:
+            srate = (entry["statements"] - entry["unresolved_statements"]) / entry["statements"]
+            stmt = f"{100 * srate:.1f}%" + (" ⚠" if srate < 0.95 else "")
+        else:
+            stmt = "—"
+        if entry["imports"]:
+            rate = (entry["imports"] - entry["unresolved"]) / entry["imports"]
+            allc = f"{100 * rate:.1f}%"
+        else:
+            allc = "—"
+        w(f"| {language} | {len(entry['repos'])} | {entry['projects']} | "
+          f"{entry['files']:,} | {stmt} | {allc} | {entry['findings']:,} | "
+          f"{per_thousand(entry['findings'], entry['files'])} |")
+    w("")
+
+    w("## D2 — Resolution\n")
+    w("The share of imports tropism understood, and **the number that caps every "
+      "hygiene finding's confidence**: below 90% `unused-dep` and `missing-dep` drop "
+      "to Low. design/19 targets ≥95% and treats below 80% as meaning that language's "
+      "findings should not be trusted.\n")
+    measured = [(row, summarise(d)) for row, d in done if summarise(d)["has_resolution"]]
+    if measured:
+        w("| Repository | Imports | Resolved (all) | Statements | Resolved (statements) |")
+        w("| --- | --- | --- | --- | --- |")
+        for row, s in measured:
+            rate, srate = s["resolution_rate"], s["statement_rate"]
+            all_cell = f"{100 * rate:.1f}%" if rate is not None else "—"
+            st_cell = f"{100 * srate:.1f}%" if srate is not None else "—"
+            if srate is not None and srate < 0.95:
+                st_cell += " ⚠"
+            w(f"| {row['repo']} | {s['imports']:,} | {all_cell} | {s['statements']:,} "
+              f"| {st_cell} |")
+        w("")
+        w("**Read the statement column, not the first one.** *Resolved (all)* counts "
+          "bare path references as failures, and Rust leaves an unrecognised path root "
+          "unresolved *by design* — `Palette::plain()` is a local type, and calling it "
+          "external would invent a missing dependency in every file. So on Rust the "
+          "first column largely measures a deliberate decision. *Resolved (statements)* "
+          "counts only imports tropism was asked to resolve and could not, which is what "
+          "provider completeness means.\n")
+        w("**`rate` — the first column — is still what caps hygiene confidence.** Where "
+          "the two diverge sharply, every hygiene finding in that project is pinned to "
+          "Low for a reason unrelated to whether tropism understood the code.\n")
+        reasons = collections.Counter()
+        for _, s in measured:
+            reasons.update(s["unresolved_reasons"])
+        if reasons:
+            w("**Why imports did not resolve.** This is the actionable list: each line "
+              "names a provider gap in the ecosystem's own vocabulary, ordered by how "
+              "much it costs.\n")
+            w("| Count | Reason |")
+            w("| --- | --- |")
+            for reason, count in reasons.most_common(15):
+                w(f"| {count:,} | {reason[:110]} |")
+            w("")
+    else:
+        w("> **Not measurable from these results.** They predate the `resolution` field "
+          "in the report contract. Re-run with `FORCE=1 ./run.sh` — until then D2, a "
+          "primary dimension, is simply unmeasured, and the confidence attached to "
+          "every hygiene finding below is unexplained.\n")
+
+    w("## D2b — Check availability\n")
     w("`unavailable` is not a failure — it is the honest answer where no resolved "
       "tree exists (S3). What matters is whether the *reason* is right.\n")
     reasons = collections.Counter()
