@@ -71,7 +71,7 @@ parser (resolved tree), and import extraction from source.
 | Swift      | SwiftPM         | `Package.swift`                       | `Package.resolved`                                 |
 | Ruby       | Bundler         | `Gemfile`                             | `Gemfile.lock`                                     |
 
-Only Cargo and npm produce a genuinely resolved *tree* — exact versions and edges. `uv.lock`,
+Cargo, npm, yarn and pnpm produce a genuinely resolved *tree* — exact versions and edges. `uv.lock`,
 `poetry.lock`, and `Gemfile.lock` have both but describe a flat environment, so a diamond cannot
 occur in them. `go.sum`, `gradle.lockfile`, `Package.resolved`, and `conan.lock` have versions and
 no edges at all, and Maven has no lockfile whatsoever; those four report `Unavailable` with a
@@ -431,7 +431,11 @@ was sound on every repository. Do not turn hygiene on by default or let it gate 
   `uv.lock` means is a platform-conditional resolution, which is a version conflict and never a
   diamond — and an edge naming a forked package is ambiguous, so the Python provider drops it rather
   than attaching it to an arbitrary copy.
-- **Only Cargo and npm produce a real resolved tree.** Maven has no lockfile at all;
+- **Four package managers produce a real resolved tree**, all in two ecosystems: Cargo, and npm,
+  yarn and pnpm. D14 added the last two — both carry edges, so `diamond-dep` can name the dependents
+  that disagreed. `pnpm-lock.yaml` is read by a targeted parser because every YAML crate is
+  deprecated, an unmaintained fork, or pre-0.1; the input is machine-generated and regular, which is
+  what makes that defensible. Maven has no lockfile at all;
   `gradle.lockfile`, `Package.resolved`, and `conan.lock` are flat lists with no edges. Each returns
   `Ok(None)` from `parse_lockfile` with a `resolved_tree_note`, exactly as Go does for `go.sum`.
   Returning the flat list would let `diamond-dep` report a confident `0 findings` about a graph it

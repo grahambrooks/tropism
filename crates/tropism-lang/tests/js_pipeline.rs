@@ -185,3 +185,59 @@ fn an_unmatched_alias_does_not_invent_a_dependency() {
         .collect();
     assert!(!missing.contains(&"@"), "{missing:?}");
 }
+
+// ---------------------------------------------------------------------------
+// D14: yarn and pnpm lockfiles
+
+/// The point of D14. Before it, a Yarn or pnpm repository reported `Unavailable`
+/// for both resolved-tree checks — two of six, in the one ecosystem where a
+/// genuinely resolved tree with edges exists.
+#[test]
+fn yarn_and_pnpm_lockfiles_are_resolved_trees() {
+    for fixture in ["js-yarn", "js-pnpm"] {
+        let report = analyze(fixture);
+        let project = &report.projects[0];
+        for check in [CheckId::VersionConflict, CheckId::DiamondDep] {
+            assert!(
+                matches!(project.checks.get(&check), Some(CheckStatus::Ran { .. })),
+                "{fixture}: {check} should run, got {:?}",
+                project.checks.get(&check)
+            );
+        }
+    }
+}
+
+/// A diamond needs *edges*, not just versions. Naming the two dependents that
+/// disagreed is the assertion that separates a parsed graph from a flat list —
+/// which is the distinction `go.sum` and `conan.lock` fail, and why they correctly
+/// report nothing rather than a confident zero.
+#[test]
+fn a_diamond_from_yarn_or_pnpm_names_the_dependents_that_disagreed() {
+    for fixture in ["js-yarn", "js-pnpm"] {
+        let report = analyze(fixture);
+        let found = findings_for(&report, CheckId::DiamondDep);
+        assert_eq!(found.len(), 1, "{fixture}: {found:?}");
+
+        let message = &found[0].message;
+        assert!(message.contains("shared"), "{fixture}: {message}");
+        assert!(message.contains("alpha"), "{fixture}: {message}");
+        assert!(message.contains("beta"), "{fixture}: {message}");
+    }
+}
+
+/// Both formats describe the same install, so they must produce the same finding.
+/// If they ever diverge, one of the two parsers is wrong about the graph.
+#[test]
+fn yarn_and_pnpm_agree_about_the_same_dependency_tree() {
+    let messages = |fixture: &str| -> Vec<String> {
+        let report = analyze(fixture);
+        let mut found: Vec<String> = report
+            .findings()
+            .filter(|f| matches!(f.check, CheckId::VersionConflict | CheckId::DiamondDep))
+            .map(|f| f.message.clone())
+            .collect();
+        found.sort();
+        found
+    };
+    assert_eq!(messages("js-yarn"), messages("js-pnpm"));
+}

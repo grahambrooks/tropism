@@ -1,0 +1,43 @@
+lockfileVersion: '9.0'
+
+settings:
+  autoInstallPeers: true
+
+importers:
+
+  .:
+    dependencies:
+      alpha:
+        specifier: ^1.0.0
+        version: 1.0.0
+      beta:
+        specifier: ^1.0.0
+        version: 1.0.0
+
+packages:
+
+  alpha@1.0.0:
+    resolution: {integrity: sha512-aaa}
+
+  beta@1.0.0:
+    resolution: {integrity: sha512-bbb}
+
+  shared@1.4.2:
+    resolution: {integrity: sha512-ccc}
+
+  shared@2.1.0:
+    resolution: {integrity: sha512-ddd}
+
+snapshots:
+
+  alpha@1.0.0:
+    dependencies:
+      shared: 1.4.2
+
+  beta@1.0.0:
+    dependencies:
+      shared: 2.1.0
+
+  shared@1.4.2: {}
+
+  shared@2.1.0: {}

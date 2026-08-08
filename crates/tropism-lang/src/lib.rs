@@ -12,6 +12,13 @@ pub mod go;
 #[cfg(feature = "javascript")]
 pub mod javascript;
 
+/// npm is not the only lockfile JavaScript has, and the other two are large enough
+/// formats to live beside the provider rather than inside it.
+#[cfg(feature = "javascript")]
+pub mod pnpm;
+#[cfg(feature = "javascript")]
+pub mod yarn;
+
 #[cfg(feature = "rust")]
 pub mod rust;
 

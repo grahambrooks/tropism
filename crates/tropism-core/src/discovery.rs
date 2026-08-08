@@ -41,7 +41,10 @@ pub fn discover(
 
     // filename -> languages that claim it. `package.json` maps to both JS and TS.
     let mut manifest_owners: BTreeMap<&str, Vec<Language>> = BTreeMap::new();
-    let mut lockfile_owners: BTreeMap<&str, Vec<Language>> = BTreeMap::new();
+    // The rank is the provider's own preference order, so a project holding more
+    // than one lockfile picks the same one every run rather than whichever the
+    // directory walk reached first.
+    let mut lockfile_owners: BTreeMap<&str, Vec<(Language, usize)>> = BTreeMap::new();
     let mut manifest_extension_owners: BTreeMap<&str, Vec<Language>> = BTreeMap::new();
     for provider in providers {
         for name in provider.manifest_names() {
@@ -56,17 +59,18 @@ pub fn discover(
                 .or_default()
                 .push(provider.language());
         }
-        for name in provider.lockfile_names() {
+        for (rank, name) in provider.lockfile_names().iter().enumerate() {
             lockfile_owners
                 .entry(name)
                 .or_default()
-                .push(provider.language());
+                .push((provider.language(), rank));
         }
     }
 
-    // (directory, language) -> manifests and lockfile found there.
-    let mut found: BTreeMap<(Utf8PathBuf, Language), (Vec<Utf8PathBuf>, Option<Utf8PathBuf>)> =
-        BTreeMap::new();
+    // (directory, language) -> manifests, and the best lockfile found there with
+    // the rank that made it best.
+    type Slot = (Vec<Utf8PathBuf>, Option<(Utf8PathBuf, usize)>);
+    let mut found: BTreeMap<(Utf8PathBuf, Language), Slot> = BTreeMap::new();
 
     let walker = WalkBuilder::new(scan_root)
         .standard_filters(respect_ignore)
@@ -110,10 +114,13 @@ pub fn discover(
                 .push(relative.clone());
         }
         if let Some(languages) = lockfile_owners.get(file_name) {
-            for language in languages {
+            for (language, rank) in languages {
                 let slot = &mut found.entry((dir.clone(), *language)).or_default().1;
-                if slot.is_none() {
-                    *slot = Some(relative.clone());
+                // Lower rank wins. A repository mid-migration can hold both a
+                // `package-lock.json` and a `yarn.lock`, and which one tropism reads
+                // must not depend on directory iteration order.
+                if slot.as_ref().is_none_or(|(_, best)| rank < best) {
+                    *slot = Some((relative.clone(), *rank));
                 }
             }
         }
@@ -129,7 +136,7 @@ pub fn discover(
                 root,
                 language,
                 manifests,
-                lockfile,
+                lockfile: lockfile.map(|(path, _)| path),
             }
         })
         .collect();
@@ -303,6 +310,59 @@ mod tests {
         assert_eq!(
             projects[0].lockfile, None,
             "absence is normal, not a failure"
+        );
+
+        std::fs::remove_dir_all(&dir).unwrap();
+    }
+
+    /// A repository mid-migration holds two lockfiles. Which one tropism reads
+    /// decides which resolved tree every downstream check sees, so it must be the
+    /// provider's stated preference and not whichever the directory walk reached
+    /// first — that would make the answer depend on filesystem iteration order.
+    #[test]
+    fn the_preferred_lockfile_wins_when_a_project_has_several() {
+        let js = Stub(
+            Language::JavaScript,
+            &["package.json"],
+            &["package-lock.json", "pnpm-lock.yaml", "yarn.lock"],
+        );
+        let dir = temp_dir("twolocks");
+        write(&dir, "package.json", "{}");
+        // Written least-preferred first, so a first-seen-wins implementation picks
+        // the wrong one on any filesystem that preserves creation order.
+        write(&dir, "yarn.lock", "");
+        write(&dir, "pnpm-lock.yaml", "");
+        write(&dir, "package-lock.json", "{}");
+
+        let projects = discover(&dir, &[&js], true, &ExcludeSet::default()).unwrap();
+
+        assert_eq!(projects.len(), 1);
+        assert_eq!(
+            projects[0].lockfile.as_deref(),
+            Some(Utf8Path::new("package-lock.json"))
+        );
+
+        std::fs::remove_dir_all(&dir).unwrap();
+    }
+
+    /// And with the preferred one absent, the next in order is taken.
+    #[test]
+    fn the_next_preference_is_taken_when_the_first_is_absent() {
+        let js = Stub(
+            Language::JavaScript,
+            &["package.json"],
+            &["package-lock.json", "pnpm-lock.yaml", "yarn.lock"],
+        );
+        let dir = temp_dir("onelock");
+        write(&dir, "package.json", "{}");
+        write(&dir, "yarn.lock", "");
+        write(&dir, "pnpm-lock.yaml", "");
+
+        let projects = discover(&dir, &[&js], true, &ExcludeSet::default()).unwrap();
+
+        assert_eq!(
+            projects[0].lockfile.as_deref(),
+            Some(Utf8Path::new("pnpm-lock.yaml"))
         );
 
         std::fs::remove_dir_all(&dir).unwrap();

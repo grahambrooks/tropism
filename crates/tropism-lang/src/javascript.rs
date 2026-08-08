@@ -92,11 +92,14 @@ impl LanguageProvider for JavaScriptProvider {
         &["package.json"]
     }
 
-    /// npm only. yarn and pnpm lockfiles are unrelated formats; yarn's is bespoke
-    /// and pnpm's is YAML, which has no maintained crate — see
-    /// `design/08-crates.md`. A repo using those gets `Unavailable`, correctly.
+    /// All three, most-preferred first.
+    ///
+    /// Order matters when a repository holds more than one — a migration in
+    /// progress, or a `package-lock.json` someone forgot to delete. npm's is the
+    /// richest (it distinguishes copies by install path, which the other two cannot)
+    /// so it wins, and after that the more recent format does.
     fn lockfile_names(&self) -> &'static [&'static str] {
-        &["package-lock.json"]
+        &["package-lock.json", "pnpm-lock.yaml", "yarn.lock"]
     }
 
     /// pnpm states its workspace in a file of its own rather than in the manifest,
@@ -131,12 +134,20 @@ impl LanguageProvider for JavaScriptProvider {
         parse_package_json(path, text)
     }
 
+    /// All three formats are genuinely resolved trees *with edges*, which is why
+    /// they are parsed rather than reported unavailable — unlike `go.sum`,
+    /// `gradle.lockfile`, `Package.resolved` and `conan.lock`, which carry versions
+    /// and no relationships. See D14.
     fn parse_lockfile(
         &self,
-        _path: &Utf8Path,
+        path: &Utf8Path,
         text: &str,
     ) -> anyhow::Result<Option<Vec<ResolvedDep>>> {
-        parse_package_lock(text)
+        match path.file_name() {
+            Some("pnpm-lock.yaml") => crate::pnpm::parse(text),
+            Some("yarn.lock") => crate::yarn::parse(text),
+            _ => parse_package_lock(text),
+        }
     }
 
     fn extract_imports(&self, path: &Utf8Path, text: &str) -> anyhow::Result<Vec<Import>> {

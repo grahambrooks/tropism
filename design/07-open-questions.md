@@ -218,7 +218,8 @@ languages forced four trait changes; the last five forced **none**. `LanguagePro
 What the five did produce is a sharper map of where the *ecosystems* differ, which is worth more than
 another trait method:
 
-- Only Cargo and npm ship a resolved tree with edges. Four of the five new ecosystems ship a flat
+- Only Cargo and npm ship a resolved tree with edges. (Yarn and pnpm joined them later, under D14;
+  the point below stands — it is two *ecosystems*, not four.) Four of the five new ecosystems ship a flat
   list, and Maven ships nothing.
 - Four of the ten manifests are programs. All four are now parsed with a grammar, and two of them
   reuse a grammar already in the tree (`conanfile.py` → Python, `Gemfile` → Ruby).

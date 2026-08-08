@@ -129,6 +129,21 @@ is language four. The state of the ecosystem as of the verification date:
 `saphyr` is the only actively maintained option and is the current best bet, at the cost of a
 pre-0.1 API. Re-check when JS/TS work starts; the decision does not need to be made before then.
 
+**Decided when D14 was built, and the answer was none of them.** Re-checked: the table above is
+unchanged — `saphyr` is still pre-0.1, and the two forks still have no recent release. So
+`pnpm-lock.yaml` is read by a targeted parser in `crates/tropism-lang/src/pnpm.rs` instead.
+
+The justification is the *input*, not the ecosystem: a lockfile is machine-generated, two-space
+indented, and uses no anchors, aliases, flow collections or multi-line scalars. That is a small
+regular grammar, and a general YAML parser would be a large dependency — in a tool that ships signed
+binaries and must build offline — bought to read a fraction of one. The same reasoning already
+applied to `go.mod`, `yarn.lock`, `Gemfile.lock` and `requirements.txt`.
+
+**What that costs:** a lockfile using YAML features the parser does not model is read as though those
+lines were not there. The mitigation is that it fails toward `Ok(None)` and an `Unavailable` check
+rather than toward a wrong graph, and that the parser is exercised against real 20k–33k-line
+lockfiles rather than only fixtures. Revisit if `saphyr` reaches 1.0.
+
 **Python version parsing may need vendoring.** `pep440_rs` (0.7.3, 2024-12) and `pep508_rs` (0.9.2,
 2025-01) are the right crates but have not been released in over a year — development moved into
 uv's tree. Re-check at step 7; be prepared to vendor or reimplement the subset tropism needs.
