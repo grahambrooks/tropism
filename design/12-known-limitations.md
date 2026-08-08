@@ -396,6 +396,40 @@ hygiene at 63% false positives on the one ecosystem anyone has checked.
 **Decide with D4 in hand:** either cap on `statement_rate`, or keep the current cap and document that
 `Low` on Rust means "path references dominate" rather than "resolution is poor".
 
+### D42. A bare `use <sibling module>` in a nested Rust module is reported as a missing dependency
+
+Rust 2018 uniform paths let a module write `pub(crate) use ast_with::*;` for a sibling declared
+`mod ast_with;` in the same file. `rust.rs` handles this — the comment "Rust 2018 uniform paths"
+exists for it — but checks `module_set(ctx)`, which holds **full module paths**, against a bare
+leaf name. So it only ever matched a *top-level* module.
+
+Reproduced minimally: `src/rules/mod.rs` containing `pub(crate) use ast_with::*;` and
+`mod ast_with;`, with `src/rules/ast_with.rs` present, reports ``​`ast_with` is imported but not
+declared``.
+
+**Cost:** 15 of a 180-finding audit sample, and the single largest source of Rust false positives.
+It fires hardest on exactly the codebases most likely to adopt tropism — ruff's `rules/mod.rs`
+pattern, `tokio-stream/src`, `deno`'s `cli/tools`.
+
+**Fix:** resolve a bare root against the *importing file's* module path first — a bare `use X` in
+module `a::b` may mean `a::b::X` — before falling through to the declared-crate check.
+
+### D43. `.package(path: "..")` yields a Swift dependency named `..`
+
+The Swift manifest parser takes the last path component of a `.package(path:)` entry as the package
+name. For `"../shared"` that is `shared`, which is wrong but readable; for `".."` it is `..`, which
+is a finding naming nothing.
+
+Reproduced minimally. Both then surface as `unused-dep`, because a local path package is
+consumed through a *product* name that no path component supplies.
+
+**Cost:** small in absolute terms — 2 of 180 — but every one is unintelligible output, and a
+finding a reader cannot even parse is worse than a wrong one they can.
+
+**Fix:** a `.package(path:)` entry has no reliable name in the manifest; treat it as a local
+sibling and resolve it through the target's `.product(name:package:)` entries, as the registry case
+already is. Failing that, drop it rather than name it after a directory.
+
 ### D9. No sub-ruleset inheritance in a monorepo
 
 Whether `packages/web/tropism.toml` extends or replaces the root ruleset is undecided

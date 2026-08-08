@@ -27,6 +27,20 @@ noise. Regenerating an unchanged report says so and leaves the bytes alone.
 ./clean.sh --images # and the docker images this harness built
 ```
 
+## Status
+
+Both passes have run against the pinned corpus.
+
+| | |
+| --- | --- |
+| `results/` | 24 of 24 repositories analyzed, **0 failures** |
+| `oracles/results/` | 46 oracle runs, **all succeeded** — `madge-circular` (6 repos), `cargo-duplicates` (4), `pylint-cycles` (4), `go-list` (3), `jdeps-cycles` (3), `bundle-list` (3) |
+| `REPORT.md` | regenerated from both |
+| `audit.json` | the D4 sample, 180 findings, 20 per language |
+
+C#, C++ and Swift have no oracle by design (see below), so their numbers in `REPORT.md` are
+unverified counts rather than measured accuracy.
+
 Both scripts are resumable and failure-tolerant: anything already produced is skipped, and a
 repository that cannot be cloned or analyzed is **recorded as failed** and the run continues. A
 three-hour run must not die on repository nineteen. `FORCE=1` re-does completed work.
@@ -162,6 +176,44 @@ are unverified counts rather than measured accuracy, and the report says so in t
 
 A report that quietly omitted the un-auditable half would read as a clean bill of health for checks
 nobody looked at. That is the failure mode `CheckStatus` exists to prevent, one level up.
+
+## What the audit sample says
+
+`audit.json` is 180 hygiene findings, 20 per language, drawn seeded so a second auditor grades the
+same set. Classified by cause, it is not one problem — it is six, and they want different fixes:
+
+| Share | Cause | What it is |
+| --- | --- | --- |
+| **19%** | inside a test fixture, example or sample | not wrong, but nobody wants it — the D1 discovery problem, arriving as noise |
+| **11%** | C#: `ProjectReference` used from XAML or as an analyzer | S1, and specific: a `.cs`-only walk cannot see `.axaml` |
+| **10%** | Go: module resolved via `replace` / `go.work` | **D12**, now with a measured cost |
+| **8%** | Ruby: gems auto-required by `Bundler.require` | a Rails app never `require`s its Gemfile, so `unused-dep` is close to unusable there |
+| **8%** | **Rust: bare `use <sibling module>` in a nested module** | **D42 — a verified bug**, reproduced minimally |
+| **5%** | C++: platform SDK and intrinsics headers | `dsound.h`, `uxtheme.h`, `d3d11_2.h`, `commctrl.h` — a curated-list gap, the cheapest fix here |
+| **5%** | C++: generated `.g.h` headers | **D35**, arriving as false `missing-dep` rather than as silence |
+| **3%** | Java: test deps injected by a Gradle convention plugin | tropism reads `build.gradle`, not the plugin that rewrites it |
+| **1%** | **Swift: `.package(path: "..")` named `..`** | **D43 — a verified bug** |
+
+**What to fix, in the order the evidence supports:**
+
+1. **D42, Rust sibling modules.** A real bug, the largest single Rust cause, and it fires on exactly
+   the codebases most likely to adopt tropism. `rust.rs` already has the uniform-path code — it
+   matches a bare leaf name against a set of *full* module paths, so it only ever worked at the
+   crate root.
+2. **C++ platform headers.** Ten findings from one missing list. `SYSTEM_HEADERS` covers POSIX and C
+   but not the Windows SDK, and every large OSS C++ repository with a manifest is a Windows
+   codebase.
+3. **The fixture problem.** 19% across every language, and it is not a provider bug — it is that a
+   first run on a real repository has no `tropism.toml` and so no `exclude`. Worth deciding whether
+   discovery should default to skipping obvious fixture paths, or whether `tropism analyze` should
+   *suggest* an `exclude` block on first run.
+4. **D43, Swift path packages.** Small, but a finding named `..` is unintelligible, which is worse
+   than wrong.
+
+**What the audit says *not* to fix:** the C# XAML case and the Ruby `Bundler.require` case are both
+S1 — usage through a channel a hermetic tool cannot see. They are not bugs and they have no fix that
+keeps the constraint. What they do argue is that **`unused-dep` should probably never gate for C# or
+Ruby**, which is a decision design/19's D4 was set up to make.
 
 ## Already found, before the real corpus ran
 

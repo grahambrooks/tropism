@@ -18,14 +18,28 @@ Mechanical, from the numbers below, so a reader can argue with a threshold rathe
 
 - **No run failures.** 24 repositories analyzed, none errored.
 - **Parsing is near-total.** 2 of 159,993 files unreadable (0.001%).
-- **Scale holds.** Largest run elastic/elasticsearch — 31,458 files in 41s (767 files/sec).
+- **Scale holds.** Largest run elastic/elasticsearch — 31,458 files in 40s (786 files/sec).
+- **cpp: 100.0% of import statements resolved** (8,708 statements).
+- **go: 100.0% of import statements resolved** (165,129 statements).
+- **javascript: 99.8% of import statements resolved** (243,054 statements).
+- **python: 99.9% of import statements resolved** (50,197 statements).
+- **ruby: 100.0% of import statements resolved** (8,009 statements).
+- **rust: 100.0% of import statements resolved** (47,240 statements).
+- **swift: 100.0% of import statements resolved** (3,422 statements).
 - **`cycle` ran in every repository.**
 - **`unused-dep` ran in every repository.**
 - **`missing-dep` ran in every repository.**
 
 ### Where it is deficient
 
-- **Resolution rate not measurable.** These results predate the `resolution` field in the report contract. Re-run with `FORCE=1 ./run.sh` to measure D2 at all.
+- **csharp: 92.6% of import statements resolved.** Under the 95% target; the unresolved reasons below name the gap.
+- **java: only 68.3% of import statements resolved.** Below 80%, design/19 says that language's findings should not be trusted. The unresolved reasons below name the gap.
+- **denoland/deno: 42% of imports resolve but 100% of import *statements* do.** The gap is bare path references, which are deliberately left unresolved. Because the confidence cap keys on the first number, every hygiene finding here is pinned to Low for a reason unrelated to whether tropism understood the code.
+- **tokio-rs/tokio: 52% of imports resolve but 100% of import *statements* do.** The gap is bare path references, which are deliberately left unresolved. Because the confidence cap keys on the first number, every hygiene finding here is pinned to Low for a reason unrelated to whether tropism understood the code.
+- **BurntSushi/ripgrep: 25% of imports resolve but 100% of import *statements* do.** The gap is bare path references, which are deliberately left unresolved. Because the confidence cap keys on the first number, every hygiene finding here is pinned to Low for a reason unrelated to whether tropism understood the code.
+- **astral-sh/ruff: 25% of imports resolve but 100% of import *statements* do.** The gap is bare path references, which are deliberately left unresolved. Because the confidence cap keys on the first number, every hygiene finding here is pinned to Low for a reason unrelated to whether tropism understood the code.
+- **vercel/next.js: 62% of imports resolve but 100% of import *statements* do.** The gap is bare path references, which are deliberately left unresolved. Because the confidence cap keys on the first number, every hygiene finding here is pinned to Low for a reason unrelated to whether tropism understood the code.
+- **facebook/react: 57% of imports resolve but 100% of import *statements* do.** The gap is bare path references, which are deliberately left unresolved. Because the confidence cap keys on the first number, every hygiene finding here is pinned to Low for a reason unrelated to whether tropism understood the code.
 - **denoland/deno: 725 of 797 projects are under test or fixture paths.** Discovery gates every other number, and a first run here is dominated by packages nobody wants findings about. This is what `exclude` in tropism.toml is for.
 - **vercel/next.js: 583 of 746 projects are under test or fixture paths.** Discovery gates every other number, and a first run here is dominated by packages nobody wants findings about. This is what `exclude` in tropism.toml is for.
 
@@ -113,21 +127,70 @@ The split design/19 asks for. tropism is not one tool with one accuracy — it i
 
 | Language | Repos | Projects | Files | Statements resolved | All imports | Findings | per 1k files |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| cpp | 2 | 6 | 3,174 | — | — | 562 | 177.1 |
-| csharp | 3 | 163 | 6,203 | — | — | 520 | 83.8 |
-| go | 4 | 86 | 24,736 | — | — | 40 | 1.6 |
-| java | 5 | 1222 | 43,352 | — | — | 2,145 | 49.5 |
-| javascript | 13 | 1756 | 53,313 | — | — | 12,651 | 237.3 |
-| python | 7 | 201 | 8,243 | — | — | 2,507 | 304.1 |
-| ruby | 4 | 21 | 14,500 | — | — | 481 | 33.2 |
-| rust | 8 | 253 | 5,122 | — | — | 2,128 | 415.5 |
-| swift | 2 | 10 | 1,350 | — | — | 64 | 47.4 |
+| cpp | 2 | 6 | 3,174 | 100.0% | 100.0% | 562 | 177.1 |
+| csharp | 3 | 163 | 6,203 | 92.6% ⚠ | 92.6% | 520 | 83.8 |
+| go | 4 | 86 | 24,736 | 100.0% | 100.0% | 40 | 1.6 |
+| java | 5 | 1222 | 43,352 | 68.3% ⚠ | 68.3% | 2,145 | 49.5 |
+| javascript | 13 | 1756 | 53,313 | 99.8% | 99.8% | 12,651 | 237.3 |
+| python | 7 | 201 | 8,243 | 99.9% | 99.9% | 2,507 | 304.1 |
+| ruby | 4 | 21 | 14,500 | 100.0% | 100.0% | 481 | 33.2 |
+| rust | 8 | 253 | 5,122 | 100.0% | 33.8% | 2,128 | 415.5 |
+| swift | 2 | 10 | 1,350 | 100.0% | 100.0% | 64 | 47.4 |
 
 ## D2 — Resolution
 
 The share of imports tropism understood, and **the number that caps every hygiene finding's confidence**: below 90% `unused-dep` and `missing-dep` drop to Low. design/19 targets ≥95% and treats below 80% as meaning that language's findings should not be trusted.
 
-> **Not measurable from these results.** They predate the `resolution` field in the report contract. Re-run with `FORCE=1 ./run.sh` — until then D2, a primary dimension, is simply unmeasured, and the confidence attached to every hygiene finding below is unexplained.
+| Repository | Imports | Resolved (all) | Statements | Resolved (statements) |
+| --- | --- | --- | --- | --- |
+| kubernetes/kubernetes | 108,660 | 100.0% | 108,660 | 100.0% |
+| prometheus/prometheus | 7,718 | 100.0% | 7,718 | 100.0% |
+| grafana/grafana | 103,671 | 100.0% | 103,671 | 100.0% |
+| denoland/deno | 107,050 | 42.0% | 19,261 | 100.0% |
+| tokio-rs/tokio | 23,581 | 52.2% | 4,361 | 100.0% |
+| BurntSushi/ripgrep | 4,965 | 24.8% | 384 | 100.0% |
+| astral-sh/ruff | 109,641 | 24.8% | 17,086 | 99.7% |
+| apache/airflow | 53,251 | 100.0% | 53,251 | 100.0% |
+| pallets/flask | 648 | 100.0% | 648 | 100.0% |
+| microsoft/vscode | 123,279 | 98.2% | 119,792 | 100.0% |
+| vercel/next.js | 78,258 | 62.0% | 39,879 | 99.8% |
+| facebook/react | 23,474 | 56.8% | 12,098 | 100.0% |
+| spring-projects/spring-boot | 76,836 | 66.5% | 76,836 | 66.5% ⚠ |
+| google/guava | 38,711 | 99.8% | 38,711 | 99.8% |
+| elastic/elasticsearch | 512,777 | 66.1% | 511,946 | 66.2% ⚠ |
+| jellyfin/jellyfin | 12,736 | 90.2% | 12,736 | 90.2% ⚠ |
+| AvaloniaUI/Avalonia | 17,783 | 94.8% | 17,783 | 94.8% ⚠ |
+| microsoft/terminal | 4,972 | 97.6% | 1,812 | 93.4% ⚠ |
+| apache/arrow | 20,657 | 100.0% | 9,161 | 100.0% |
+| pointfreeco/swift-composable-architecture | 1,671 | 100.0% | 1,671 | 100.0% |
+| apple/swift-nio | 1,751 | 100.0% | 1,751 | 100.0% |
+| rails/rails | 6,115 | 100.0% | 5,602 | 100.0% |
+| mastodon/mastodon | 7,502 | 94.4% | 7,421 | 94.4% ⚠ |
+| discourse/discourse | 12,221 | 100.0% | 11,895 | 100.0% |
+
+**Read the statement column, not the first one.** *Resolved (all)* counts bare path references as failures, and Rust leaves an unrecognised path root unresolved *by design* — `Palette::plain()` is a local type, and calling it external would invent a missing dependency in every file. So on Rust the first column largely measures a deliberate decision. *Resolved (statements)* counts only imports tropism was asked to resolve and could not, which is what provider completeness means.
+
+**`rate` — the first column — is still what caps hygiene confidence.** Where the two diverge sharply, every hygiene finding in that project is pinned to Low for a reason unrelated to whether tropism understood the code.
+
+**Why imports did not resolve.** This is the actionable list: each line names a provider gap in the ecosystem's own vocabulary, ordered by how much it costs.
+
+| Count | Reason |
+| --- | --- |
+| 21,638 | `org.hamcrest.Matchers` matches no declared coordinate or known package |
+| 6,987 | `ast` is a path reference, not an import |
+| 5,384 | `Type` is a path reference, not an import |
+| 5,299 | `v8` is a path reference, not an import |
+| 4,689 | `org.mockito.Mockito` matches no declared coordinate or known package |
+| 4,493 | `Rule` is a path reference, not an import |
+| 3,349 | `Expr` is a path reference, not an import |
+| 3,150 | `org.assertj.core.api.Assertions` matches no declared coordinate or known package |
+| 3,091 | `Default` is a path reference, not an import |
+| 2,987 | `org.elasticsearch.test.ESTestCase` matches no declared coordinate or known package |
+| 2,735 | `Path` is a path reference, not an import |
+| 2,091 | `Vec` is a path reference, not an import |
+| 1,974 | `org.jspecify.annotations.Nullable` matches no declared coordinate or known package |
+| 1,951 | `org.elasticsearch.common.settings.Settings` matches no declared coordinate or known package |
+| 1,517 | `Arc` is a path reference, not an import |
 
 ## D2b — Check availability
 
@@ -183,29 +246,29 @@ Run `tropism workspaces <repo>` to check origins; any `language` origin where th
 | Repository | Seconds | Source files | Files/sec | Skipped files |
 | --- | --- | --- | --- | --- |
 | kubernetes/kubernetes | 16 | 17,702 | 1,106 | 0 |
-| prometheus/prometheus | 0 | 979 | — | 0 |
-| grafana/grafana | 10 | 15,089 | 1,509 | 0 |
-| denoland/deno | 8 | 1,943 | 243 | 2 ⚠ |
-| tokio-rs/tokio | 3 | 790 | 263 | 0 |
+| prometheus/prometheus | 1 | 979 | 979 | 0 |
+| grafana/grafana | 19 | 15,089 | 794 | 0 |
+| denoland/deno | 11 | 1,943 | 177 | 2 ⚠ |
+| tokio-rs/tokio | 1 | 790 | 790 | 0 |
 | BurntSushi/ripgrep | 1 | 110 | 110 | 0 |
-| astral-sh/ruff | 7 | 2,226 | 318 | 0 |
-| apache/airflow | 9 | 8,870 | 986 | 0 |
+| astral-sh/ruff | 3 | 2,226 | 742 | 0 |
+| apache/airflow | 7 | 8,870 | 1,267 | 0 |
 | pallets/flask | 0 | 83 | — | 0 |
-| microsoft/vscode | 11 | 12,225 | 1,111 | 0 |
-| vercel/next.js | 34 | 22,546 | 663 | 0 |
+| microsoft/vscode | 22 | 12,225 | 556 | 0 |
+| vercel/next.js | 33 | 22,546 | 683 | 0 |
 | facebook/react | 4 | 4,552 | 1,138 | 0 |
-| spring-projects/spring-boot | 13 | 8,667 | 667 | 0 |
+| spring-projects/spring-boot | 14 | 8,667 | 619 | 0 |
 | google/guava | 2 | 3,229 | 1,614 | 0 |
-| elastic/elasticsearch | 41 | 31,458 | 767 | 0 |
-| jellyfin/jellyfin | 1 | 2,133 | 2,133 | 0 |
+| elastic/elasticsearch | 40 | 31,458 | 786 | 0 |
+| jellyfin/jellyfin | 2 | 2,133 | 1,066 | 0 |
 | AvaloniaUI/Avalonia | 3 | 4,013 | 1,338 | 0 |
-| microsoft/terminal | 1 | 1,234 | 1,234 | 0 |
+| microsoft/terminal | 2 | 1,234 | 617 | 0 |
 | apache/arrow | 2 | 3,038 | 1,519 | 0 |
-| pointfreeco/swift-composable-architecture | 1 | 796 | 796 | 0 |
+| pointfreeco/swift-composable-architecture | 0 | 796 | — | 0 |
 | apple/swift-nio | 0 | 554 | — | 0 |
 | rails/rails | 2 | 3,142 | 1,571 | 0 |
-| mastodon/mastodon | 2 | 4,141 | 2,070 | 0 |
-| discourse/discourse | 8 | 10,473 | 1,309 | 0 |
+| mastodon/mastodon | 1 | 4,141 | 4,141 | 0 |
+| discourse/discourse | 11 | 10,473 | 952 | 0 |
 
 ## D4 — Manifest hygiene: outstanding hand audit
 
