@@ -382,6 +382,13 @@ told afterwards. This is the first genuinely agent-shaped capability in the prod
 4. **Glob dialect.** `globset` is already a transitive dependency via `ignore`. Confirm its
    semantics match what users expect from `**` before committing to it in a file format.
 
+5. ~~**Should the ruleset be a general policy language?**~~ **Evaluated and declined for now** —
+   [18-rego-evaluation.md](18-rego-evaluation.md). Rego via `regorus` was prototyped and works,
+   hermetically, at acceptable cost. It was declined because the only gap it closes is D6/D7, which
+   is less work to implement natively than to buy a second rule vocabulary — and because an
+   arbitrary policy cannot be scoped to a change the way a per-edge rule can, which would make
+   `tropism check` a liar about policies it could not evaluate.
+
 ## Revised product thesis
 
 [09-product-review.md](09-product-review.md) concluded that "detects dependency problems" is a weak

@@ -85,6 +85,7 @@ built, and everything about them here is still intent rather than a description 
 | [15-dist-evaluation.md](15-dist-evaluation.md)       | cargo-dist, measured against the release pipeline        |
 | [16-signing.md](16-signing.md)                       | Code signing: what it buys, and what it would take       |
 | [17-baselines.md](17-baselines.md)                   | D8: making the whole-repository run adoptable            |
+| [18-rego-evaluation.md](18-rego-evaluation.md)       | Rego as a second rule language: prototyped, not adopted  |
 
 ## Design principles
 
