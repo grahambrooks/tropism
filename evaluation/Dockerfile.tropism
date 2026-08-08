@@ -1,0 +1,41 @@
+# The hermetic runner: tropism, and nothing else.
+#
+# This image deliberately contains **no language toolchain** — no cargo, node,
+# python, go, javac, dotnet, ruby or swift — and the container is run with
+# `--network none` and a read-only mount of the repository under analysis.
+#
+# That is not belt-and-braces. tropism's central claim is that it works on a
+# checkout with nothing installed, and the only way to *test* a negative claim is
+# to make its violation fail loudly. If tropism ever shells out to a package
+# manager, reads an installed `node_modules`, or reaches the network, this
+# container is where it breaks — rather than a laptop where all three happen to be
+# available and the bug stays invisible.
+#
+# The oracle toolchains live in a separate image on purpose. See evaluation/README.md.
+
+FROM rust:1-slim AS builder
+WORKDIR /src
+COPY . .
+# tree-sitter grammars compile C, so a C toolchain is needed to *build* tropism —
+# and is absent from the runtime stage below, which is the point.
+RUN apt-get update \
+ && apt-get install -y --no-install-recommends build-essential \
+ && rm -rf /var/lib/apt/lists/* \
+ && cargo build --release -p tropism --locked
+
+FROM debian:stable-slim
+# `ca-certificates` is *not* installed: nothing here should be making TLS calls.
+RUN useradd --create-home --uid 1000 evaluator
+COPY --from=builder /src/target/release/tropism /usr/local/bin/tropism
+USER evaluator
+WORKDIR /work
+
+# A sanity check that the image is what it claims: none of these may exist.
+RUN for tool in cargo rustc node npm pnpm yarn python3 pip go javac mvn gradle dotnet ruby bundle swift; do \
+      if command -v "$tool" >/dev/null 2>&1; then \
+        echo "FATAL: $tool is present in the hermetic image; the evaluation would be invalid" >&2; \
+        exit 1; \
+      fi; \
+    done
+
+ENTRYPOINT ["tropism"]

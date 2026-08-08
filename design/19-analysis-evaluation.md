@@ -177,17 +177,61 @@ architecture *is*. Worth its own evaluation; not this one.
 
 ---
 
+## Isolation
+
+**Built: [`evaluation/`](../evaluation/).** Two containers, because the two halves of the evaluation
+have opposite requirements and collapsing them would invalidate the result.
+
+|  | `Dockerfile.tropism` | `oracles/Dockerfile.oracles` |
+| --- | --- | --- |
+| Toolchains | **none**, asserted at build time | exactly one, per ecosystem |
+| Network at run time | `--network none` | on; resolving is the point |
+| Repository mount | read-only | writable **throwaway copy** |
+
+**The tropism container proves the hermetic claim rather than assuming it.** "Works on a checkout
+with nothing installed" is a negative claim, and the only way to test one is to make its violation
+fail loudly. On a developer laptop a bug where tropism shelled out to `npm`, read an installed
+`node_modules`, or reached the network would be *invisible*, because all three happen to be
+available. The image ends with a loop that fails the build if `cargo`, `node`, `python3`, `go`,
+`dotnet`, `ruby` or `swift` is on `PATH`, and the container runs `--network none --read-only`.
+
+**The oracle containers exist because ground truth is both expensive and dangerous.** Resolving
+dependencies executes arbitrary code from 24 repositories nobody here audited — npm lifecycle
+scripts, `build.rs`, `setup.py`, Gradle build logic — which should not run on a developer machine.
+
+It also *mutates the checkout*. `oracles.sh` copies the tree first and deletes the copy after, so the
+pristine clone can never acquire a `node_modules/` that a later tropism run would then see. Without
+that, run two measures something different from run one and nothing says so. The read-only mount and
+the throwaway copy are what enforce "oracles are never inputs" **mechanically**, rather than by
+remembering.
+
+One image per ecosystem rather than one with ten: a combined image is enormous, and a version skew in
+one toolchain would silently change the oracle for another.
+
+C#, C++ and Swift get no oracle image. `dotnet list package` needs a full SDK restore and has no
+cycle oracle at all; C++ has no dependency oracle and mostly no manifest; Swift's toolchain has no
+slim image. Those three are hand-audited, and `report.py` prints their numbers as **unverified
+counts** rather than as measured accuracy.
+
 ## Method
 
-1. **Pin the corpus.** Shallow clone at a recorded commit SHA (`--depth 1 --filter=blob:none`), so
-   the run is reproducible and re-runnable after a change. Expect 10–15 GB.
-2. **Run** `tropism analyze --format json` per repo, recording version and wall-clock.
-3. **Commit the raw JSON** under `evaluation/` keyed by repo and SHA. This is what makes the second
-   run cheap: the next evaluation is a *diff*, and a regression becomes visible without re-auditing.
-4. **Collect oracles** with the native tooling, in a separate pass.
-5. **Audit by hand** where no oracle exists — D3 for five languages, all of D4.
-6. **Write up per dimension**, with the per-language split visible. An aggregate number across ten
-   languages would hide exactly the variation that matters.
+Scripted end to end. `./run.sh`, `./oracles.sh`, `./report.py` — both scripts resumable, so an
+interrupted run costs nothing to restart.
+
+1. **Pin the corpus.** `pin-corpus.sh` records a SHA per repository, because an unpinned corpus makes
+   every difference between runs ambiguous between "tropism changed" and "the repository changed" —
+   the one question this exists to answer. Blobless shallow clone; expect 10–15 GB.
+2. **`./run.sh`** — analyze each repository in the hermetic container, recording the JSON alongside
+   wall-clock and exit code, so D7 and D8 need no second pass.
+3. **Keep the raw JSON** under `evaluation/results/`. The next evaluation is then a *diff*, and a
+   regression is visible without re-auditing anything.
+4. **`./oracles.sh`** — ground truth, per ecosystem, on throwaway copies. An oracle that could not
+   run is recorded as `ok: false`; a missing oracle must never read as "tropism agreed with it".
+5. **`./report.py --audit-sample 20`** draws the D4 sample, seeded, so a second auditor grades the
+   *same* findings and two audits are comparable. Then audit by hand — D3 for five languages, all of
+   D4.
+6. **`./report.py`** writes the report per dimension, with the per-language split visible. An
+   aggregate across ten languages would hide exactly the variation that matters.
 
 ---
 
@@ -207,6 +251,22 @@ Stated in advance, so the analysis cannot be fitted to the outcome afterwards.
 | Any panic | P1 |
 
 ---
+
+## Already found, before the corpus was run
+
+Validating the harness against four local repositories surfaced a contract defect. `Language` derives
+`serde(rename_all = "kebab-case")`, so the **JSON contract emits `java-script`, `type-script` and
+`c-sharp`** while `Language::as_str()` — the text renderer, `tropism workspaces`, `tropism explain` —
+emits `javascript`, `typescript` and `csharp`.
+
+Two spellings for one language across two surfaces of one tool, in the contract
+[05-interfaces.md](05-interfaces.md) intends the MCP server to share with the CLI. `report.py`
+normalises around it; the normalisation should be deleted once the contract has one spelling. Fixing
+it is a change to a published value and therefore a `SCHEMA_VERSION` question, which is why it is
+recorded here rather than quietly patched.
+
+That is one defect from four repositories analyzed only to check that the scripts ran. It is the
+argument for the other 24.
 
 ## Cost and sequencing
 

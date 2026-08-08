@@ -1,0 +1,26 @@
+# repo	sha	languages	shape	note
+# Pinned 2026-08-08. Re-pin with evaluation/pin-corpus.sh.
+kubernetes/kubernetes	b882c60b4023bdf09264c2d5d30a2cadebc240fb	go	mono	go.work workspace at scale
+prometheus/prometheus	e75af386be14c1229b3976d4b7adfff853a4022e	go	poly	regression anchor for the _test.go rules
+grafana/grafana	eec4a1c66b328851863369c9e031931c9b83cdbe	go,javascript	mono	polyglot monorepo; yarn
+denoland/deno	98dc759254a90b98f7bbb62ba5361e531d0db6a5	rust	mono	large cargo workspace with a resolved tree
+tokio-rs/tokio	ecd621dd2c1a5205a84f579225e1454b62af211c	rust	mono	library: no Cargo.lock, exercises D2
+BurntSushi/ripgrep	3fce3b5bb0236da2df6d99672afb8a719642eca7	rust	poly	small enough to audit end to end
+astral-sh/ruff	ba581e111aef8d46308406aa5b708f2ec8b23cef	rust,python	mono	two ecosystems, both with lockfiles
+apache/airflow	7790df7e2d4617865187b2f07632d00699a91f1e	python	mono	large python monorepo; flat env (S7)
+pallets/flask	6a2f545bfd8ed31e19066a299296917e034aca58	python	poly	import->distribution mapping (S5)
+microsoft/vscode	c780ea96132b1cabf170a454aced493d8317eee7	javascript	mono	npm baseline at scale
+vercel/next.js	a677cf66af002fbdcf49a982ef435b03554817cc	javascript	mono	pnpm lockfile and pnpm workspace
+facebook/react	2042572329425f9ebf35ae6287ea5bab72b2c497	javascript	mono	yarn lockfile at scale
+spring-projects/spring-boot	12cb2e8a3ecf33ca9729d86830af8125731c59a2	java	mono	gradle multi-project, no lockfile
+google/guava	0a8e1ec55afe1d9361ebbd0c4149adfbb32ccf9a	java	mono	maven reactor; parent POM (D32)
+elastic/elasticsearch	41f508a4bb5f85196a604482fd38e84833227d47	java	mono	gradle at scale; version catalogs (D30)
+jellyfin/jellyfin	70ffd25b505fff4423d7aab5386d46e327713708	csharp	mono	central package management (D19), .sln (D20)
+AvaloniaUI/Avalonia	43c597eff9757116414c6119fe1cef1fd80d1bc1	csharp	mono	second CPM sample
+microsoft/terminal	b888cb7e4c3b0b21b7ed66c224bcdf7fa9ef6d9a	cpp	mono	one of few large OSS C++ with a manifest
+apache/arrow	8fba43931a850d2fee54dd35e5ffc7629e98c198	cpp,python	mono	manifests in subdirectories
+pointfreeco/swift-composable-architecture	269d6457986d163557ea2601275b1117e4dee3c0	swift	poly	has Package.resolved
+apple/swift-nio	18670a7e974dc1c8e51a1c29c98a4193a424fad4	swift	poly	no Package.resolved: the common Swift case
+rails/rails	7805bcdbe53168061b387bd70a810bc6ed6d2710	ruby	mono	monorepo of gems; .gemspec (D29)
+mastodon/mastodon	df1439c18b6160ba69562504ec5726d436c4b462	ruby,javascript	mono	ruby + yarn
+discourse/discourse	f3c568cfd26a427e9cae32063732a56bc7d334b9	ruby,javascript	mono	ruby + pnpm

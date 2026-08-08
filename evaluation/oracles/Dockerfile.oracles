@@ -1,0 +1,71 @@
+# The oracle images: one per ecosystem, each with exactly one toolchain.
+#
+# These are the *opposite* of Dockerfile.tropism. They need network access and a
+# full toolchain, because establishing ground truth means actually resolving
+# dependencies — `cargo tree`, `npm ls`, `madge`, `jdeps` all require the real
+# thing.
+#
+# Two consequences follow, and both are why this is isolated rather than run on a
+# laptop:
+#
+#   1. **Installing dependencies executes arbitrary code** from 24 repositories
+#      nobody here audited — npm lifecycle scripts, `build.rs`, `setup.py`,
+#      Gradle build logic. That should not run on a developer machine.
+#   2. **The oracle mutates the checkout** (`node_modules/`, `target/`,
+#      `.venv/`). `oracles.sh` therefore works on a throwaway copy, so the tree
+#      tropism analyzed stays pristine and the two passes cannot contaminate
+#      each other.
+#
+# One toolchain per image rather than one image with ten: a combined image is
+# enormous, and a version skew in one ecosystem would silently change the oracle
+# for another.
+#
+# Build with:  docker build -f Dockerfile.oracles --target <ecosystem> -t tropism-oracle-<ecosystem> .
+
+# --------------------------------------------------------------------------
+FROM node:22-slim AS node
+RUN npm install -g madge@8 >/dev/null 2>&1
+WORKDIR /work
+
+# --------------------------------------------------------------------------
+FROM rust:1-slim AS rust
+RUN apt-get update \
+ && apt-get install -y --no-install-recommends build-essential pkg-config libssl-dev git \
+ && rm -rf /var/lib/apt/lists/*
+WORKDIR /work
+
+# --------------------------------------------------------------------------
+FROM python:3.13-slim AS python
+RUN pip install --no-cache-dir pylint==3.* uv >/dev/null
+WORKDIR /work
+
+# --------------------------------------------------------------------------
+FROM golang:1-bookworm AS go
+WORKDIR /work
+
+# --------------------------------------------------------------------------
+FROM eclipse-temurin:21-jdk AS java
+RUN apt-get update \
+ && apt-get install -y --no-install-recommends maven git \
+ && rm -rf /var/lib/apt/lists/*
+WORKDIR /work
+
+# --------------------------------------------------------------------------
+FROM ruby:3.3-slim AS ruby
+RUN apt-get update \
+ && apt-get install -y --no-install-recommends build-essential git \
+ && rm -rf /var/lib/apt/lists/*
+WORKDIR /work
+
+# --------------------------------------------------------------------------
+# C#, C++ and Swift have no oracle worth automating:
+#
+#   * C#     — `dotnet list package` needs a full restore of a large SDK tree,
+#              and there is no cycle oracle at all.
+#   * C++    — no dependency oracle exists; most repositories have no manifest
+#              (see design/19, "The C++ finding").
+#   * Swift  — `swift package show-dependencies` needs the toolchain, which has
+#              no slim image and is Linux-second-class.
+#
+# All three are hand-audited instead, and `report.py` marks them as such rather
+# than reporting a gap as a pass.

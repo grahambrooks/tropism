@@ -1,0 +1,7 @@
+# Clones, throwaway oracle copies, and run output. All reproducible from
+# corpus.tsv; none of it belongs in the repository.
+.checkouts/
+.scratch/
+results/
+oracles/results/
+__pycache__/
