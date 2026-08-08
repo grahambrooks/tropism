@@ -1,0 +1,31 @@
+evaluation/README.md
+  s_3111171e960687::t_13761d418062d1 82-92
+design/19-analysis-evaluation.md
+  s_3111171e960687::t_13761d418062d1 257-269
+crates/tropism-core/src/report.rs
+  s_3111171e960687::t_6655c32286fa07 13-23
+evaluation/report.py
+  s_3111171e960687::t_00b4e2855f927c 46,83,125,128,248
+crates/tropism-core/src/model.rs
+  s_3111171e960687::t_39324041bc1aa3 92-93,221-225,262-266
+  s_3111171e960687::t_5dc18b88aa60eb 94,198-220,226-261,267-270
+  s_3111171e960687::t_b4cf5299501d8a 8-21,36-51,66-91
+design/12-known-limitations.md
+  s_3111171e960687::t_13761d418062d1 351,353-356,358-359,361-365,367-372
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.21",
+  "base_commit_sha": "5c19bf0c4424097308b7dac903a0578ec2719661",
+  "prompts": {},
+  "sessions": {
+    "s_3111171e960687": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "8dbcbda8-4623-438b-a805-7c8f1634b75d",
+        "model": "claude-opus-5"
+      },
+      "human_author": "Graham Brooks <graham@grahambrooks.com>"
+    }
+  }
+}
