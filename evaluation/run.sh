@@ -114,7 +114,10 @@ while IFS=$'\t' read -r repo sha _langs _shape _note; do
   fi
 done < "$CORPUS"
 
-failed=$(grep -l '"error"' "$RESULTS"/*.json 2>/dev/null | wc -l | tr -d ' ')
+# Counted with jq, not grep. `grep '"error"'` matches `"severity": "error"` inside
+# every finding, so it reported all 24 repositories as failed on a run where none
+# did — an alarming summary line for a clean run.
+failed=$(jq -s '[.[] | select(.error)] | length' "$RESULTS"/*.json 2>/dev/null || echo 0)
 total=$(find "$RESULTS" -maxdepth 1 -name '*.json' | wc -l | tr -d ' ')
 log "done — $total results, $failed failed"
 [ "$failed" != "0" ] && log "failures are recorded in results/ and reported by ./report.py"
