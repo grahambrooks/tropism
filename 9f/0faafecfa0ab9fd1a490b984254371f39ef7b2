@@ -1,0 +1,26 @@
+design/12-known-limitations.md
+  s_3111171e960687::t_c2e157d7f0e137 293-302
+crates/tropism-lang/tests/scaling.rs
+  s_3111171e960687::t_5594779f0069eb 22,25-27,45-61,63-66,105,107-108
+  s_3111171e960687::t_784eefbc2c0ea8 1-21,23-24,28-44,62,67-104,106,109-226
+CLAUDE.md
+  s_3111171e960687::t_c2e157d7f0e137 389-393
+crates/tropism-lang/tests/scaling.rs.bak
+  s_3111171e960687::t_1c0e92215f6489 1-208
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.21",
+  "base_commit_sha": "9f0faafecfa0ab9fd1a490b984254371f39ef7b2",
+  "prompts": {},
+  "sessions": {
+    "s_3111171e960687": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "8dbcbda8-4623-438b-a805-7c8f1634b75d",
+        "model": "claude-opus-5"
+      },
+      "human_author": "Graham Brooks <graham@grahambrooks.com>"
+    }
+  }
+}
