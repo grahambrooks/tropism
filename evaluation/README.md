@@ -8,9 +8,18 @@ native tooling, and report where the analysis is right.
 ./pin-corpus.sh     # (optional) re-pin the corpus to current SHAs
 ./run.sh            # clone + analyze, in the hermetic container
 ./oracles.sh        # ground truth, in per-ecosystem containers
-./report.py         # markdown report to stdout
+./report.py         # writes REPORT.md
 ./report.py --audit-sample 20 > audit.json
 ```
+
+`REPORT.md` is **committed**, unlike `results/`. It is small and human-readable, so the next
+evaluation lands as a reviewable diff in a pull request rather than as a directory of JSON nobody
+opens. `--stdout` prints instead, `--output PATH` writes elsewhere.
+
+Its header carries the tropism version, the report schema version and the corpus pin, and
+**deliberately no generation timestamp** — a clock reading would make every regeneration a diff even
+when no number moved. The per-repository timings are data and stay; a timestamp on top of them is
+noise. Regenerating an unchanged report says so and leaves the bytes alone.
 
 ```sh
 ./clean.sh          # reclaim clones and scratch, keep results

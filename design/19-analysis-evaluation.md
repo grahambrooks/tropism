@@ -237,8 +237,11 @@ interrupted run costs nothing to restart.
 5. **`./report.py --audit-sample 20`** draws the D4 sample, seeded, so a second auditor grades the
    *same* findings and two audits are comparable. Then audit by hand — D3 for five languages, all of
    D4.
-6. **`./report.py`** writes the report per dimension, with the per-language split visible. An
-   aggregate across ten languages would hide exactly the variation that matters.
+6. **`./report.py`** writes `evaluation/REPORT.md`, per dimension, with the per-language split
+   visible — an aggregate across ten languages would hide exactly the variation that matters. That
+   file is committed while `results/` is not, so a later evaluation is reviewable as a diff. Its
+   header records the tropism version, schema version and corpus pin, and no timestamp: a clock
+   reading would make every regeneration a diff even when nothing moved.
 
 ---
 
