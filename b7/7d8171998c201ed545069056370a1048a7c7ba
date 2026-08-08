@@ -1,0 +1,27 @@
+evaluation/report.py
+  s_3111171e960687::t_7a2467b4386e9c 17,44-48,81-105,489-498,672-673,679-684
+  s_3111171e960687::t_19ff271673bf66 685
+evaluation/REPORT.md
+  s_3111171e960687::t_1d04ea0c15df91 21,38,93,95,98-100,106-107,120-122,130,137,150-152,156,248-251,253-259,261-263,265,267-268,270-271,279,286
+evaluation/README.md
+  s_3111171e960687::t_d5f8b52f25c21c 197-216
+design/12-known-limitations.md
+  s_3111171e960687::t_d5f8b52f25c21c 399-417
+  s_3111171e960687::t_520d5a12e9ed15 398
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.21",
+  "base_commit_sha": "b77d8171998c201ed545069056370a1048a7c7ba",
+  "prompts": {},
+  "sessions": {
+    "s_3111171e960687": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "8dbcbda8-4623-438b-a805-7c8f1634b75d",
+        "model": "claude-opus-5"
+      },
+      "human_author": "Graham Brooks <graham@grahambrooks.com>"
+    }
+  }
+}
