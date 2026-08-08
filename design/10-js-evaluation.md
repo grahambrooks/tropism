@@ -1,5 +1,10 @@
 # 10 — JavaScript/TypeScript evaluation
 
+> **Nine languages later, this is still the only ecosystem measured this way.**
+> [19-analysis-evaluation.md](19-analysis-evaluation.md) plans the run that covers the rest, and
+> tests whether the 63% below is a JavaScript number or a tropism number.
+
+
 The kill-criterion run set in [09-product-review.md](09-product-review.md): build a second slice
 where all six checks *can* run, point it at ten real repositories, and decide on evidence whether
 the detection thesis survives.

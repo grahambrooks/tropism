@@ -86,6 +86,7 @@ built, and everything about them here is still intent rather than a description 
 | [16-signing.md](16-signing.md)                       | Code signing: what it buys, and what it would take       |
 | [17-baselines.md](17-baselines.md)                   | D8: making the whole-repository run adoptable            |
 | [18-rego-evaluation.md](18-rego-evaluation.md)       | Rego as a second rule language: prototyped, not adopted  |
+| [19-analysis-evaluation.md](19-analysis-evaluation.md) | Plan: measuring analysis capability on 24 real repositories |
 
 ## Design principles
 
