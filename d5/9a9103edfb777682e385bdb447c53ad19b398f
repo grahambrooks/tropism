@@ -1,0 +1,43 @@
+design/12-known-limitations.md
+  s_3111171e960687::t_8070cb5bee50a8 351-370
+evaluation/corpus.tsv
+  s_3111171e960687::t_452406a80aa9e4 1
+  s_3111171e960687::t_c640fee5d3ae54 2-26
+evaluation/oracles/Dockerfile.oracles
+  s_3111171e960687::t_e76f1462149e21 1-71
+evaluation/report.py
+  s_3111171e960687::t_054b085988f331 36-51
+  s_3111171e960687::t_76a72f39b9a164 1-35,52-61,63-98,100-140,142-143,145-263,265-312
+  s_3111171e960687::t_2c5b140bdaae84 62,99,141,144,264
+evaluation/run.sh
+  s_3111171e960687::t_9bd0853e87bd7c 1-106
+evaluation/pin-corpus.sh
+  s_3111171e960687::t_b5b32256e491c6 1-29
+evaluation/README.md
+  s_3111171e960687::t_eeb3986b4b51ca 1-89
+design/19-analysis-evaluation.md
+  s_3111171e960687::t_79e867eb5f6b2e 180-215,218-234,255-269
+  s_3111171e960687::t_875315b5751299 270
+evaluation/.gitignore
+  s_3111171e960687::t_b5b32256e491c6 1-7
+evaluation/Dockerfile.tropism
+  s_3111171e960687::t_86e336b34d6269 1-41
+evaluation/oracles.sh
+  s_3111171e960687::t_16248e3f50a466 1-112
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.21",
+  "base_commit_sha": "d59a9103edfb777682e385bdb447c53ad19b398f",
+  "prompts": {},
+  "sessions": {
+    "s_3111171e960687": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "8dbcbda8-4623-438b-a805-7c8f1634b75d",
+        "model": "claude-opus-5"
+      },
+      "human_author": "Graham Brooks <graham@grahambrooks.com>"
+    }
+  }
+}

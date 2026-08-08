@@ -1,0 +1,30 @@
+evaluation/run.sh
+  s_3111171e960687::t_81ed87adce720a 6-14,19,25-27,32,36-41,44,50,54,69-71,73,79,98,100-114,117,120-121
+  s_3111171e960687::t_ac8049345c8327 118-119
+design/19-analysis-evaluation.md
+  s_3111171e960687::t_daba6c2170157a 223-230
+evaluation/README.md
+  s_3111171e960687::t_daba6c2170157a 15-59
+evaluation/oracles.sh
+  s_3111171e960687::t_a5e9138f61b785 6-7,9-14,16-17,25-27,31-32,37,45,47,49,63-64,66,78-92,96-99,102,105,108-111,114,117,120-124,128-129
+evaluation/clean.sh
+  s_3111171e960687::t_56fe720ccb7601 1-39
+evaluation/lib.sh
+  s_3111171e960687::t_d25fcce594d8ab 1-71
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.21",
+  "base_commit_sha": "1ad5e16c58126f13ffdd50e81260dc62e7f91b65",
+  "prompts": {},
+  "sessions": {
+    "s_3111171e960687": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "8dbcbda8-4623-438b-a805-7c8f1634b75d",
+        "model": "claude-opus-5"
+      },
+      "human_author": "Graham Brooks <graham@grahambrooks.com>"
+    }
+  }
+}

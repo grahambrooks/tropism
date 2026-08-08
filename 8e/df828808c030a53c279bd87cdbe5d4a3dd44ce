@@ -1,0 +1,19 @@
+evaluation/run.sh
+  s_3111171e960687::t_fa78680bda0694 117-120
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.21",
+  "base_commit_sha": "8edf828808c030a53c279bd87cdbe5d4a3dd44ce",
+  "prompts": {},
+  "sessions": {
+    "s_3111171e960687": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "8dbcbda8-4623-438b-a805-7c8f1634b75d",
+        "model": "claude-opus-5"
+      },
+      "human_author": "Graham Brooks <graham@grahambrooks.com>"
+    }
+  }
+}
