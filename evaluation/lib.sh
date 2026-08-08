@@ -1,7 +1,28 @@
 # Shared helpers for the evaluation scripts. Sourced, never executed.
+#
+# **Must stay bash 3.2 compatible.** macOS ships bash 3.2.57 as `/bin/bash` and has
+# since 2007, for licensing reasons, so `#!/usr/bin/env bash` finds 3.2 on a stock
+# machine. Requiring a Homebrew bash to run an evaluation harness is friction the
+# harness does not need.
+#
+# So: no `;;&`, no `declare -A`, no `mapfile`, no `${var,,}`, no `[[ -v ]]`.
+# `make check-scripts` verifies this against the real `/bin/bash`; note that
+# `bash -n a.sh b.sh` checks only the *first* file, which is how a `;;&` shipped
+# past a green lint once already.
 # shellcheck shell=bash
 
 log() { printf '%s %s\n' "$(date -u +%H:%M:%S)" "$*" >&2; }
+
+# Whether a comma-separated language list contains one language.
+#
+# `corpus.tsv` stores `ruby,javascript`, and a polyglot repository needs every
+# matching oracle rather than the first.
+has_language() {
+  case ",$1," in
+    *",$2,"*) return 0 ;;
+    *) return 1 ;;
+  esac
+}
 
 # Free space on the filesystem holding $1, in MiB.
 free_mib() {

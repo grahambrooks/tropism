@@ -89,6 +89,18 @@ first and nobody would notice.
 One image per ecosystem rather than one with ten: a combined image is enormous, and a version skew in
 one toolchain would silently change the oracle for another.
 
+## Portability
+
+**The scripts must stay bash 3.2 compatible.** macOS has shipped bash 3.2.57 as
+`/bin/bash` since 2007 for licensing reasons, so `#!/usr/bin/env bash` finds 3.2 on a stock machine.
+Requiring a Homebrew bash to run an evaluation harness is friction the harness does not need.
+
+So: no `;;&`, no `declare -A`, no `mapfile`, no `${var,,}`, no `[[ -v ]]`.
+
+`make check-scripts` verifies it against the real `/bin/bash`, **one file at a time** — because
+`bash -n a.sh b.sh` checks only the first file, which is exactly how a `;;&` shipped past a green
+lint and broke `oracles.sh` on first use.
+
 ## The rule this all serves
 
 **tropism must not invoke a package manager. The harness must.**

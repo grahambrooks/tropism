@@ -36,6 +36,7 @@ help:
 	@echo 'make release-dry  show what that would do, without doing it'
 	@echo 'make version      print the next version'
 	@echo 'make check        fmt, clippy, tests, and tropism on itself'
+	@echo 'make check-scripts  evaluation/ shell scripts, against real bash 3.2'
 	@echo 'make plan         what dist would build for the current version'
 	@echo 'make alerts       Dependabot alerts, split demo fixtures from real ones'
 
@@ -51,6 +52,24 @@ check:
 	cargo test --workspace --doc
 	cargo build -p tropism --no-default-features
 	cargo run --quiet -p tropism -- check
+	$(MAKE) check-scripts
+
+# The evaluation harness has to run on a stock macOS, which has shipped bash
+# 3.2.57 as /bin/bash since 2007 and is not going to stop. `;;&` reached a user
+# past a green shellcheck run because `bash -n a.sh b.sh` checks only the *first*
+# file — hence the loop, and hence /bin/bash explicitly rather than $$(which bash).
+.PHONY: check-scripts
+check-scripts:
+	@for f in evaluation/*.sh; do \
+		/bin/bash -n "$$f" || { echo "FAILED under bash 3.2: $$f" >&2; exit 1; }; \
+	done
+	@if command -v shellcheck >/dev/null 2>&1; then \
+		shellcheck -x -P evaluation evaluation/*.sh || exit 1; \
+	else \
+		echo 'shellcheck not installed; syntax checked only'; \
+	fi
+	@python3 -m py_compile evaluation/report.py && rm -rf evaluation/__pycache__
+	@echo 'evaluation scripts OK'
 
 .PHONY: plan
 plan:

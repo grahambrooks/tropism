@@ -91,32 +91,40 @@ while IFS=$'\t' read -r repo sha langs _shape _note; do
     continue
   fi
 
-  case ",$langs," in
-    *,rust,*)
-      # --duplicates reports what actually compiles, which is *not* what the
-      # lockfile says. That gap is S8; the report quantifies it rather than
-      # treating either side as wrong.
-      oracle rust "$slug" "$work" cargo-duplicates \
-        'cargo tree --duplicates --workspace 2>&1 | head -400' ;;&
-    *,javascript,*)
-      oracle node "$slug" "$work" madge-circular \
-        'madge --circular --extensions ts,tsx,js,jsx --json . 2>/dev/null || echo "[]"' ;;&
-    *,python,*)
-      oracle python "$slug" "$work" pylint-cycles \
-        'pylint --disable=all --enable=cyclic-import --output-format=json . 2>/dev/null || echo "[]"' ;;&
-    *,go,*)
-      # Go's compiler rejects import cycles, so this oracle is exact and free: if
-      # the package graph loads, any module-scope cycle tropism reports is a false
-      # positive by construction.
-      oracle go "$slug" "$work" go-list \
-        'go list ./... 2>&1 | head -2000' ;;&
-    *,java,*)
-      oracle java "$slug" "$work" jdeps-cycles \
-        'find . -name "*.jar" -not -path "*/test*" | head -20 | xargs -r jdeps -cycles 2>&1 | head -400 || true' ;;&
-    *,ruby,*)
-      oracle ruby "$slug" "$work" bundle-list \
-        'bundle lock --print 2>/dev/null | head -400 || true' ;;&
-  esac
+  # A polyglot repository needs *every* matching oracle, not the first — mastodon
+  # is Ruby and JavaScript, ruff is Rust and Python. `case` with `;;&` expresses
+  # that and is bash 4, which macOS does not ship; `has_language` is the portable
+  # spelling and reads better besides.
+  if has_language "$langs" rust; then
+    # --duplicates reports what actually compiles, which is *not* what the
+    # lockfile says. That gap is S8; the report quantifies it rather than
+    # treating either side as wrong.
+    oracle rust "$slug" "$work" cargo-duplicates \
+      'cargo tree --duplicates --workspace 2>&1 | head -400'
+  fi
+  if has_language "$langs" javascript; then
+    oracle node "$slug" "$work" madge-circular \
+      'madge --circular --extensions ts,tsx,js,jsx --json . 2>/dev/null || echo "[]"'
+  fi
+  if has_language "$langs" python; then
+    oracle python "$slug" "$work" pylint-cycles \
+      'pylint --disable=all --enable=cyclic-import --output-format=json . 2>/dev/null || echo "[]"'
+  fi
+  if has_language "$langs" go; then
+    # Go's compiler rejects import cycles, so this oracle is exact and free: if
+    # the package graph loads, any module-scope cycle tropism reports is a false
+    # positive by construction.
+    oracle go "$slug" "$work" go-list \
+      'go list ./... 2>&1 | head -2000'
+  fi
+  if has_language "$langs" java; then
+    oracle java "$slug" "$work" jdeps-cycles \
+      'find . -name "*.jar" -not -path "*/test*" | head -20 | xargs -r jdeps -cycles 2>&1 | head -400 || true'
+  fi
+  if has_language "$langs" ruby; then
+    oracle ruby "$slug" "$work" bundle-list \
+      'bundle lock --print 2>/dev/null | head -400 || true'
+  fi
 
   # Delete the copy *and* everything the oracle installed into it.
   used=$(size_mib "$work")
