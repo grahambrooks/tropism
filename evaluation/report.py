@@ -33,22 +33,6 @@ CORPUS = HERE / "corpus.tsv"
 INFERRED = ["cycle", "unused-dep", "missing-dep", "version-conflict", "diamond-dep"]
 
 
-def normalise_language(name: str) -> str:
-    """Reconciles the two spellings tropism currently emits for one language.
-
-    Found by this harness on its first real run. `Language` derives
-    `serde(rename_all = "kebab-case")`, so the JSON contract says `java-script`,
-    `type-script` and `c-sharp`, while `Language::as_str()` — which drives the text
-    renderer, `tropism workspaces` and `tropism explain` — says `javascript`,
-    `typescript` and `csharp`.
-
-    Normalising here keeps the evaluation honest about a defect that is not the
-    evaluation's. Remove this once the contract has one spelling; the report will
-    keep working either way.
-    """
-    return name.replace("-", "")
-
-
 def load_corpus() -> list[dict]:
     rows = []
     for line in CORPUS.read_text().splitlines():
@@ -59,7 +43,7 @@ def load_corpus() -> list[dict]:
             {
                 "repo": repo,
                 "sha": sha,
-                "languages": [normalise_language(x) for x in langs.split(",")],
+                "languages": langs.split(","),
                 "shape": shape,
                 "note": note,
                 "slug": repo.replace("/", "__"),
@@ -96,7 +80,7 @@ def summarise(report: dict) -> dict:
 
     return {
         "projects": len(projects),
-        "languages": sorted({normalise_language(p["language"]) for p in projects}),
+        "languages": sorted({p["language"] for p in projects}),
         "source_files": sum(p.get("source_file_count", 0) for p in projects),
         "findings": len(findings),
         "by_check": dict(by_check),
@@ -138,10 +122,10 @@ def draw_audit_sample(corpus, size: int, seed: int = 20260808) -> list[dict]:
         for project in report.get("projects", []):
             for finding in project.get("findings", []):
                 if finding["check"] in ("unused-dep", "missing-dep"):
-                    pool[normalise_language(project["language"])].append(
+                    pool[project["language"]].append(
                         {
                             "repo": row["repo"],
-                            "language": normalise_language(project["language"]),
+                            "language": project["language"],
                             "check": finding["check"],
                             "id": finding["id"],
                             "message": finding["message"],
@@ -261,7 +245,7 @@ def markdown(corpus) -> str:
         for project in data.get("projects", []):
             for finding in project.get("findings", []):
                 if finding["check"] in ("unused-dep", "missing-dep"):
-                    pool[normalise_language(project["language"])] += 1
+                    pool[project["language"]] += 1
     if pool:
         w("| Language | Hygiene findings available to sample |")
         w("| --- | --- |")

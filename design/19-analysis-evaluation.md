@@ -254,19 +254,19 @@ Stated in advance, so the analysis cannot be fitted to the outcome afterwards.
 
 ## Already found, before the corpus was run
 
-Validating the harness against four local repositories surfaced a contract defect. `Language` derives
-`serde(rename_all = "kebab-case")`, so the **JSON contract emits `java-script`, `type-script` and
-`c-sharp`** while `Language::as_str()` — the text renderer, `tropism workspaces`, `tropism explain` —
-emits `javascript`, `typescript` and `csharp`.
+Validating the harness against four local repositories surfaced a contract defect, since fixed.
+`Language` derived `serde(rename_all = "kebab-case")`, so the JSON contract emitted `java-script`,
+`type-script` and `c-sharp` while every human-facing surface said `javascript`, `typescript`,
+`csharp` — two spellings for one language in the contract
+[05-interfaces.md](05-interfaces.md) intends the MCP server to share with the CLI.
 
-Two spellings for one language across two surfaces of one tool, in the contract
-[05-interfaces.md](05-interfaces.md) intends the MCP server to share with the CLI. `report.py`
-normalises around it; the normalisation should be deleted once the contract has one spelling. Fixing
-it is a change to a published value and therefore a `SCHEMA_VERSION` question, which is why it is
-recorded here rather than quietly patched.
+Fixed in D40 by deriving the wire format from `as_str`, so the two cannot drift again, with
+`SCHEMA_VERSION` bumped to 2.
 
-That is one defect from four repositories analyzed only to check that the scripts ran. It is the
-argument for the other 24.
+**That is one contract defect from four repositories analyzed only to check that the scripts ran.**
+It is the argument for the other 24, and it is also the argument for the harness itself: nobody had
+read that field closely enough to notice in ten language slices, and a script comparing two surfaces
+found it on first contact.
 
 ## Cost and sequencing
 

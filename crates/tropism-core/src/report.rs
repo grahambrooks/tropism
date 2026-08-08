@@ -10,7 +10,17 @@ use serde::{Deserialize, Serialize};
 
 use crate::model::Project;
 
-pub const SCHEMA_VERSION: u32 = 1;
+/// The report contract's version. **Not** `tropism.toml`'s `schema_version`, which
+/// versions the ruleset file format and is unrelated.
+///
+/// `2` — D40. Three languages were spelled `java-script`, `type-script` and
+/// `c-sharp` in JSON and `javascript`, `typescript`, `csharp` everywhere else; the
+/// contract now uses the second spelling throughout. That changes a published
+/// value, so it is a breaking change by the rule at the top of this file, and the
+/// rule is applied even though nothing has been published to crates.io yet — a
+/// version that is not incremented when the contract changes tells a consumer
+/// nothing, which is the failure this project refuses everywhere else.
+pub const SCHEMA_VERSION: u32 = 2;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
 #[serde(rename_all = "kebab-case")]

@@ -79,11 +79,14 @@ nobody looked at. That is the failure mode `CheckStatus` exists to prevent, one 
 
 ## Already found, before the real corpus ran
 
-Validating the harness against four local repositories surfaced a contract defect: `Language` derives
-`serde(rename_all = "kebab-case")`, so the **JSON contract says `java-script`, `type-script` and
-`c-sharp`** while `Language::as_str()` — the text renderer, `tropism workspaces`, `tropism explain` —
-says `javascript`, `typescript` and `csharp`. Two spellings for one language across two surfaces of
-one tool, in the contract the MCP server is meant to share with the CLI.
+Validating against four local repositories surfaced a contract defect on first contact: the JSON
+contract said `java-script`, `type-script` and `c-sharp` while the text renderer, `tropism
+workspaces` and `tropism explain` said `javascript`, `typescript` and `csharp`. Two spellings for one
+language across two surfaces of one tool, in the contract the MCP server is meant to share with the
+CLI.
 
-`report.py` normalises around it so the evaluation stays honest about a defect that is not the
-evaluation's. The normalisation should be deleted once the contract has one spelling.
+Fixed — D40 in [design/12](../design/12-known-limitations.md). The wire format is now derived from
+`Language::as_str`, so the two cannot drift again, and `report.py` needs no workaround.
+
+One defect from four repositories run only to check the scripts worked. That is the argument for the
+other 24.

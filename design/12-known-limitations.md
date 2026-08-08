@@ -348,25 +348,28 @@ and findings move, so it keys on the finding ID *and* on `(rule, from_module, to
 occurrence count — a rename keeps a violation in the same module pair and stays baselined, a move
 across a boundary does not. Baselined findings are downgraded and counted, never deleted.
 
-### D40. The JSON contract and the text output spell three languages differently
+### D40. ~~The JSON contract and the text output spell three languages differently~~ — RESOLVED
 
-`Language` derives `serde(rename_all = "kebab-case")`, so the JSON contract emits **`java-script`**,
-**`type-script`** and **`c-sharp`**, while `Language::as_str()` — which drives the text renderer,
-`tropism workspaces` and `tropism explain` — emits `javascript`, `typescript` and `csharp`. The other
-seven languages are single words and are unaffected, which is why this survived ten language slices.
+`Language` derived `serde(rename_all = "kebab-case")`, so the JSON contract emitted `java-script`,
+`type-script` and `c-sharp` while `Language::as_str()` — the text renderer, `tropism workspaces`,
+`tropism explain` — emitted `javascript`, `typescript` and `csharp`. The other seven languages are
+single words, which is how it survived ten language slices.
 
-**Cost:** two spellings for one language across two surfaces of one tool, in exactly the contract
-[05-interfaces.md](05-interfaces.md) intends the MCP server to share with the CLI — "any question
-answerable by the CLI is answerable over MCP with the same result". Any consumer grouping by language
-across both surfaces gets two buckets for one language.
+**Found by** the harness in [19-analysis-evaluation.md](19-analysis-evaluation.md), on four local
+repositories run only to check the scripts worked — before the real corpus existed.
 
-**Found by** the evaluation harness in [19-analysis-evaluation.md](19-analysis-evaluation.md), on
-four local repositories run only to check the scripts worked.
+**Fixed at the source of the drift rather than at the symptom.** `Serialize`/`Deserialize` are now
+implemented in terms of `as_str` and `parse`, so there is one spelling because there is one function;
+adding a hyphenated variant back is no longer possible without deleting a test. Three tests pin it —
+agreement across every surface, JSON round-trip, and rejection of the old spellings — and all three
+were verified to fail against the original derive.
 
-**Fix:** make the serde representation match `as_str()` — ideally by deriving one from the other so
-they cannot drift again. It changes a published value, so it is a `SCHEMA_VERSION` decision rather
-than a patch, which is why it is registered instead of quietly changed. Nothing has been published to
-crates.io, so no consumer exists yet; this is the cheapest it will ever be to fix.
+The old names are **rejected, not accepted alongside the new ones**: accepting both would leave two
+vocabularies in the contract, which is the defect rather than the fix.
+
+`SCHEMA_VERSION` went to **2**. Changing a published value is a breaking change by the rule at the
+top of `report.rs`, and the rule was applied even though nothing has been published — a version that
+does not move when the contract moves tells a consumer nothing.
 
 ### D9. No sub-ruleset inheritance in a monorepo
 
