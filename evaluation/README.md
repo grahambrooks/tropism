@@ -194,9 +194,26 @@ same set. Classified by cause, it is not one problem — it is six, and they wan
 | **3%** | Java: test deps injected by a Gradle convention plugin | tropism reads `build.gradle`, not the plugin that rewrites it |
 | **1%** | **Swift: `.package(path: "..")` named `..`** | **D43 — a verified bug** |
 
-**Fixed since:** D42 (Rust sibling modules), D44 (C++ platform headers), and D45 — `analyze` now
-offers an `exclude` block for fixture trees, annotated with what each glob would hide. Re-run the
-corpus to measure what they were worth; the shares above are from before.
+**Fixed since, and re-measured against the whole corpus:**
+
+| Repository | Check | Before | After | |
+| --- | --- | --- | --- | --- |
+| astral-sh/ruff | missing-dep | 982 | **113** | −869 (D42) |
+| tokio-rs/tokio | missing-dep | 93 | **10** | −83 (D42) |
+| vercel/next.js | missing-dep | 457 | **393** | −64 (D42, turbopack) |
+| microsoft/terminal | missing-dep | 392 | **354** | −38 (D44) |
+| apache/arrow | missing-dep | 151 | **126** | −25 (D44) |
+| microsoft/vscode | missing-dep | 94 | **87** | −7 |
+| facebook/react | missing-dep | 137 | **134** | −3 |
+| **corpus** | **missing-dep** | **4,803** | **3,714** | **−1,089, −23%** |
+
+Nothing else moved: `unused-dep`, `version-conflict` and `diamond-dep` are identical to the finding,
+which is what a targeted resolution fix should do.
+
+`cycle` did move, in both directions — ruff +1, vscode +1, tokio −3 — and that is **D46**, not noise.
+Resolving those edges correctly makes the module graph genuinely more connected, so components merge:
+tokio went from 8 cycles to 5, one of which is now 158 modules. Fewer findings, at least one of them
+much less useful. Verified by building the pre-fix binary and diffing, rather than inferred.
 
 **What to fix, in the order the evidence supports:**
 

@@ -14,6 +14,7 @@ failure mode `CheckStatus` exists to prevent, one level up.
     ./report.py --stdout            # print instead, for piping
     ./report.py --json              # machine-readable
     ./report.py --audit-sample 20   # draw the D4 audit sample
+    ./report.py --baseline results.before   # add a delta column against a prior run
 
 REPORT.md is committed, unlike results/. It is small, human-readable, and the
 thing worth reviewing — so the next evaluation shows up as a diff in a pull
@@ -39,6 +40,11 @@ RESULTS = HERE / "results"
 ORACLES = HERE / "oracles" / "results"
 CORPUS = HERE / "corpus.tsv"
 DEFAULT_OUTPUT = HERE / "REPORT.md"
+
+# Set by --baseline. A prior results/ directory to diff against, because
+# design/19's argument for keeping raw results is that the *next* evaluation is a
+# diff — a second column of absolute numbers is not one.
+BASELINE: pathlib.Path | None = None
 
 # Checks that gate, versus checks that inform. design/10 is why they are not
 # reported together: an aggregate over both hides the split that matters.
@@ -70,6 +76,31 @@ def load_corpus() -> list[dict]:
             }
         )
     return rows
+
+
+def load_baseline(slug: str) -> dict | None:
+    if BASELINE is None:
+        return None
+    path = BASELINE / f"{slug}.json"
+    if not path.exists():
+        return None
+    try:
+        return json.loads(path.read_text())
+    except json.JSONDecodeError:
+        return None
+
+
+def delta(now: int, before: int | None) -> str:
+    """A signed change, or blank when there is nothing to compare against.
+
+    Blank rather than zero: "no baseline" and "no change" are different claims,
+    and this whole tool exists because those two get conflated.
+    """
+    if before is None:
+        return ""
+    if now == before:
+        return " (=)"
+    return f" ({now - before:+,})"
 
 
 def load(slug: str) -> dict | None:
@@ -455,7 +486,16 @@ def markdown(corpus) -> str:
     w("| --- | " + " | ".join("---" for _ in INFERRED) + " | --- | --- |")
     for row, data in done:
         s = summarise(data)
-        cells = [str(s["by_check"].get(check, 0)) for check in INFERRED]
+        before = load_baseline(row["slug"])
+        prior = summarise(before) if before and "error" not in before else None
+        cells = [
+            str(s["by_check"].get(check, 0))
+            + delta(
+                s["by_check"].get(check, 0),
+                prior["by_check"].get(check, 0) if prior else None,
+            )
+            for check in INFERRED
+        ]
         oracles = oracle_status(row["slug"])
         got = ", ".join(k for k, ok in sorted(oracles.items()) if ok) or "—"
         density = per_thousand(s["findings"], s["source_files"])
@@ -629,10 +669,19 @@ def main() -> int:
                         help=f"where to write the report (default {DEFAULT_OUTPUT.name})")
     parser.add_argument("--stdout", action="store_true",
                         help="print the report instead of writing it")
+    parser.add_argument("--baseline", metavar="DIR",
+                        help="a prior results/ directory; adds a delta to each count")
     parser.add_argument("--json", action="store_true", help="machine-readable summary")
     parser.add_argument("--audit-sample", type=int, metavar="N",
                         help="draw N hygiene findings per language for the D4 audit")
     args = parser.parse_args()
+
+    global BASELINE
+    if args.baseline:
+        BASELINE = pathlib.Path(args.baseline)
+        if not BASELINE.is_dir():
+            print(f"no such baseline directory: {BASELINE}", file=sys.stderr)
+            return 1
 
     corpus = load_corpus()
     if not RESULTS.exists() or not any(RESULTS.glob("*.json")):

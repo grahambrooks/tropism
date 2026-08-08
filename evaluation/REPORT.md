@@ -18,7 +18,7 @@ Mechanical, from the numbers below, so a reader can argue with a threshold rathe
 
 - **No run failures.** 24 repositories analyzed, none errored.
 - **Parsing is near-total.** 2 of 159,993 files unreadable (0.001%).
-- **Scale holds.** Largest run elastic/elasticsearch — 31,458 files in 40s (786 files/sec).
+- **Scale holds.** Largest run elastic/elasticsearch — 31,458 files in 42s (749 files/sec).
 - **cpp: 100.0% of import statements resolved** (8,708 statements).
 - **go: 100.0% of import statements resolved** (165,129 statements).
 - **javascript: 99.8% of import statements resolved** (243,054 statements).
@@ -35,7 +35,7 @@ Mechanical, from the numbers below, so a reader can argue with a threshold rathe
 - **csharp: 92.6% of import statements resolved.** Under the 95% target; the unresolved reasons below name the gap.
 - **java: only 68.3% of import statements resolved.** Below 80%, design/19 says that language's findings should not be trusted. The unresolved reasons below name the gap.
 - **denoland/deno: 42% of imports resolve but 100% of import *statements* do.** The gap is bare path references, which are deliberately left unresolved. Because the confidence cap keys on the first number, every hygiene finding here is pinned to Low for a reason unrelated to whether tropism understood the code.
-- **tokio-rs/tokio: 52% of imports resolve but 100% of import *statements* do.** The gap is bare path references, which are deliberately left unresolved. Because the confidence cap keys on the first number, every hygiene finding here is pinned to Low for a reason unrelated to whether tropism understood the code.
+- **tokio-rs/tokio: 53% of imports resolve but 100% of import *statements* do.** The gap is bare path references, which are deliberately left unresolved. Because the confidence cap keys on the first number, every hygiene finding here is pinned to Low for a reason unrelated to whether tropism understood the code.
 - **BurntSushi/ripgrep: 25% of imports resolve but 100% of import *statements* do.** The gap is bare path references, which are deliberately left unresolved. Because the confidence cap keys on the first number, every hygiene finding here is pinned to Low for a reason unrelated to whether tropism understood the code.
 - **astral-sh/ruff: 25% of imports resolve but 100% of import *statements* do.** The gap is bare path references, which are deliberately left unresolved. Because the confidence cap keys on the first number, every hygiene finding here is pinned to Low for a reason unrelated to whether tropism understood the code.
 - **vercel/next.js: 62% of imports resolve but 100% of import *statements* do.** The gap is bare path references, which are deliberately left unresolved. Because the confidence cap keys on the first number, every hygiene finding here is pinned to Low for a reason unrelated to whether tropism understood the code.
@@ -90,21 +90,21 @@ Counts only. Soundness needs the oracle columns and the hand audit below; a coun
 | prometheus/prometheus | 9 | 40 | 0 | 180 | 150 | 387.1 | go-list |
 | grafana/grafana | 75 | 199 | 14 | 434 | 328 | 69.6 | go-list, madge-circular |
 | denoland/deno | 3 | 239 | 205 | 103 | 74 | 321.2 | cargo-duplicates |
-| tokio-rs/tokio | 8 | 8 | 93 | 0 | 0 | 138.0 | cargo-duplicates |
+| tokio-rs/tokio | 5 | 8 | 10 | 0 | 0 | 29.1 | cargo-duplicates |
 | BurntSushi/ripgrep | 0 | 16 | 1 | 1 | 1 | 172.7 | cargo-duplicates |
-| astral-sh/ruff | 33 | 71 | 982 | 64 | 48 | 538.2 | cargo-duplicates, pylint-cycles |
+| astral-sh/ruff | 34 | 71 | 113 | 64 | 48 | 148.2 | cargo-duplicates, pylint-cycles |
 | apache/airflow | 22 | 1257 | 1142 | 293 | 218 | 330.6 | pylint-cycles |
 | pallets/flask | 1 | 14 | 13 | 3 | 0 | 373.5 | pylint-cycles |
-| microsoft/vscode | 159 | 277 | 94 | 434 | 315 | 104.6 | madge-circular |
-| vercel/next.js | 58 | 1154 | 457 | 1262 | 917 | 170.7 | madge-circular |
-| facebook/react | 22 | 372 | 137 | 2370 | 1783 | 1029.0 | madge-circular |
+| microsoft/vscode | 160 | 277 | 87 | 434 | 315 | 104.1 | madge-circular |
+| vercel/next.js | 58 | 1154 | 393 | 1262 | 917 | 167.8 | madge-circular |
+| facebook/react | 22 | 372 | 134 | 2370 | 1783 | 1028.3 | madge-circular |
 | spring-projects/spring-boot | 16 | 552 | 276 | 21 | 18 | 101.9 | jdeps-cycles |
 | google/guava | 5 | 25 | 0 | 0 | 0 | 9.3 | jdeps-cycles |
 | elastic/elasticsearch | 103 | 789 | 332 | 17 | 6 | 39.6 | jdeps-cycles |
 | jellyfin/jellyfin | 8 | 162 | 19 | 0 | 0 | 88.6 | — |
 | AvaloniaUI/Avalonia | 24 | 291 | 21 | 0 | 0 | 83.7 | — |
-| microsoft/terminal | 23 | 4 | 392 | 0 | 0 | 339.5 | — |
-| apache/arrow | 30 | 67 | 151 | 0 | 0 | 81.6 | pylint-cycles |
+| microsoft/terminal | 23 | 4 | 354 | 0 | 0 | 308.8 | — |
+| apache/arrow | 30 | 67 | 126 | 0 | 0 | 73.4 | pylint-cycles |
 | pointfreeco/swift-composable-architecture | 0 | 4 | 32 | 0 | 0 | 45.2 | — |
 | apple/swift-nio | 0 | 6 | 22 | 0 | 0 | 50.5 | — |
 | rails/rails | 0 | 60 | 77 | 69 | 50 | 81.5 | bundle-list |
@@ -117,9 +117,9 @@ Counts only. Soundness needs the oracle columns and the hand audit below; a coun
 
 | Confidence | Findings | Share |
 | --- | --- | --- |
-| high | 10,382 | 49% |
-| medium | 7,608 | 36% |
-| low | 3,108 | 14% |
+| high | 10,381 | 51% |
+| medium | 7,545 | 37% |
+| low | 2,082 | 10% |
 
 ## Per-language
 
@@ -127,14 +127,14 @@ The split design/19 asks for. tropism is not one tool with one accuracy — it i
 
 | Language | Repos | Projects | Files | Statements resolved | All imports | Findings | per 1k files |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| cpp | 2 | 6 | 3,174 | 100.0% | 100.0% | 562 | 177.1 |
+| cpp | 2 | 6 | 3,174 | 100.0% | 100.0% | 499 | 157.2 |
 | csharp | 3 | 163 | 6,203 | 92.6% ⚠ | 92.6% | 520 | 83.8 |
 | go | 4 | 86 | 24,736 | 100.0% | 100.0% | 40 | 1.6 |
 | java | 5 | 1222 | 43,352 | 68.3% ⚠ | 68.3% | 2,145 | 49.5 |
 | javascript | 13 | 1756 | 53,313 | 99.8% | 99.8% | 12,651 | 237.3 |
 | python | 7 | 201 | 8,243 | 99.9% | 99.9% | 2,507 | 304.1 |
 | ruby | 4 | 21 | 14,500 | 100.0% | 100.0% | 481 | 33.2 |
-| rust | 8 | 253 | 5,122 | 100.0% | 33.8% | 2,128 | 415.5 |
+| rust | 8 | 253 | 5,122 | 100.0% | 33.9% | 1,101 | 215.0 |
 | swift | 2 | 10 | 1,350 | 100.0% | 100.0% | 64 | 47.4 |
 
 ## D2 — Resolution
@@ -147,13 +147,13 @@ The share of imports tropism understood, and **the number that caps every hygien
 | prometheus/prometheus | 7,718 | 100.0% | 7,718 | 100.0% |
 | grafana/grafana | 103,671 | 100.0% | 103,671 | 100.0% |
 | denoland/deno | 107,050 | 42.0% | 19,261 | 100.0% |
-| tokio-rs/tokio | 23,581 | 52.2% | 4,361 | 100.0% |
-| BurntSushi/ripgrep | 4,965 | 24.8% | 384 | 100.0% |
-| astral-sh/ruff | 109,641 | 24.8% | 17,086 | 99.7% |
+| tokio-rs/tokio | 23,581 | 52.9% | 4,361 | 100.0% |
+| BurntSushi/ripgrep | 4,965 | 25.1% | 384 | 100.0% |
+| astral-sh/ruff | 109,641 | 24.9% | 17,086 | 99.7% |
 | apache/airflow | 53,251 | 100.0% | 53,251 | 100.0% |
 | pallets/flask | 648 | 100.0% | 648 | 100.0% |
 | microsoft/vscode | 123,279 | 98.2% | 119,792 | 100.0% |
-| vercel/next.js | 78,258 | 62.0% | 39,879 | 99.8% |
+| vercel/next.js | 78,258 | 62.1% | 39,879 | 99.8% |
 | facebook/react | 23,474 | 56.8% | 12,098 | 100.0% |
 | spring-projects/spring-boot | 76,836 | 66.5% | 76,836 | 66.5% ⚠ |
 | google/guava | 38,711 | 99.8% | 38,711 | 99.8% |
@@ -245,30 +245,30 @@ Run `tropism workspaces <repo>` to check origins; any `language` origin where th
 
 | Repository | Seconds | Source files | Files/sec | Skipped files |
 | --- | --- | --- | --- | --- |
-| kubernetes/kubernetes | 16 | 17,702 | 1,106 | 0 |
-| prometheus/prometheus | 1 | 979 | 979 | 0 |
-| grafana/grafana | 19 | 15,089 | 794 | 0 |
-| denoland/deno | 11 | 1,943 | 177 | 2 ⚠ |
+| kubernetes/kubernetes | 20 | 17,702 | 885 | 0 |
+| prometheus/prometheus | 2 | 979 | 490 | 0 |
+| grafana/grafana | 15 | 15,089 | 1,006 | 0 |
+| denoland/deno | 9 | 1,943 | 216 | 2 ⚠ |
 | tokio-rs/tokio | 1 | 790 | 790 | 0 |
-| BurntSushi/ripgrep | 1 | 110 | 110 | 0 |
-| astral-sh/ruff | 3 | 2,226 | 742 | 0 |
-| apache/airflow | 7 | 8,870 | 1,267 | 0 |
-| pallets/flask | 0 | 83 | — | 0 |
-| microsoft/vscode | 22 | 12,225 | 556 | 0 |
-| vercel/next.js | 33 | 22,546 | 683 | 0 |
-| facebook/react | 4 | 4,552 | 1,138 | 0 |
+| BurntSushi/ripgrep | 0 | 110 | — | 0 |
+| astral-sh/ruff | 4 | 2,226 | 556 | 0 |
+| apache/airflow | 8 | 8,870 | 1,109 | 0 |
+| pallets/flask | 1 | 83 | 83 | 0 |
+| microsoft/vscode | 11 | 12,225 | 1,111 | 0 |
+| vercel/next.js | 31 | 22,546 | 727 | 0 |
+| facebook/react | 5 | 4,552 | 910 | 0 |
 | spring-projects/spring-boot | 14 | 8,667 | 619 | 0 |
-| google/guava | 2 | 3,229 | 1,614 | 0 |
-| elastic/elasticsearch | 40 | 31,458 | 786 | 0 |
-| jellyfin/jellyfin | 2 | 2,133 | 1,066 | 0 |
+| google/guava | 1 | 3,229 | 3,229 | 0 |
+| elastic/elasticsearch | 42 | 31,458 | 749 | 0 |
+| jellyfin/jellyfin | 1 | 2,133 | 2,133 | 0 |
 | AvaloniaUI/Avalonia | 3 | 4,013 | 1,338 | 0 |
-| microsoft/terminal | 2 | 1,234 | 617 | 0 |
+| microsoft/terminal | 1 | 1,234 | 1,234 | 0 |
 | apache/arrow | 2 | 3,038 | 1,519 | 0 |
-| pointfreeco/swift-composable-architecture | 0 | 796 | — | 0 |
-| apple/swift-nio | 0 | 554 | — | 0 |
+| pointfreeco/swift-composable-architecture | 1 | 796 | 796 | 0 |
+| apple/swift-nio | 1 | 554 | 554 | 0 |
 | rails/rails | 2 | 3,142 | 1,571 | 0 |
-| mastodon/mastodon | 1 | 4,141 | 4,141 | 0 |
-| discourse/discourse | 11 | 10,473 | 952 | 0 |
+| mastodon/mastodon | 2 | 4,141 | 2,070 | 0 |
+| discourse/discourse | 8 | 10,473 | 1,309 | 0 |
 
 ## D4 — Manifest hygiene: outstanding hand audit
 
@@ -276,14 +276,14 @@ Run `tropism workspaces <repo>` to check origins; any `language` origin where th
 
 | Language | Hygiene findings available to sample |
 | --- | --- |
-| cpp | 512 |
+| cpp | 449 |
 | csharp | 488 |
 | go | 36 |
 | java | 2021 |
 | javascript | 3233 |
 | python | 2470 |
 | ruby | 457 |
-| rust | 1435 |
+| rust | 409 |
 | swift | 64 |
 
 Draw the sample with `./report.py --audit-sample 20` — seeded, so a second auditor grades the same findings and the two audits are comparable.

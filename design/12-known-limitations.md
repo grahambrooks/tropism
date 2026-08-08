@@ -396,6 +396,26 @@ hygiene at 63% false positives on the one ecosystem anyone has checked.
 **Decide with D4 in hand:** either cap on `statement_rate`, or keep the current cap and document that
 `Low` on Rust means "path references dominate" rather than "resolution is poor".
 
+### D46. Fixing D42 merged many small Rust cycles into one very large SCC
+
+Measured consequence of D42, not a regression it introduced — but it needs saying, because it moved
+the check design/10 found sound.
+
+Resolving a bare `use <sibling>` correctly means those edges are now *internal* rather than a phantom
+external dependency, so the module graph is genuinely more connected than tropism could previously
+see. Strongly-connected components merge accordingly. On `tokio-rs/tokio` the count fell 8 → 5 while
+one of the survivors grew to **158 modules**; `astral-sh/ruff` and `microsoft/vscode` each gained a
+cycle for the same reason.
+
+**Fewer findings, and at least one of them much less useful.** "Import cycle among 158 modules" is
+probably true — Rust imposes no module-level acyclicity — and is not something anyone can act on. The
+old 11-module cycles were more actionable and were computed from an incomplete graph.
+
+**Not yet decided.** The candidates: extend the containment rule that already keeps `use super::*`
+from being an edge (CLAUDE.md notes it "would report a cycle in essentially every Rust crate"), cap
+or summarise very large SCCs, or report the strongly-connected component's *condensation* rather than
+its membership. Needs the D3 cycle audit to choose, and design/19 already schedules that.
+
 ### D44. ~~Windows SDK and compiler intrinsics headers are reported as missing dependencies~~ — RESOLVED
 
 `SYSTEM_HEADERS` covered POSIX and C but not the Windows SDK, so `dsound.h`, `uxtheme.h`,
