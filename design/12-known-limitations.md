@@ -459,7 +459,7 @@ claiming external crates are local.
 It resolves rather than suppresses. `tropism explain` on the reproduction now reports
 `resolves to module \`rules::ast_with\``, so the edge exists and a rule can see it.
 
-### D43. `.package(path: "..")` yields a Swift dependency named `..`
+### D43. ~~`.package(path: "..")` yields a Swift dependency named `..`~~ — RESOLVED
 
 The Swift manifest parser takes the last path component of a `.package(path:)` entry as the package
 name. For `"../shared"` that is `shared`, which is wrong but readable; for `".."` it is `..`, which
@@ -471,9 +471,22 @@ consumed through a *product* name that no path component supplies.
 **Cost:** small in absolute terms — 2 of 180 — but every one is unintelligible output, and a
 finding a reader cannot even parse is worse than a wrong one they can.
 
-**Fix:** a `.package(path:)` entry has no reliable name in the manifest; treat it as a local
-sibling and resolve it through the target's `.product(name:package:)` entries, as the registry case
-already is. Failing that, drop it rather than name it after a directory.
+**Fixed, and the premise above was wrong.** A path package *does* have a reliable name — it is just
+not written in the manifest. `..` is not a name, it is a *reference* to one, so it is now resolved
+against the manifest's own directory: `..` in `Examples/TicTacToe/tic-tac-toe/Package.swift` names
+`Examples/TicTacToe`, whose directory name **is** the SwiftPM identity.
+
+That does more than delete the nonsense. Because the identity is now correct, the parent package
+matches the `.product(name: "AppCore", package: "TicTacToe")` entry the target already declared, so
+the dependency is recognised as *used* rather than reported unused under a name that matched
+nothing. Dropping the entry — the fix originally proposed here — would have removed the bad finding
+and left that one wrong too.
+
+A path climbing above the scan root has no name to recover and contributes nothing, which is the
+rule this parser follows for every dynamic construct.
+
+Measured: all 5 `..` findings in the corpus are gone, and the two Swift repositories' `unused-dep`
+counts fell from 6 to 5 and from 4 to 2 — the extra drop being the parent package that now resolves.
 
 ### D45. A first run is dominated by test fixtures, and now says so
 

@@ -105,8 +105,8 @@ Counts only. Soundness needs the oracle columns and the hand audit below; a coun
 | AvaloniaUI/Avalonia | 24 | 291 | 21 | 0 | 0 | 83.7 | — |
 | microsoft/terminal | 23 | 4 | 354 | 0 | 0 | 308.8 | — |
 | apache/arrow | 30 | 67 | 126 | 0 | 0 | 73.4 | pylint-cycles |
-| pointfreeco/swift-composable-architecture | 0 | 4 | 32 | 0 | 0 | 45.2 | — |
-| apple/swift-nio | 0 | 6 | 22 | 0 | 0 | 50.5 | — |
+| pointfreeco/swift-composable-architecture | 0 | 2 | 32 | 0 | 0 | 42.7 | — |
+| apple/swift-nio | 0 | 5 | 22 | 0 | 0 | 48.7 | — |
 | rails/rails | 0 | 60 | 77 | 69 | 50 | 81.5 | bundle-list |
 | mastodon/mastodon | 8 | 138 | 22 | 106 | 89 | 87.7 | bundle-list, madge-circular |
 | discourse/discourse | 10 | 167 | 321 | 239 | 172 | 86.8 | bundle-list, madge-circular |
@@ -118,7 +118,7 @@ Counts only. Soundness needs the oracle columns and the hand audit below; a coun
 | Confidence | Findings | Share |
 | --- | --- | --- |
 | high | 10,381 | 51% |
-| medium | 7,545 | 37% |
+| medium | 7,542 | 37% |
 | low | 2,082 | 10% |
 
 ## Per-language
@@ -135,7 +135,7 @@ The split design/19 asks for. tropism is not one tool with one accuracy — it i
 | python | 7 | 201 | 8,243 | 99.9% | 99.9% | 2,507 | 304.1 |
 | ruby | 4 | 21 | 14,500 | 100.0% | 100.0% | 481 | 33.2 |
 | rust | 8 | 253 | 5,122 | 100.0% | 33.9% | 1,101 | 215.0 |
-| swift | 2 | 10 | 1,350 | 100.0% | 100.0% | 64 | 47.4 |
+| swift | 2 | 10 | 1,350 | 100.0% | 100.0% | 61 | 45.2 |
 
 ## D2 — Resolution
 
@@ -284,7 +284,7 @@ Run `tropism workspaces <repo>` to check origins; any `language` origin where th
 | python | 2470 |
 | ruby | 457 |
 | rust | 409 |
-| swift | 64 |
+| swift | 61 |
 
 Draw the sample with `./report.py --audit-sample 20` — seeded, so a second auditor grades the same findings and the two audits are comparable.
 

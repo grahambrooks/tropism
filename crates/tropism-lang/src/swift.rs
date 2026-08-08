@@ -275,12 +275,22 @@ fn parse_package_swift(path: &Utf8Path, text: &str) -> anyhow::Result<Manifest> 
                 package_name = argument(node, "name", source).and_then(|n| string_value(n, source));
             }
             "package" => {
-                // `.package(url:)`, `.package(path:)`, or `.package(id:)`.
+                // `.package(url:)`, `.package(path:)`, or `.package(id:)`. Which
+                // label matched decides how the identity is derived, so it is kept.
                 let identity = ["url", "path", "id", "name"]
                     .iter()
-                    .find_map(|label| argument(node, label, source))
-                    .and_then(|value| string_value(value, source))
-                    .map(|value| package_identity(&value));
+                    .find_map(|label| {
+                        argument(node, label, source)
+                            .and_then(|value| string_value(value, source))
+                            .map(|value| (*label, value))
+                    })
+                    .map(|(label, value)| {
+                        if label == "path" {
+                            local_package_identity(&value, path)
+                        } else {
+                            package_identity(&value)
+                        }
+                    });
                 if let Some(identity) = identity.filter(|identity| !identity.is_empty()) {
                     packages.push(PackageRef {
                         identity,
@@ -442,6 +452,39 @@ fn package_identity(location: &str) -> String {
         .unwrap_or(location)
         .trim_end_matches(".git")
         .to_owned()
+}
+
+/// The identity of a `.package(path:)` dependency.
+///
+/// D43. A relative path is resolved against the manifest's own directory first,
+/// because `..` is not a name — it is a *reference* to one. Taking the last path
+/// component, as the URL case does, made `.package(path: "..")` a dependency
+/// literally called `..`: a finding nobody can parse, which is worse than one that
+/// is merely wrong.
+///
+/// Resolved, `..` in `Examples/TicTacToe/tic-tac-toe/Package.swift` names
+/// `Examples/TicTacToe`, whose directory name **is** the SwiftPM identity. So the
+/// path has a name after all; it just is not written in the manifest.
+///
+/// An empty result — a path that climbs above the scan root, where no name is
+/// recoverable — is dropped by the caller rather than guessed at, which is the same
+/// rule the rest of this parser follows for anything dynamic.
+fn local_package_identity(location: &str, manifest: &Utf8Path) -> String {
+    let base = manifest.parent().unwrap_or(Utf8Path::new(""));
+    let mut segments: Vec<&str> = Vec::new();
+    for segment in base.as_str().split('/').chain(location.split(['/', '\\'])) {
+        match segment {
+            "" | "." => {}
+            ".." => {
+                // Climbing past the scan root leaves nothing to name.
+                if segments.pop().is_none() {
+                    return String::new();
+                }
+            }
+            other => segments.push(other),
+        }
+    }
+    segments.last().map(|s| (*s).to_owned()).unwrap_or_default()
 }
 
 fn walk_calls(node: tree_sitter::Node<'_>, visit: &mut impl FnMut(tree_sitter::Node<'_>)) {
@@ -683,6 +726,48 @@ let package = Package(
             .find(|d| d.name == "SwiftTesting")
             .unwrap();
         assert_eq!(dep.kind, DepKind::Dev);
+    }
+
+    /// D43. `..` is not a name, it is a reference to one — so it is resolved
+    /// against the manifest's own directory, where it does have a name.
+    ///
+    /// The audit found `.package(path: "..")` reported as a dependency literally
+    /// called `..`: a finding nobody can parse, which is worse than one that is
+    /// merely wrong.
+    #[test]
+    fn a_relative_path_package_resolves_to_the_directory_it_names() {
+        let manifest = Utf8Path::new("Examples/TicTacToe/tic-tac-toe/Package.swift");
+        assert_eq!(local_package_identity("..", manifest), "TicTacToe");
+        assert_eq!(local_package_identity("../..", manifest), "Examples");
+        assert_eq!(local_package_identity("../shared", manifest), "shared");
+        assert_eq!(local_package_identity("./sibling", manifest), "sibling");
+        assert_eq!(local_package_identity("Nested/Pkg", manifest), "Pkg");
+        // Trailing separators must not swallow the name.
+        assert_eq!(local_package_identity("../shared/", manifest), "shared");
+    }
+
+    /// A path climbing above the scan root leaves nothing to name, so it
+    /// contributes nothing rather than a guess — the rule this parser follows for
+    /// every dynamic construct.
+    #[test]
+    fn a_path_above_the_scan_root_contributes_no_dependency() {
+        let manifest = Utf8Path::new("pkg/Package.swift");
+        assert_eq!(local_package_identity("../..", manifest), "");
+        assert_eq!(local_package_identity("../../../elsewhere", manifest), "");
+    }
+
+    /// A manifest at the scan root has no parent, and `..` from there is still
+    /// unnameable rather than an error.
+    #[test]
+    fn a_root_manifest_handles_a_parent_path() {
+        assert_eq!(
+            local_package_identity("..", Utf8Path::new("Package.swift")),
+            ""
+        );
+        assert_eq!(
+            local_package_identity("./local", Utf8Path::new("Package.swift")),
+            "local"
+        );
     }
 
     #[test]
