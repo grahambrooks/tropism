@@ -51,7 +51,7 @@ RUN apt-get update \
 WORKDIR /work
 
 # --------------------------------------------------------------------------
-FROM ruby:3.3-slim AS ruby
+FROM ruby:3.4-slim AS ruby
 RUN apt-get update \
  && apt-get install -y --no-install-recommends build-essential git \
  && rm -rf /var/lib/apt/lists/*
