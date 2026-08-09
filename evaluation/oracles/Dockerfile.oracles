@@ -35,7 +35,7 @@ RUN apt-get update \
 WORKDIR /work
 
 # --------------------------------------------------------------------------
-FROM python:3.13-slim AS python
+FROM python:3.14-slim AS python
 RUN pip install --no-cache-dir pylint==3.* uv >/dev/null
 WORKDIR /work
 
