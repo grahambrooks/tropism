@@ -44,7 +44,7 @@ FROM golang:1-bookworm AS go
 WORKDIR /work
 
 # --------------------------------------------------------------------------
-FROM eclipse-temurin:21-jdk AS java
+FROM eclipse-temurin:25-jdk AS java
 RUN apt-get update \
  && apt-get install -y --no-install-recommends maven git \
  && rm -rf /var/lib/apt/lists/*
