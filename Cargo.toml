@@ -20,7 +20,7 @@ homepage = "https://github.com/grahambrooks/tropism"
 # never true in practice: `ignore`, `ratatui`, and `time` all require 1.88, so
 # `cargo check` refused before compiling a line and the msrv job had been red.
 # A declared floor nothing is tested at is worse than an honest one.
-rust-version = "1.97"
+rust-version = "1.98.0"
 
 # Versions verified against crates.io on 2026-07-30. See design/08-crates.md for the
 # rationale behind each choice and the ones deliberately deferred.
