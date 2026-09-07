@@ -25,8 +25,8 @@ rust-version = "1.98.1"
 # Versions verified against crates.io on 2026-07-30. See design/08-crates.md for the
 # rationale behind each choice and the ones deliberately deferred.
 [workspace.dependencies]
-tropism-core = { path = "crates/tropism-core" }
-tropism-lang = { path = "crates/tropism-lang" }
+tropism-core = { path = "crates/tropism-core", version = "2026.9.0" }
+tropism-lang = { path = "crates/tropism-lang", version = "2026.9.0" }
 
 anyhow = "1.0.104"
 thiserror = "2.0.19"
