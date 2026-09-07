@@ -368,12 +368,12 @@ fn parse_maven_modules(text: &str) -> Option<WorkspaceDecl> {
         match reader.read_event() {
             Err(_) | Ok(Event::Eof) => break,
             Ok(Event::Start(element)) => {
-                stack.push(String::from_utf8_lossy(element.local_name().as_ref()).into_owned());
+                stack.push(element.local_name().as_ref().to_owned());
                 buffer.clear();
             }
-            Ok(Event::Text(event)) => buffer.push_str(&event.decode().unwrap_or_default()),
+            Ok(Event::Text(event)) => buffer.push_str(&event.xml10_content()),
             Ok(Event::End(element)) => {
-                let name = String::from_utf8_lossy(element.local_name().as_ref()).into_owned();
+                let name = element.local_name().as_ref().to_owned();
                 let value = buffer.trim().to_owned();
                 // The chain must be exactly `project > modules > module`. Anything
                 // deeper is a `<profile>`, whose activation cannot be evaluated
@@ -447,16 +447,16 @@ fn parse_pom(path: &Utf8Path, text: &str) -> anyhow::Result<Manifest> {
                 break;
             }
             Ok(Event::Start(element)) => {
-                let name = String::from_utf8_lossy(element.local_name().as_ref()).into_owned();
+                let name = element.local_name().as_ref().to_owned();
                 if name == "dependency" && !in_managed(&stack) {
                     current = Some(PartialDep::at(reader.buffer_position()));
                 }
                 stack.push(name);
                 buffer.clear();
             }
-            Ok(Event::Text(event)) => buffer.push_str(&event.decode().unwrap_or_default()),
+            Ok(Event::Text(event)) => buffer.push_str(&event.xml10_content()),
             Ok(Event::End(element)) => {
-                let name = String::from_utf8_lossy(element.local_name().as_ref()).into_owned();
+                let name = element.local_name().as_ref().to_owned();
                 let value = buffer.trim().to_owned();
                 stack.pop();
                 buffer.clear();
