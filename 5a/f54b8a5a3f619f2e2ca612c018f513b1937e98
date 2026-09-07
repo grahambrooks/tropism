@@ -1,0 +1,25 @@
+Cargo.toml
+  s_d612b0b3403ecb::t_ea454954c020bd 23,47
+rust-toolchain.toml
+  s_d612b0b3403ecb::t_691a3ea5e49636 19
+.github/workflows/ci.yml
+  s_d612b0b3403ecb::t_691a3ea5e49636 67
+Cargo.lock
+  s_d612b0b3403ecb::t_b48569c9394f2e 160,220,222,271,337,339,352,354,362,364,371,373,424,426,434,436,442,447,449,453,511,513,575,577,752,754,791,817,819,893,895,899,901,945,947,1092,1094,1102,1104,1112,1114,1125,1127,1255,1257,1509,1603,1605,1670,1672,1805,1831,1833,1870,1872,1933,1935,2100,2102,2152,2154,2165,2167,2175,2177,2182,2188,2190
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.2",
+  "base_commit_sha": "5af54b8a5a3f619f2e2ca612c018f513b1937e98",
+  "prompts": {},
+  "sessions": {
+    "s_d612b0b3403ecb": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "568dc47e-cc3c-4a86-8249-67b9c4d41296",
+        "model": "claude-opus-5"
+      },
+      "human_author": "Graham Brooks <graham@grahambrooks.com>"
+    }
+  }
+}
