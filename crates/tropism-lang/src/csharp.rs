@@ -300,12 +300,11 @@ fn parse_csproj(path: &Utf8Path, text: &str) -> anyhow::Result<Manifest> {
                     Event::Start(element) | Event::Empty(element) => element,
                     _ => unreachable!(),
                 };
-                let name = String::from_utf8_lossy(element.local_name().as_ref()).into_owned();
+                let name = element.local_name().as_ref().to_owned();
 
                 let attribute = |key: &str| -> Option<String> {
                     element.attributes().flatten().find_map(|attr| {
-                        (attr.key.local_name().as_ref() == key.as_bytes())
-                            .then(|| String::from_utf8_lossy(&attr.value).into_owned())
+                        (attr.key.local_name().as_ref() == key).then(|| attr.value.into_owned())
                     })
                 };
 
@@ -347,11 +346,11 @@ fn parse_csproj(path: &Utf8Path, text: &str) -> anyhow::Result<Manifest> {
                 buffer.clear();
             }
             Ok(Event::Text(text_event)) => {
-                buffer.push_str(&text_event.decode().unwrap_or_default());
+                buffer.push_str(&text_event.xml10_content());
             }
             Ok(Event::End(element)) => {
                 depth -= 1;
-                let name = String::from_utf8_lossy(element.local_name().as_ref()).into_owned();
+                let name = element.local_name().as_ref().to_owned();
                 if current_element.as_deref() == Some(name.as_str()) {
                     match name.as_str() {
                         "RootNamespace" => root_namespace = Some(buffer.trim().to_owned()),
