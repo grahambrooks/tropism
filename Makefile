@@ -117,6 +117,14 @@ release: release-guard check
 	perl -pi -e 's/^version = "[^"]*"$$/version = "$(VERSION)"/ if $$. < 20' Cargo.toml
 	@grep -q '^version = "$(VERSION)"$$' Cargo.toml \
 		|| { echo 'release: failed to set the version'; exit 1; }
+	# The internal deps carry a `version` as well as a `path`, because
+	# `cargo publish` refuses a path dependency that has no version requirement
+	# and strips the `path` from what it uploads. They are the same CalVer as
+	# the workspace, so they move with it — left behind, publish-crate.yml
+	# would upload tropism-lang pinned to a tropism-core that predates it.
+	perl -pi -e 's/^(tropism-(?:core|lang) = \{ path = "[^"]*", version = )"[^"]*"/$$1"$(VERSION)"/' Cargo.toml
+	@test "$$(grep -c '^tropism-\(core\|lang\) = {.*version = "$(VERSION)" }$$' Cargo.toml)" = 2 \
+		|| { echo 'release: failed to set the internal dependency versions'; exit 1; }
 	# Cargo.lock records the workspace members' own versions, so it moves too.
 	cargo update --workspace --offline
 	git add Cargo.toml Cargo.lock
