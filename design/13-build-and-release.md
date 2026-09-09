@@ -350,9 +350,23 @@ there is a user, and each adds a release surface that has to keep working.
 **Implemented**, in `Formula/tropism.rb` and `.github/workflows/homebrew-formula.yml`.
 
 ```sh
+brew trust --formula grahambrooks/tropism/tropism
 brew tap grahambrooks/tropism https://github.com/grahambrooks/tropism
 brew install grahambrooks/tropism/tropism
 ```
+
+### The `brew trust` line is not optional on Homebrew 6
+
+Homebrew 6 refuses to load a formula from an untrusted third-party tap, and the refusal happens
+during `brew tap` itself — the tap is cloned, fails validation, and is deleted again, reporting
+`Invalid formula (arm64_linux)` and `Cannot tap: invalid syntax in tap!`. The formula is fine; the
+message is what an unloadable formula looks like from the outside, which makes this worth writing
+down rather than rediscovering.
+
+**Tap-level trust does not satisfy it.** `brew trust grahambrooks/tropism` records the tap in
+`~/.homebrew/trust.json` and `brew tap` still refuses; only `brew trust --formula
+grahambrooks/tropism/tropism` works. Verified on Homebrew 6.0.22 — both orderings, both the real
+URL and a local path.
 
 ### The formula is in this repository, not a separate tap repo
 

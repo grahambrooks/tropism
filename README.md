@@ -60,13 +60,19 @@ One line, no admin rights, no Rust toolchain:
 
 ```sh
 # macOS / Linux — Homebrew
+brew trust --formula grahambrooks/tropism/tropism
 brew tap grahambrooks/tropism https://github.com/grahambrooks/tropism
 brew install grahambrooks/tropism/tropism
 ```
 
-The formula lives in this repository rather than in a separate `homebrew-tropism` tap, which is why
-`brew tap` needs the explicit URL. After that first tap, `brew upgrade` picks up new releases like
-any other formula.
+After that first tap, `brew upgrade` picks up new releases like any other formula.
+
+Two things about those first two lines. The formula lives in this repository rather than in a
+separate `homebrew-tropism` tap, so `brew tap` needs the explicit URL. And Homebrew 6 refuses to
+load a formula from an untrusted third-party tap — `brew tap` itself fails, before you get as far as
+installing — so the trust has to be granted first. It must be `--formula`: trusting the whole tap
+with `brew trust grahambrooks/tropism` is *not* enough to get `brew tap` past its own validation.
+Older Homebrew has no `brew trust` and needs only the last two lines.
 
 ```sh
 # macOS / Linux — installer script
