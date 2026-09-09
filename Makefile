@@ -141,3 +141,9 @@ release: release-guard check
 	@echo 'pushed $(TAG). The release workflow builds six targets and publishes:'
 	@echo '  https://github.com/grahambrooks/tropism/actions/workflows/release.yml'
 	@echo '  https://github.com/grahambrooks/tropism/releases/tag/$(TAG)'
+	@echo
+	@echo 'When it finishes, homebrew-formula.yml opens an auto-merging PR updating'
+	@echo 'Formula/tropism.rb. Nothing here bumps the formula: its version and its'
+	@echo 'checksums have to land together, and the checksums do not exist yet.'
+	@echo '  https://github.com/grahambrooks/tropism/actions/workflows/homebrew-formula.yml'
+	@echo 'Remember to `git pull` before the next release — that PR lands on main.'

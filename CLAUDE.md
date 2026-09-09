@@ -180,6 +180,15 @@ Two things to know before touching any of it:
   lost on the next `dist generate`. Config lives in `dist-workspace.toml`; crates.io publishing
   lives in its own `publish-crate.yml` for exactly this reason, and stays manual because a
   crates.io version can be yanked but never reused.
+- **The Homebrew formula is generated, never hand-edited, and `make release` must not touch it.**
+  `Formula/tropism.rb` lives in this repo (not a separate tap), and `dist` already publishes a
+  complete formula — version *and* every `sha256` — as the `tropism.rb` release asset.
+  `.github/workflows/homebrew-formula.yml` copies that asset behind
+  `.github/homebrew-formula-header.txt` and lands it through an auto-merging pull request. Bumping
+  the version in the formula at release time would name tarballs that do not exist yet and break
+  `brew install` until CI caught up; keeping version and checksums in one commit is the whole point.
+  See §11 of [design/13-build-and-release.md](design/13-build-and-release.md) for why the trigger is
+  `workflow_run` rather than `on: release`, and why the commit goes through the REST API.
 - **The version is committed, not injected.** That reverses the original design, deliberately —
   [design/15-dist-evaluation.md](design/15-dist-evaluation.md) records the evaluation and why
   adoption overruled it. The short version: judged on maintainer ergonomics the old pipeline won

@@ -338,5 +338,66 @@ release workflow, which builds with `-p tropism`, but it does block one route to
 
 ## 9. What this does not cover
 
-Container images, a Homebrew tap, Linux distribution packaging, and a documentation site. None are
-needed before there is a user, and each adds a release surface that has to keep working.
+Container images, Linux distribution packaging, and a documentation site. None are needed before
+there is a user, and each adds a release surface that has to keep working.
+
+~~A Homebrew tap~~ is now covered — see §11.
+
+---
+
+## 11. The Homebrew channel
+
+**Implemented**, in `Formula/tropism.rb` and `.github/workflows/homebrew-formula.yml`.
+
+```sh
+brew tap grahambrooks/tropism https://github.com/grahambrooks/tropism
+brew install grahambrooks/tropism/tropism
+```
+
+### The formula is in this repository, not a separate tap repo
+
+A `homebrew-tropism` repo would let `brew tap grahambrooks/tropism` resolve without a URL, which is
+the nicer command. It was not chosen: it is a second repository to keep in sync, it needs a PAT with
+write access to it because `GITHUB_TOKEN` is scoped to one repository, and it puts the formula
+somewhere the release commit cannot see. The cost of the in-repo choice is one explicit URL, typed
+once.
+
+### Nothing here computes a checksum
+
+`dist` already builds a complete formula — `version` and all four `sha256` lines — and uploads it as
+the `tropism.rb` release asset, because `installers` includes `"homebrew"`. The workflow copies that
+asset, prepending `.github/homebrew-formula-header.txt`. The checksums therefore come from the same
+run that produced the tarballs they describe, and are never recomputed by a second downloader.
+
+**This is why `make release` does not bump the formula.** The obvious design — bump `version` in the
+formula alongside `Cargo.toml`, then have CI fill in the checksums afterwards — leaves `main`
+carrying a formula that names the new release's tarballs with the *previous* release's checksums.
+Every `brew install` in that window fails on a checksum mismatch. Copying a formula that `dist`
+already completed collapses the two stages into one commit, so the window does not exist.
+
+### Two GitHub behaviours the workflow is shaped by
+
+- **`on: release` would never fire.** `dist` creates the GitHub release using the default
+  `GITHUB_TOKEN`, and events raised by that token do not start new workflow runs. The trigger is
+  `workflow_run` on `Release` completing, which is not subject to that rule. `Release` also runs on
+  pull requests, so the job additionally requires a successful `push` run whose ref starts with `v`.
+- **`main` requires a pull request.** The `automation-guard` ruleset requires one (with zero
+  approvals) and asks for an extra approval on commits that are not attributed to a GitHub account.
+  So the branch and the commit are created through the REST contents API rather than `git push`: an
+  API commit is authored by `github-actions[bot]`, which is attributed, and GitHub signs it.
+
+The pull request is merged with `gh pr merge --auto`, falling back to an immediate squash merge.
+The fallback is not defensive padding: no status check runs on a branch pushed by `GITHUB_TOKEN` and
+no approval is required, so the pull request is already in a clean state — and GitHub *rejects*
+`--auto` on a pull request that has nothing left to wait for.
+
+Before opening anything, the workflow parses the downloaded formula with `ruby -c` and asserts its
+`version` matches the tag. A truncated download would otherwise be committed and only surface in a
+user's `brew install`.
+
+### Prerequisite
+
+**"Allow GitHub Actions to create and approve pull requests"** must be enabled
+(Settings → Actions → General → Workflow permissions). Without it, `gh pr create` fails with
+`GitHub Actions is not permitted to create or approve pull requests` and the formula silently stops
+tracking releases.

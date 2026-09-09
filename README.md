@@ -59,7 +59,17 @@ Pronounced *TROH-pizm*.
 One line, no admin rights, no Rust toolchain:
 
 ```sh
-# macOS / Linux
+# macOS / Linux — Homebrew
+brew tap grahambrooks/tropism https://github.com/grahambrooks/tropism
+brew install grahambrooks/tropism/tropism
+```
+
+The formula lives in this repository rather than in a separate `homebrew-tropism` tap, which is why
+`brew tap` needs the explicit URL. After that first tap, `brew upgrade` picks up new releases like
+any other formula.
+
+```sh
+# macOS / Linux — installer script
 curl --proto '=https' --tlsv1.2 -LsSf https://github.com/grahambrooks/tropism/releases/latest/download/tropism-installer.sh | sh
 ```
 

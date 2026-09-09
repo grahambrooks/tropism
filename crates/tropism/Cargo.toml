@@ -6,7 +6,7 @@ license.workspace = true
 rust-version.workspace = true
 repository.workspace = true
 homepage.workspace = true
-description = "Command-line interface for tropism"
+description = "Polyglot dependency analyzer that enforces your architecture rules"
 
 [[bin]]
 name = "tropism"
