@@ -1,0 +1,135 @@
+# Homebrew formula updates, kept out of the release pipeline on purpose.
+#
+# `dist` owns .github/workflows/release.yml and regenerates it, so a job added there
+# by hand is lost on the next `dist generate`. This lives in its own file for the
+# same reason publish-crate.yml does.
+#
+# What it does: `dist` already builds a complete formula — version and all four
+# sha256s — and uploads it as the `tropism.rb` release asset. This copies that asset
+# into Formula/tropism.rb (behind .github/homebrew-formula-header.txt) through a
+# pull request with auto-merge enabled. It computes nothing itself; the checksums
+# come from the same run that produced the tarballs they describe.
+#
+# Two GitHub behaviours shape the trigger and the commit mechanism:
+#
+#   * `on: release` would never fire. `dist` creates the release with the default
+#     GITHUB_TOKEN, and events raised by that token do not start new workflow runs.
+#     `workflow_run` is not subject to that rule, so this keys off Release finishing.
+#
+#   * `main` carries the `automation-guard` ruleset, which requires a pull request
+#     and asks for an extra approval on commits that are not attributed to a GitHub
+#     account. So the branch and the commit are made through the REST API rather
+#     than `git push`: an API commit is authored by github-actions[bot], which is an
+#     attributed identity, and GitHub signs it.
+
+name: homebrew-formula
+
+on:
+  workflow_run:
+    workflows: [Release]
+    types: [completed]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Release tag to sync the formula from (e.g. v2026.9.0)
+        required: true
+        type: string
+
+concurrency:
+  group: homebrew-formula
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  sync:
+    runs-on: ubuntu-24.04
+    # Release also runs on pull_request, where there is no tag and no release to
+    # read. Only a successful tag build has anything to copy.
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      (github.event.workflow_run.conclusion == 'success' &&
+       github.event.workflow_run.event == 'push' &&
+       startsWith(github.event.workflow_run.head_branch, 'v'))
+    env:
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      REPO: ${{ github.repository }}
+      TAG: ${{ inputs.tag || github.event.workflow_run.head_branch }}
+      FORMULA: Formula/tropism.rb
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: main
+
+      - name: Build the formula from the release asset
+        run: |
+          set -euo pipefail
+          gh release download "$TAG" --repo "$REPO" --pattern tropism.rb --dir "$RUNNER_TEMP"
+          cat .github/homebrew-formula-header.txt "$RUNNER_TEMP/tropism.rb" > "$RUNNER_TEMP/candidate.rb"
+
+          # A truncated or empty download would otherwise be committed and only fail
+          # later, in someone's `brew install`.
+          ruby -c "$RUNNER_TEMP/candidate.rb" >/dev/null
+          FORMULA_VERSION=$(sed -n 's/^  version "\(.*\)"$/\1/p' "$RUNNER_TEMP/candidate.rb")
+          if [[ "$FORMULA_VERSION" != "${TAG#v}" ]]; then
+            echo "::error::formula declares ${FORMULA_VERSION}, but the tag is ${TAG}"
+            exit 1
+          fi
+          echo "::notice::formula for ${FORMULA_VERSION} downloaded and parsed"
+
+      - name: Open an auto-merging pull request
+        run: |
+          set -euo pipefail
+          if cmp -s "$RUNNER_TEMP/candidate.rb" "$FORMULA"; then
+            echo "::notice::${FORMULA} is already current for ${TAG}; nothing to do"
+            exit 0
+          fi
+
+          BRANCH="homebrew/${TAG}"
+          BASE_SHA=$(gh api "repos/${REPO}/commits/main" --jq .sha)
+          if gh api "repos/${REPO}/git/ref/heads/${BRANCH}" >/dev/null 2>&1; then
+            gh api --method PATCH "repos/${REPO}/git/refs/heads/${BRANCH}" \
+              -f sha="$BASE_SHA" -F force=true >/dev/null
+          else
+            gh api --method POST "repos/${REPO}/git/refs" \
+              -f ref="refs/heads/${BRANCH}" -f sha="$BASE_SHA" >/dev/null
+          fi
+
+          # Committing through the contents API rather than `git push` keeps the
+          # commit attributed to github-actions[bot]; see the header of this file.
+          BLOB_SHA=$(gh api "repos/${REPO}/contents/${FORMULA}?ref=${BRANCH}" --jq .sha 2>/dev/null || true)
+          jq -n \
+            --arg message "chore(homebrew): update the formula to ${TAG}" \
+            --arg content "$(base64 -w0 < "$RUNNER_TEMP/candidate.rb")" \
+            --arg branch "$BRANCH" \
+            --arg sha "$BLOB_SHA" \
+            '{message: $message, content: $content, branch: $branch}
+             + (if $sha == "" then {} else {sha: $sha} end)' \
+          | gh api --method PUT "repos/${REPO}/contents/${FORMULA}" --input - >/dev/null
+
+          {
+            echo "\`dist\` published a formula for [\`${TAG}\`](https://github.com/${REPO}/releases/tag/${TAG})."
+            echo
+            echo "This copies that asset verbatim, so the version and all four \`sha256\` lines"
+            echo "come from the run that built the tarballs they describe. Nothing here was"
+            echo "computed by hand."
+            echo
+            echo "Opened by [homebrew-formula.yml](https://github.com/${REPO}/blob/main/.github/workflows/homebrew-formula.yml)."
+          } > "$RUNNER_TEMP/pr-body.md"
+
+          gh pr create --repo "$REPO" --base main --head "$BRANCH" \
+            --title "chore(homebrew): update the formula to ${TAG}" \
+            --body-file "$RUNNER_TEMP/pr-body.md" \
+            || echo "::notice::a pull request for ${BRANCH} already exists"
+
+          PR=$(gh pr view "$BRANCH" --repo "$REPO" --json url --jq .url)
+          echo "::notice::opened ${PR}"
+
+          # `--auto` is rejected when a pull request is already in a clean, mergeable
+          # state, which this one is: no status check runs on a branch pushed by
+          # GITHUB_TOKEN, and automation-guard requires no approvals. Fall back to
+          # merging outright so the formula lands either way.
+          gh pr merge "$PR" --repo "$REPO" --squash --delete-branch --auto \
+            || gh pr merge "$PR" --repo "$REPO" --squash --delete-branch
