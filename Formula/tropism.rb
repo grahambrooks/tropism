@@ -17,25 +17,25 @@
 class Tropism < Formula
   desc "Polyglot dependency analyzer that enforces your architecture rules"
   homepage "https://github.com/grahambrooks/tropism"
-  version "2026.9.1"
+  version "2026.9.2"
   if OS.mac?
     if Hardware::CPU.arm?
-      url "https://github.com/grahambrooks/tropism/releases/download/v2026.9.1/tropism-aarch64-apple-darwin.tar.xz"
-      sha256 "06d2f173a98dfc15d93943265bc07ad168770b70a9f976d71a553e63484d14f6"
+      url "https://github.com/grahambrooks/tropism/releases/download/v2026.9.2/tropism-aarch64-apple-darwin.tar.xz"
+      sha256 "f139ae0ba23e213e3062b5ad27bc6b0a2c8cc061f8bc736bb44fafb4582a563c"
     end
     if Hardware::CPU.intel?
-      url "https://github.com/grahambrooks/tropism/releases/download/v2026.9.1/tropism-x86_64-apple-darwin.tar.xz"
-      sha256 "b68397fe86601b004e2e11bd1a4bbcff9e4fb5b99b6eb2bc62c32225c406ccb9"
+      url "https://github.com/grahambrooks/tropism/releases/download/v2026.9.2/tropism-x86_64-apple-darwin.tar.xz"
+      sha256 "70eeb4e6b1d0711b6d7da8fd68fa4af0eabd72c0d02f09ecd9704d4c78c7158d"
     end
   end
   if OS.linux?
     if Hardware::CPU.arm?
-      url "https://github.com/grahambrooks/tropism/releases/download/v2026.9.1/tropism-aarch64-unknown-linux-gnu.tar.xz"
-      sha256 "5f4e5c8d8fbe2d85be731b6c805891d08f735577eda68e044b90cf4ba0831f32"
+      url "https://github.com/grahambrooks/tropism/releases/download/v2026.9.2/tropism-aarch64-unknown-linux-gnu.tar.xz"
+      sha256 "580055a41982e55a9a45d43ec47d2370fdab12ba19c1147031b7a4ea8105ff9b"
     end
     if Hardware::CPU.intel?
-      url "https://github.com/grahambrooks/tropism/releases/download/v2026.9.1/tropism-x86_64-unknown-linux-gnu.tar.xz"
-      sha256 "d5d52fc5a8eafd07b2e88a0d1754441714623e2acae90e3c12ccda2479c8bfbc"
+      url "https://github.com/grahambrooks/tropism/releases/download/v2026.9.2/tropism-x86_64-unknown-linux-gnu.tar.xz"
+      sha256 "b52f543faf27c8b85445868469b11a55c15a63e909cad2355d3e8bc1f90fcdd1"
     end
   end
   license "MIT"
