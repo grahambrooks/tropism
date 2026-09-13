@@ -22,6 +22,10 @@ pub enum DiscoveryError {
         root: Utf8PathBuf,
         source: ignore::Error,
     },
+    /// The ruleset exists but does not load. A configuration error, never an empty
+    /// ruleset: a gate that evaluates nothing blocks nothing (issue #43).
+    #[error("{0}")]
+    InvalidRuleset(String),
 }
 
 /// Finds every project root under `scan_root`.

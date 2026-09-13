@@ -137,15 +137,18 @@ pub fn check(
         CheckScope::Files(_) if widened => None,
         CheckScope::Files(files) => Some(files.iter().cloned().collect()),
     };
-    let mut report = analyze_scoped(scan_root, providers, &rules_only, parse_scope.as_ref())?;
-
-    let rules_evaluated = match &options.rules_path {
-        Some(path) => std::fs::read_to_string(path)
-            .ok()
-            .and_then(|text| crate::rules::Ruleset::parse(path.clone(), &text).ok()),
-        None => crate::rules::Ruleset::discover(scan_root).ok().flatten(),
-    }
-    .map_or(0, |ruleset| ruleset.rule_count());
+    // Loaded once, and a load failure ends the run. This count used to be computed
+    // with the error discarded, so a ruleset using `layers` read as "0 rule(s)" and
+    // the hook passed (issue #43).
+    let ruleset = load_ruleset(scan_root, &rules_only)?;
+    let rules_evaluated = ruleset.as_ref().map_or(0, Ruleset::rule_count);
+    let mut report = analyze_scoped(
+        scan_root,
+        providers,
+        &rules_only,
+        parse_scope.as_ref(),
+        ruleset.as_ref(),
+    )?;
 
     let (checked_files, suppressed) = match scope {
         CheckScope::Repository => (count_source_files(&report), Some(0)),
@@ -208,6 +211,33 @@ fn count_source_files(report: &Report) -> usize {
     report.projects.iter().map(|p| p.source_file_count).sum()
 }
 
+/// The ruleset this run evaluates: `--rules` if given, otherwise `tropism.toml` at
+/// the scan root, and nothing under `--no-rules`.
+///
+/// A ruleset that exists but does not load is an error, never `None`. Treating it
+/// as absent is how a ruleset using `layers` passed the hook as zero rules
+/// (issue #43).
+fn load_ruleset(
+    scan_root: &Utf8Path,
+    options: &Options,
+) -> Result<Option<Ruleset>, DiscoveryError> {
+    if !options.use_rules {
+        return Ok(None);
+    }
+    let loaded = match &options.rules_path {
+        Some(path) => std::fs::read_to_string(path)
+            .map_err(|error| anyhow::anyhow!("{path}: {error}"))
+            .and_then(|text| Ruleset::parse(path.clone(), &text))
+            .map(Some),
+        None => Ruleset::discover(scan_root),
+    };
+    loaded.map_err(invalid_ruleset)
+}
+
+fn invalid_ruleset(error: anyhow::Error) -> DiscoveryError {
+    DiscoveryError::InvalidRuleset(format!("{error:#}"))
+}
+
 /// What `tropism workspaces` reports.
 ///
 /// A boundary that cannot be inspected is a boundary nobody can trust or correct.
@@ -254,7 +284,7 @@ pub fn workspaces(
     options: &Options,
 ) -> Result<WorkspaceReport, DiscoveryError> {
     let (exclude, configured) = if options.use_rules {
-        Ruleset::discover_prepass(scan_root).unwrap_or_default()
+        Ruleset::discover_prepass(scan_root).map_err(invalid_ruleset)?
     } else {
         (ExcludeSet::default(), Vec::new())
     };
@@ -346,7 +376,7 @@ pub fn explain(
     file: &Utf8Path,
 ) -> anyhow::Result<ExplainReport> {
     let (exclude, configured) = if options.use_rules {
-        Ruleset::discover_prepass(scan_root).unwrap_or_default()
+        Ruleset::discover_prepass(scan_root).map_err(invalid_ruleset)?
     } else {
         (ExcludeSet::default(), Vec::new())
     };
@@ -495,7 +525,7 @@ fn collect_edges(
     options: &Options,
 ) -> Result<Vec<DependencyEdge>, DiscoveryError> {
     let (exclude, configured) = if options.use_rules {
-        Ruleset::discover_prepass(scan_root).unwrap_or_default()
+        Ruleset::discover_prepass(scan_root).map_err(invalid_ruleset)?
     } else {
         (ExcludeSet::default(), Vec::new())
     };
@@ -851,7 +881,8 @@ pub fn analyze(
     providers: &[&dyn LanguageProvider],
     options: &Options,
 ) -> Result<Report, DiscoveryError> {
-    analyze_scoped(scan_root, providers, options, None)
+    let ruleset = load_ruleset(scan_root, options)?;
+    analyze_scoped(scan_root, providers, options, None, ruleset.as_ref())
 }
 
 /// [`analyze`], with extraction optionally narrowed to a set of files.
@@ -865,12 +896,13 @@ fn analyze_scoped(
     providers: &[&dyn LanguageProvider],
     options: &Options,
     parse_scope: Option<&BTreeSet<Utf8PathBuf>>,
+    ruleset: Option<&Ruleset>,
 ) -> Result<Report, DiscoveryError> {
     // Exclusions and workspace boundaries have to be known before anything is
-    // walked, so the ruleset is read once here for both and again at the end for
-    // its rules.
+    // walked, so the ruleset is read once here for both; the caller loaded it
+    // separately for its rules.
     let (exclude, configured_workspaces) = if options.use_rules {
-        Ruleset::discover_prepass(scan_root).unwrap_or_default()
+        Ruleset::discover_prepass(scan_root).map_err(invalid_ruleset)?
     } else {
         (ExcludeSet::default(), Vec::new())
     };
@@ -958,7 +990,7 @@ fn analyze_scoped(
         add_project_cycles(&mut report, &rule_input);
     }
 
-    apply_rules(scan_root, &mut report, &rule_input, options, &workspaces);
+    apply_rules(&mut report, &rule_input, ruleset, options, &workspaces);
 
     // After the rules, so the counts include every finding the run produced.
     report.suggested_excludes = suggest_excludes(&report);
@@ -1148,59 +1180,35 @@ fn containing_root(path: &Utf8Path, roots: &[Utf8PathBuf]) -> Option<String> {
         })
 }
 
+/// Evaluates an already-loaded ruleset. A broken ruleset never reaches here:
+/// [`load_ruleset`] refuses it, because a broken ruleset must not look like a
+/// satisfied one.
 fn apply_rules(
-    scan_root: &Utf8Path,
     report: &mut Report,
     input: &RuleInput,
+    ruleset: Option<&Ruleset>,
     options: &Options,
     workspaces: &WorkspaceMap,
 ) {
     let rule_checks = [CheckId::ModuleRule, CheckId::PackageRule];
 
-    let loaded = if !options.use_rules {
-        Err("disabled with --no-rules".to_owned())
-    } else {
-        match &options.rules_path {
-            Some(path) => std::fs::read_to_string(path)
-                .map_err(|error| format!("{path}: {error}"))
-                .and_then(|text| {
-                    Ruleset::parse(path.clone(), &text).map_err(|error| error.to_string())
-                })
-                .map(Some),
-            None => Ruleset::discover(scan_root).map_err(|error| error.to_string()),
-        }
-    };
-
-    let ruleset = match loaded {
-        Err(error) => {
-            // A broken ruleset must not look like a satisfied one.
-            for project in &mut report.projects {
-                for check in rule_checks {
-                    project.checks.insert(
-                        check,
-                        CheckStatus::Failed {
-                            error: error.clone(),
-                        },
-                    );
-                }
+    let Some(ruleset) = ruleset else {
+        let reason = if options.use_rules {
+            format!(
+                "no {} found; see design/11-dependency-rules.md",
+                crate::rules::RULESET_FILE
+            )
+        } else {
+            "disabled with --no-rules".to_owned()
+        };
+        for project in &mut report.projects {
+            for check in rule_checks {
+                project
+                    .checks
+                    .insert(check, CheckStatus::unavailable(reason.clone()));
             }
-            return;
         }
-        Ok(None) => {
-            for project in &mut report.projects {
-                for check in rule_checks {
-                    project.checks.insert(
-                        check,
-                        CheckStatus::unavailable(format!(
-                            "no {} found; see design/11-dependency-rules.md",
-                            crate::rules::RULESET_FILE
-                        )),
-                    );
-                }
-            }
-            return;
-        }
-        Ok(Some(ruleset)) => ruleset,
+        return;
     };
 
     let project_roots: Vec<Utf8PathBuf> = report

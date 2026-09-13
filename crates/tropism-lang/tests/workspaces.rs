@@ -356,3 +356,46 @@ fn a_workspace_member_names_the_lockfile_that_covers_it() {
         "resolved-tree findings must not duplicate"
     );
 }
+
+// ---------------------------------------------------------------------------
+// A ruleset that does not load
+
+/// Issue #43. The prepass used to discard a load error, so a broken ruleset
+/// silently lost its `[[workspaces]]` and `exclude` along with its rules, and the
+/// listing described boundaries nobody configured.
+#[test]
+fn a_ruleset_that_does_not_load_is_not_read_as_no_boundaries() {
+    let providers = tropism_lang::registry();
+    let error = pipeline::workspaces(&fixture("rules-layers"), &providers, &Options::default())
+        .expect_err("a ruleset that does not load must be refused")
+        .to_string();
+    assert!(error.contains("`layers`"), "{error}");
+}
+
+/// `--no-rules` is a choice not to run the rules, not a failure of them.
+#[test]
+fn no_rules_reports_the_rule_checks_as_not_run() {
+    let providers = tropism_lang::registry();
+    let options = Options {
+        use_rules: false,
+        ..Options::default()
+    };
+    let report = pipeline::analyze(&fixture("workspaces-configured"), &providers, &options)
+        .expect("analysis failed");
+
+    assert!(!report.projects.is_empty());
+    for project in &report.projects {
+        for check in [CheckId::ModuleRule, CheckId::PackageRule] {
+            assert!(
+                matches!(
+                    &project.checks[&check],
+                    tropism_core::report::CheckStatus::Unavailable { reason }
+                        if reason.contains("--no-rules")
+                ),
+                "{}: {check:?} is {:?}",
+                project.project.root,
+                project.checks[&check]
+            );
+        }
+    }
+}

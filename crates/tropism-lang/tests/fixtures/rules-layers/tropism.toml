@@ -1,0 +1,14 @@
+# Issue #43. `layers` is specified but not implemented, so this ruleset must fail
+# to load — and a ruleset that fails to load must fail the run, not pass as zero
+# rules. core -> cli below is a real violation of the intent.
+schema_version = 1
+
+[modules]
+core = "core/**"
+cli = "cli/**"
+
+[[module_rules]]
+id = "front-ends-over-core"
+layers = ["cli", "core"]
+severity = "error"
+reason = "core must not depend on cli"
