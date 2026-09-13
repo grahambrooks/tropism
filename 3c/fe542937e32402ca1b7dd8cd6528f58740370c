@@ -1,0 +1,55 @@
+crates/tropism-lang/tests/fixtures/rules-layers/cli/cli.go
+  s_42e4fab332089a::t_39eb8dbcf63fc3 1-3
+crates/tropism-lang/tests/fixtures/rules-layers/go.mod
+  s_42e4fab332089a::t_39eb8dbcf63fc3 1-3
+crates/tropism-core/src/discovery.rs
+  s_42e4fab332089a::t_808adace60e7fd 25-28
+crates/tropism-lang/tests/fixtures/rules-allow-only/tropism.toml
+  s_42e4fab332089a::t_39eb8dbcf63fc3 1-13
+design/11-dependency-rules.md
+  s_42e4fab332089a::t_97ad6d570009c9 270-271
+crates/tropism-core/src/pipeline.rs
+  s_42e4fab332089a::t_5c9c05d25e9f40 140-151
+  s_42e4fab332089a::t_33509e5490e2bf 287,379,528,905
+  s_42e4fab332089a::t_ccc6dda09babdf 884-885
+  s_42e4fab332089a::t_299ab2be0ad86a 214-240
+  s_42e4fab332089a::t_4562dc1ee9ead0 993
+  s_42e4fab332089a::t_a64c4b625feb1f 1183-1185,1189,1195-1208,1211
+  s_42e4fab332089a::t_f1f42534f01162 899,902-903
+crates/tropism-lang/tests/fixtures/rules-layers/core/core.go
+  s_42e4fab332089a::t_39eb8dbcf63fc3 1-7
+crates/tropism-lang/tests/fixtures/rules-layers/tropism.toml
+  s_42e4fab332089a::t_39eb8dbcf63fc3 1-14
+crates/tropism-lang/tests/fixtures/rules-allow-only/core/core.go
+  s_42e4fab332089a::t_39eb8dbcf63fc3 1-7
+crates/tropism-lang/tests/fixtures/rules-allow-only/cli/cli.go
+  s_42e4fab332089a::t_39eb8dbcf63fc3 1-3
+crates/tropism-lang/tests/check.rs
+  s_42e4fab332089a::t_89b132cfda97c5 265
+  s_42e4fab332089a::t_704802830bfe4d 233-264,266-310
+crates/tropism/tests/exit_codes.rs
+  s_42e4fab332089a::t_d3e1880ee4fb1c 1-55
+crates/tropism-lang/tests/fixtures/rules-allow-only/go.mod
+  s_42e4fab332089a::t_39eb8dbcf63fc3 1-3
+design/12-known-limitations.md
+  s_42e4fab332089a::t_13d7831f16fbd8 329-334
+crates/tropism-lang/tests/workspaces.rs
+  s_42e4fab332089a::t_704802830bfe4d 359-369,371-401
+  s_42e4fab332089a::t_89b132cfda97c5 370
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "3cfe542937e32402ca1b7dd8cd6528f58740370c",
+  "prompts": {},
+  "sessions": {
+    "s_42e4fab332089a": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "5f89c8b0-1050-4463-836e-3e272b11d4fe",
+        "model": "claude-opus-5"
+      },
+      "human_author": "Graham Brooks <graham@grahambrooks.com>"
+    }
+  }
+}
