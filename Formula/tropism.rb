@@ -15,27 +15,27 @@
 #   brew tap grahambrooks/tropism https://github.com/grahambrooks/tropism
 #   brew install grahambrooks/tropism/tropism
 class Tropism < Formula
-  desc "Command-line interface for tropism"
+  desc "Polyglot dependency analyzer that enforces your architecture rules"
   homepage "https://github.com/grahambrooks/tropism"
-  version "2026.9.0"
+  version "2026.9.1"
   if OS.mac?
     if Hardware::CPU.arm?
-      url "https://github.com/grahambrooks/tropism/releases/download/v2026.9.0/tropism-aarch64-apple-darwin.tar.xz"
-      sha256 "c5f3fe30a054f49063f6d77499016036a6ee8b6ff172cc7e8d4a42c38def2ad0"
+      url "https://github.com/grahambrooks/tropism/releases/download/v2026.9.1/tropism-aarch64-apple-darwin.tar.xz"
+      sha256 "06d2f173a98dfc15d93943265bc07ad168770b70a9f976d71a553e63484d14f6"
     end
     if Hardware::CPU.intel?
-      url "https://github.com/grahambrooks/tropism/releases/download/v2026.9.0/tropism-x86_64-apple-darwin.tar.xz"
-      sha256 "ca30a2dbb520fc932385d5c284232747c633b7bd673a56e889cc53ecff61c922"
+      url "https://github.com/grahambrooks/tropism/releases/download/v2026.9.1/tropism-x86_64-apple-darwin.tar.xz"
+      sha256 "b68397fe86601b004e2e11bd1a4bbcff9e4fb5b99b6eb2bc62c32225c406ccb9"
     end
   end
   if OS.linux?
     if Hardware::CPU.arm?
-      url "https://github.com/grahambrooks/tropism/releases/download/v2026.9.0/tropism-aarch64-unknown-linux-gnu.tar.xz"
-      sha256 "0dcefa93f48f672e695f07636fb40a562ff2303a865cb6ba635b80a51ce0eef4"
+      url "https://github.com/grahambrooks/tropism/releases/download/v2026.9.1/tropism-aarch64-unknown-linux-gnu.tar.xz"
+      sha256 "5f4e5c8d8fbe2d85be731b6c805891d08f735577eda68e044b90cf4ba0831f32"
     end
     if Hardware::CPU.intel?
-      url "https://github.com/grahambrooks/tropism/releases/download/v2026.9.0/tropism-x86_64-unknown-linux-gnu.tar.xz"
-      sha256 "80a51db821cd8aff61aaa92d98e4baf67d154faf9da9124c3070420932a32e04"
+      url "https://github.com/grahambrooks/tropism/releases/download/v2026.9.1/tropism-x86_64-unknown-linux-gnu.tar.xz"
+      sha256 "d5d52fc5a8eafd07b2e88a0d1754441714623e2acae90e3c12ccda2479c8bfbc"
     end
   end
   license "MIT"
