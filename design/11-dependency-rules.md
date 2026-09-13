@@ -267,7 +267,8 @@ for a rule over an inferred check.
 
 Not implemented: `layers`, `require`, `transitive`, and version constraints. These are **rejected at
 parse time with an error naming the field**, rather than ignored — a ruleset must never appear to
-enforce more than it does.
+enforce more than it does. A ruleset that fails to load stops every command with exit `2`, in both
+scopes; it is a configuration error, never an empty ruleset.
 
 This repository's own ruleset is [`tropism.toml`](../tropism.toml), and
 `crates/tropism-lang/tests/demos.rs` asserts tropism satisfies it. Each demo under `demo/` carries a

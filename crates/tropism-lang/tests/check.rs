@@ -230,3 +230,81 @@ fn tropism_passes_its_own_check() {
         "a hook with no rules blocks nothing"
     );
 }
+
+// ---------------------------------------------------------------------------
+// A ruleset that does not load
+
+fn fixture(name: &str) -> Utf8PathBuf {
+    Utf8PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+        .join("tests/fixtures")
+        .join(name)
+}
+
+/// Issue #43. A ruleset using an unimplemented rule kind used to load as zero
+/// rules: `check` printed "0 rule(s)" and exited 0, a gate that blocked nothing.
+/// Both scopes must refuse it — a ruleset only one scope rejects would make the
+/// hook a liar about what CI will do.
+#[test]
+fn both_scopes_refuse_a_ruleset_that_does_not_load() {
+    let providers = tropism_lang::registry();
+    let root = fixture("rules-layers");
+    let options = Options::default();
+
+    for scope in [
+        CheckScope::Repository,
+        CheckScope::Files(vec![Utf8PathBuf::from("core/core.go")]),
+    ] {
+        let error = pipeline::check(&root, &providers, &options, &scope)
+            .err()
+            .expect("check must refuse a ruleset that does not load")
+            .to_string();
+        assert!(error.contains("`layers`"), "{error}");
+    }
+
+    let error = pipeline::analyze(&root, &providers, &options)
+        .expect_err("analyze must refuse a ruleset that does not load")
+        .to_string();
+    assert!(error.contains("`layers`"), "{error}");
+}
+
+/// `--rules` is read by the same loader, so an override is refused the same way.
+#[test]
+fn a_broken_rules_override_is_refused_too() {
+    let providers = tropism_lang::registry();
+    let options = Options {
+        rules_path: Some(fixture("rules-layers").join("tropism.toml")),
+        ..Options::default()
+    };
+    let error = pipeline::check(
+        &fixture("rules-allow-only"),
+        &providers,
+        &options,
+        &CheckScope::Repository,
+    )
+    .err()
+    .expect("check must refuse a --rules file that does not load")
+    .to_string();
+    assert!(error.contains("`layers`"), "{error}");
+}
+
+/// The contrast: the same source and the same intent, written as a rule kind that
+/// is implemented, reports the violation.
+#[test]
+fn the_same_intent_as_an_implemented_rule_reports_the_violation() {
+    let providers = tropism_lang::registry();
+    let outcome = pipeline::check(
+        &fixture("rules-allow-only"),
+        &providers,
+        &Options::default(),
+        &CheckScope::Repository,
+    )
+    .expect("check failed");
+
+    assert_eq!(outcome.rules_evaluated, 1);
+    let rule_findings = outcome
+        .report
+        .findings()
+        .filter(|finding| finding.check == CheckId::ModuleRule)
+        .count();
+    assert_eq!(rule_findings, 1, "{:?}", violations(&outcome));
+}

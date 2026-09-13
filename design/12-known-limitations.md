@@ -326,6 +326,12 @@ Specified in [11-dependency-rules.md](11-dependency-rules.md), **rejected at par
 error naming the field** so a ruleset never appears to enforce more than it does. `require` is
 negative-shaped and inherits S1's weakness; it should ship capped at Medium confidence.
 
+The rejection has to reach the exit code, and until issue #43 it did not. `check` discarded the
+error and reported `0 rule(s)`; `analyze` rendered the rule checks as `failed` but gated only on
+findings. Both exited 0, so the pre-commit hook blocked nothing. A ruleset that fails to load now ends
+every command with exit `2` before discovery, and
+`crates/tropism/tests/exit_codes.rs` pins it against the binary.
+
 ### D7. Version constraints in package rules are unimplemented
 
 `deny = ["lodash < 4.17.21"]` needs ecosystem-correct comparison, and **no provider implements

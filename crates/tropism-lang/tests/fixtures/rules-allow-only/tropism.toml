@@ -1,0 +1,13 @@
+# The contrast for rules-layers: the same source, with the rule written as a kind
+# that is implemented. The violation has to be reported and fail the run.
+schema_version = 1
+
+[modules]
+core = "core/**"
+cli = "cli/**"
+
+[[module_rules]]
+id = "front-ends-over-core"
+allow_only = { from = "core", to = [] }
+severity = "error"
+reason = "core must not depend on cli"
