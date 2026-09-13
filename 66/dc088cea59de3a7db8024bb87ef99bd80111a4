@@ -1,0 +1,84 @@
+crates/tropism-lang/tests/workspaces.rs
+  s_42e4fab332089a::t_508e2948bbb94c 369-376
+design/14-incremental-checking.md
+  s_42e4fab332089a::t_f7303df799c240 355
+crates/tropism/tests/exit_codes.rs
+  s_42e4fab332089a::t_09c5f2279dcb62 35,39,43-44,46-57
+  s_42e4fab332089a::t_9d59128bb325f0 5-6
+crates/tropism-lang/tests/fixtures/rules-unimplemented/go.mod
+  s_42e4fab332089a::t_c8c8fa2c45447c 1-3
+skills/evals/evals.json
+  s_42e4fab332089a::t_f3aece2c3a701c 74
+  s_42e4fab332089a::t_51f874de9972da 23-24,26-27
+crates/tropism-lang/tests/fixtures/rules-unimplemented/cli/cli.go
+  s_42e4fab332089a::t_c8c8fa2c45447c 1-3
+demo/go/tropism.toml
+  s_42e4fab332089a::t_2d4b97ec71c161 20-22,25
+design/12-known-limitations.md
+  s_42e4fab332089a::t_4673a978feb76f 323,329-330
+  s_42e4fab332089a::t_85cd261bffd84f 331
+crates/tropism-lang/tests/fixtures/rules-unimplemented/core/core.go
+  s_42e4fab332089a::t_c8c8fa2c45447c 1-7
+demo/go/README.md
+  s_42e4fab332089a::t_76daf379bbe66a 18-20
+crates/tropism-lang/tests/fixtures/rules-unimplemented/tropism.toml
+  s_42e4fab332089a::t_c8c8fa2c45447c 1-14
+crates/tropism-lang/tests/fixtures/rules-layers/tropism.toml
+  s_42e4fab332089a::t_c8c8fa2c45447c 1-2
+design/11-dependency-rules.md
+  s_42e4fab332089a::t_2cbb42771ef10e 255
+  s_42e4fab332089a::t_5e825adb282ae9 178-182,184,190-195
+  s_42e4fab332089a::t_2089bc9f436d26 275
+  s_42e4fab332089a::t_e142b615a22a1c 183
+  s_42e4fab332089a::t_280cefa6a15059 196
+skills/reporting-tropism-issues/references/known-limitations.md
+  s_42e4fab332089a::t_35638720162fc6 40
+skills/authoring-architecture-rules/references/rule-reference.md
+  s_42e4fab332089a::t_fa4a85d30eb969 274,278-279
+  s_42e4fab332089a::t_820415e2523860 12
+  s_42e4fab332089a::t_3b71ea801f0e8d 306-312
+  s_42e4fab332089a::t_cf8af7ea705018 140-161
+skills/reporting-tropism-issues/SKILL.md
+  s_42e4fab332089a::t_332f59e96659e8 51
+crates/tropism-lang/tests/check.rs
+  s_42e4fab332089a::t_4458d60bf3fa12 287
+  s_42e4fab332089a::t_f947daa76639b5 275
+  s_42e4fab332089a::t_fc070dd13ce83a 323-326
+  s_42e4fab332089a::t_90c155bec074c5 250,261,267
+  s_42e4fab332089a::t_57db36f6a4a60d 311-322,327-348
+  s_42e4fab332089a::t_87dad691abb1e8 349
+crates/tropism-core/src/rules.rs
+  s_42e4fab332089a::t_1aad727799b97f 1110-1139,1144-1188
+  s_42e4fab332089a::t_53154ead2c30c0 136,139-140
+  s_42e4fab332089a::t_31f76a18edbe28 1291-1292
+  s_42e4fab332089a::t_03cb0d5a489d13 785
+  s_42e4fab332089a::t_66ef9c13fece61 210-216
+  s_42e4fab332089a::t_2ef21161570f49 821-837
+  s_42e4fab332089a::t_1ddf405d7dc73e 1280
+  s_42e4fab332089a::t_fc070dd13ce83a 1140-1143
+  s_42e4fab332089a::t_46259d8eb3c1fa 8-11
+  s_42e4fab332089a::t_55443c2496d9bf 384-391,395-396,400-425
+  s_42e4fab332089a::t_a3f1e8964bad98 1189
+skills/authoring-architecture-rules/SKILL.md
+  s_42e4fab332089a::t_f85281f862d58b 94-95
+design/07-open-questions.md
+  s_42e4fab332089a::t_c9b36fa9d82d3f 256-257
+CLAUDE.md
+  s_42e4fab332089a::t_eb998763a540b7 122-125
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "66dc088cea59de3a7db8024bb87ef99bd80111a4",
+  "prompts": {},
+  "sessions": {
+    "s_42e4fab332089a": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "5f89c8b0-1050-4463-836e-3e272b11d4fe",
+        "model": "claude-opus-5"
+      },
+      "human_author": "Graham Brooks <graham@grahambrooks.com>"
+    }
+  }
+}
