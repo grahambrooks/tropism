@@ -352,7 +352,7 @@ The order, and the reason for each position:
 2. **The release pipeline** — no user has any of this until a binary exists.
 3. **A baseline for whole-repository runs** (D8) — only once `check` covers the commit path, because
    incremental scope is a better ratchet than a baseline file and removes the urgency for one.
-4. **The remaining rule kinds** — `layers`, `require`, `transitive`. More expressive rules are worth
+4. **The remaining rule kinds** — `require`, `transitive` (`layers` is built). More expressive rules are worth
    more once rules are enforced at the moment code is written than before.
 5. **MCP, scoped to three tools** — `tropism_check` is a thin adapter over step 1, so this gets
    cheaper by waiting rather than more expensive.

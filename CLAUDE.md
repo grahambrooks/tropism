@@ -119,10 +119,10 @@ in the manner of NDepend, JDepend, or ArchUnit. **Implemented and enforced on th
 - **Package rules** — approved and discouraged dependencies, optionally scoped to named modules.
 
 Specified in [design/11-dependency-rules.md](design/11-dependency-rules.md). Implemented:
-`deny`, `independent`, `allow_only`, package denylists, `allowed_in` scoping, closed-world approved
-lists, and stale-rule detection. **Not** implemented — and rejected at parse time with a clear
-error rather than silently ignored, so a ruleset never appears to enforce more than it does:
-`layers`, `require`, `transitive`, and version constraints.
+`deny`, `independent`, `allow_only`, `layers`, package denylists, `allowed_in` scoping, closed-world
+approved lists, and stale-rule detection. **Not** implemented — and rejected at parse time with a
+clear error rather than silently ignored, so a ruleset never appears to enforce more than it does:
+`require`, `transitive`, and version constraints.
 
 `tropism.toml` also carries `exclude` globs, applied before discovery, which is what lets
 `tropism analyze . --fail-on error` pass on this repository despite `demo/` and `tests/fixtures/`

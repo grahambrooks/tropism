@@ -37,7 +37,7 @@ Effort, not obstacle. A good report can move these up.
 | **D3** | `scan_root` is echoed as given, so an absolute path can reach the JSON output |
 | **D4** | Analysis is single-threaded and uncached |
 | **D5** | Manifest line numbers are best-effort |
-| **D6** | `layers`, `require`, `transitive` rule kinds are specified but unimplemented — **rejected by name at parse time**, so a ruleset never appears to enforce more than it does |
+| **D6** | `require`, `transitive` rule kinds are specified but unimplemented — **rejected by name at parse time**, so a ruleset never appears to enforce more than it does |
 | **D7** | Version constraints in package rules unimplemented |
 | **D8** | No baseline file (largely obviated: `tropism check <files>` ratchets by scope instead) |
 | **D9** | No sub-ruleset inheritance in a monorepo — one `tropism.toml` at the scan root |

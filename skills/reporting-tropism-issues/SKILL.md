@@ -48,7 +48,7 @@ The ones that account for most reports:
 | A dynamic manifest construct was ignored | **S4**, structural. tropism parses `Gemfile`, `build.gradle`, `Package.swift`, `conanfile.py` and never runs them. | Yes, if a *common declarative* form is being missed. |
 | An import resolved to the wrong package, or not at all | **S5**, partly structural. Import name ≠ package name. | **Yes** — a missing entry in a curated mapping table is a genuinely useful report. |
 | A language is unsupported | Ten are built. An eleventh is effort, not obstacle. | Yes. |
-| A rule kind was rejected at parse time | `layers`, `require`, `transitive`, version constraints are **specified but unimplemented** (D6, D7) — rejected by name so a ruleset never appears to enforce more than it does. | Yes, to signal demand. |
+| A rule kind was rejected at parse time | `require`, `transitive`, version constraints are **specified but unimplemented** (D6, D7) — rejected by name so a ruleset never appears to enforce more than it does. | Yes, to signal demand. |
 
 If it is structural and you file anyway, **say so in the report**. "I know this is S1, but here is
 why the current behaviour is still costing me something" is a legitimate and useful issue. What is

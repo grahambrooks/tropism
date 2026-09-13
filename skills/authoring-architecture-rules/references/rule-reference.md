@@ -9,7 +9,7 @@ than a silent no-op.
 - [Top level](#top-level)
 - [Modules](#modules)
 - [Workspaces](#workspaces)
-- [Module rules](#module-rules) — `deny`, `independent`, `allow_only`, `crosses_workspace`
+- [Module rules](#module-rules) — `deny`, `independent`, `allow_only`, `layers`, `crosses_workspace`
 - [Package rules](#package-rules) — denylist, scoping, closed-world
 - [Exclusions](#exclusions)
 - [Rejected at parse time](#rejected-at-parse-time)
@@ -137,6 +137,28 @@ An empty `to` means "may depend on nothing":
 allow_only = { from = "core", to = [] }     # core is a leaf
 ```
 
+### `layers` — an ordered stack
+
+```toml
+[[module_rules]]
+id = "service-layering"
+layers = ["entry", "api", "store", "core"]     # top first
+reason = "..."
+```
+
+No layer may depend on one **above** it: `store → api` and `core → entry` are violations. Two
+properties decide what it does *not* catch, and both are deliberate:
+
+- **Relaxed.** A layer may depend on any layer below it, not only the next one — `entry → store`
+  passes. If an entry point must go through the api, add
+  `allow_only = { from = "entry", to = ["api"] }`.
+- **Open.** An edge with either end outside the stack is out of scope. An unlisted `util` module may
+  be used by every layer, and may itself use any of them. Close a layer with `allow_only` when that
+  matters.
+
+Fewer than two layers, or a layer listed twice, is a parse error. Like every rule that names modules,
+it is reported as **stale** if any layer matches nothing.
+
 ### `crosses_workspace` — no edge may leave its workspace
 
 ```toml
@@ -249,14 +271,12 @@ by name rather than with a confusing unknown-field error:
 
 | Field | Error |
 | --- | --- |
-| `layers` | `uses 'layers', which is specified in design/11-dependency-rules.md but not implemented yet` |
-| `require` | same |
+| `require` | `uses 'require', which is specified in design/11-dependency-rules.md but not implemented yet` |
 | `transitive` | same |
 | `crosses_workspace = false` | `enforces nothing; delete the rule instead` |
 
-Version constraints in package rules are likewise unimplemented. If you want layering today, express
-it as a set of `deny` or `allow_only` rules — verbose, but it works and it means exactly what it
-says.
+Version constraints in package rules are likewise unimplemented. Without `transitive`, a `deny` rule
+matches direct edges only.
 
 This is deliberate: a ruleset must never appear to enforce more than it does.
 
@@ -283,9 +303,13 @@ database connection it never asked for.
 """
 
 [[module_rules]]
-id = "core-is-a-leaf"
-allow_only = { from = "core", to = [] }
-reason = "The domain owns the rules and depends on nothing, so it can be tested without a world."
+id = "dependencies-point-down"
+layers = ["entry", "api", "store", "core"]
+reason = """
+The api calls storage, storage persists the domain, and the domain depends on
+nothing — so it can be tested without a world. The entrypoint is above all of it
+and is closed separately, because a stack alone would let it skip to storage.
+"""
 
 [[package_rules]]
 id = "sql-stays-in-the-store"

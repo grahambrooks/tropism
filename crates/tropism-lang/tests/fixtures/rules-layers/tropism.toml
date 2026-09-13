@@ -1,6 +1,5 @@
-# Issue #43. `layers` is specified but not implemented, so this ruleset must fail
-# to load — and a ruleset that fails to load must fail the run, not pass as zero
-# rules. core -> cli below is a real violation of the intent.
+# Issue #43's reproduction, now the positive case for `layers`: core -> cli is an
+# edge from a lower layer to a higher one, and must be reported in both scopes.
 schema_version = 1
 
 [modules]

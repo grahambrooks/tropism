@@ -366,10 +366,14 @@ fn a_workspace_member_names_the_lockfile_that_covers_it() {
 #[test]
 fn a_ruleset_that_does_not_load_is_not_read_as_no_boundaries() {
     let providers = tropism_lang::registry();
-    let error = pipeline::workspaces(&fixture("rules-layers"), &providers, &Options::default())
-        .expect_err("a ruleset that does not load must be refused")
-        .to_string();
-    assert!(error.contains("`layers`"), "{error}");
+    let error = pipeline::workspaces(
+        &fixture("rules-unimplemented"),
+        &providers,
+        &Options::default(),
+    )
+    .expect_err("a ruleset that does not load must be refused")
+    .to_string();
+    assert!(error.contains("`require`"), "{error}");
 }
 
 /// `--no-rules` is a choice not to run the rules, not a failure of them.

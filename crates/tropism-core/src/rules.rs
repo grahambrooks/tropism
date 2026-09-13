@@ -5,10 +5,10 @@
 //! about a line of source — rather than the absence of one. That is why rule
 //! findings are `High` confidence while `unused-dep` is not.
 //!
-//! Implemented: `deny`, `independent`, `allow_only`, package denylists,
-//! `allowed_in` scoping, and closed-world approved lists. Not yet implemented, and
-//! rejected with a clear error rather than silently ignored: `layers`, `require`,
-//! `transitive`, and version constraints.
+//! Implemented: `deny`, `independent`, `allow_only`, `layers`, `crosses_workspace`,
+//! package denylists, `allowed_in` scoping, and closed-world approved lists. Not yet
+//! implemented, and rejected with a clear error rather than silently ignored:
+//! `require`, `transitive`, and version constraints.
 
 use std::collections::{BTreeMap, BTreeSet};
 
@@ -133,10 +133,11 @@ struct RawModuleRule {
     /// Forbid any edge leaving its workspace.
     #[serde(default)]
     crosses_workspace: Option<bool>,
-    // Specified but not implemented; present so the parser can reject them by name
-    // rather than with a confusing unknown-field error.
+    /// An ordered stack, top first.
     #[serde(default)]
     layers: Option<Vec<String>>,
+    // Specified but not implemented; present so the parser can reject them by name
+    // rather than with a confusing unknown-field error.
     #[serde(default)]
     require: Option<toml::Value>,
     #[serde(default)]
@@ -206,6 +207,13 @@ enum ModuleRuleKind {
     Independent(Vec<String>),
     /// `from` may depend only on `to`.
     AllowOnly { from: String, to: Vec<String> },
+    /// An ordered stack, top first: no layer may depend on one above it.
+    ///
+    /// Relaxed, as design/11 specifies — a layer may reach any layer below it, not
+    /// only the adjacent one. An edge with either end outside the stack is not this
+    /// rule's business, the same as for `deny` and `independent`; a team that wants
+    /// a layer closed says so with `allow_only`.
+    Layers(Vec<String>),
     /// No edge may leave its workspace.
     ///
     /// The one rule kind that names no module: it is about the *boundary*, which
@@ -349,7 +357,6 @@ impl Ruleset {
             let severity = parse_severity(rule.severity.as_deref())?;
 
             for (field, present) in [
-                ("layers", rule.layers.is_some()),
                 ("require", rule.require.is_some()),
                 ("transitive", rule.transitive.is_some()),
             ] {
@@ -374,19 +381,48 @@ impl Ruleset {
             }
             let crosses = rule.crosses_workspace.unwrap_or(false).then_some(());
 
-            let kind = match (rule.deny, rule.independent, rule.allow_only, crosses) {
-                (Some(deny), None, None, None) => ModuleRuleKind::Deny {
+            let kind = match (
+                rule.deny,
+                rule.independent,
+                rule.allow_only,
+                rule.layers,
+                crosses,
+            ) {
+                (Some(deny), None, None, None, None) => ModuleRuleKind::Deny {
                     from: deny.from,
                     to: deny.to.into_vec(),
                 },
-                (None, Some(members), None, None) => ModuleRuleKind::Independent(members),
-                (None, None, Some(allow), None) => ModuleRuleKind::AllowOnly {
+                (None, Some(members), None, None, None) => ModuleRuleKind::Independent(members),
+                (None, None, Some(allow), None, None) => ModuleRuleKind::AllowOnly {
                     from: allow.from,
                     to: allow.to.into_vec(),
                 },
-                (None, None, None, Some(())) => ModuleRuleKind::CrossesWorkspace,
-                (None, None, None, None) => anyhow::bail!(
-                    "{source}: rule `{}` has no deny, independent, allow_only, or \
+                (None, None, None, Some(layers), None) => {
+                    // One layer orders nothing, and a layer listed twice has two
+                    // positions: either way the rule would not mean what it says.
+                    if layers.len() < 2 {
+                        anyhow::bail!(
+                            "{source}: rule `{}` lists {} layer(s); `layers` needs at least \
+                             two to order anything",
+                            rule.id,
+                            layers.len()
+                        );
+                    }
+                    if let Some(repeated) = layers
+                        .iter()
+                        .enumerate()
+                        .find_map(|(at, layer)| layers[..at].contains(layer).then_some(layer))
+                    {
+                        anyhow::bail!(
+                            "{source}: rule `{}` lists `{repeated}` twice in `layers`",
+                            rule.id
+                        );
+                    }
+                    ModuleRuleKind::Layers(layers)
+                }
+                (None, None, None, None, Some(())) => ModuleRuleKind::CrossesWorkspace,
+                (None, None, None, None, None) => anyhow::bail!(
+                    "{source}: rule `{}` has no deny, independent, allow_only, layers, or \
                      crosses_workspace",
                     rule.id
                 ),
@@ -746,7 +782,7 @@ fn kind_modules(kind: &ModuleRuleKind) -> Vec<String> {
             all.extend(to.iter().cloned());
             all
         }
-        ModuleRuleKind::Independent(members) => members.clone(),
+        ModuleRuleKind::Independent(members) | ModuleRuleKind::Layers(members) => members.clone(),
         // Names no module by construction, so nothing here can go stale by a
         // rename. Its staleness test is whether the repository has two workspaces
         // at all — see `Ruleset::evaluate`.
@@ -782,6 +818,23 @@ impl ModuleRule {
                     )
                 }
             }),
+            ModuleRuleKind::Layers(layers) => {
+                let position = |module: &str| layers.iter().position(|layer| layer == module);
+                // An end outside the stack is not this rule's business.
+                let (Some(from_at), Some(to_at)) = (position(from), position(to)) else {
+                    return None;
+                };
+                (to_at < from_at).then(|| {
+                    format!(
+                        "`{from}` must not depend on `{to}`, a layer above it (layers: {})",
+                        layers
+                            .iter()
+                            .map(|layer| format!("`{layer}`"))
+                            .collect::<Vec<_>>()
+                            .join(" > ")
+                    )
+                })
+            }
             // Evaluated against the workspace map, not module names, so it is
             // handled by the caller and never reached here.
             ModuleRuleKind::CrossesWorkspace => None,
@@ -1054,6 +1107,86 @@ allowed_in = ["cli"]
         );
     }
 
+    // --- layers -----------------------------------------------------------
+
+    const LAYERS: &str = r#"
+[modules]
+cli = "crates/cli/**"
+lang = "crates/lang/**"
+core = "crates/core/**"
+util = "crates/util/**"
+
+[[module_rules]]
+id = "layering"
+layers = ["cli", "lang", "core"]
+"#;
+
+    fn layered(edges: &[DependencyEdge]) -> (Vec<Finding>, Vec<String>) {
+        Ruleset::parse(Utf8PathBuf::from("tropism.toml"), LAYERS)
+            .unwrap()
+            .evaluate_bare(edges, &[])
+    }
+
+    #[test]
+    fn a_layer_may_not_depend_on_one_above_it() {
+        let (findings, _) = layered(&[edge("crates/core/src/lib.rs", "crates/lang/src/lib.rs")]);
+        assert_eq!(findings.len(), 1, "{findings:?}");
+        let message = &findings[0].message;
+        assert!(
+            message.contains("`core` must not depend on `lang`, a layer above it"),
+            "{message}"
+        );
+        assert!(message.contains("`cli` > `lang` > `core`"), "{message}");
+        assert_eq!(
+            findings[0].severity,
+            Severity::Error,
+            "rules default to error"
+        );
+        assert_eq!(findings[0].confidence, Confidence::High);
+    }
+
+    /// Relaxed layering, as design/11 specifies: "later entries", not "the next one".
+    #[test]
+    fn a_layer_may_depend_on_any_layer_below_it() {
+        let (findings, _) = layered(&[
+            edge("crates/cli/src/main.rs", "crates/lang/src/lib.rs"),
+            edge("crates/cli/src/main.rs", "crates/core/src/lib.rs"),
+            edge("crates/lang/src/lib.rs", "crates/core/src/lib.rs"),
+        ]);
+        assert!(findings.is_empty(), "{findings:?}");
+    }
+
+    /// A module outside the stack is not the rule's business, in either direction.
+    /// Closing a layer is what `allow_only` is for.
+    #[test]
+    fn layers_do_not_constrain_modules_outside_the_stack() {
+        let (findings, _) = layered(&[
+            edge("crates/lang/src/lib.rs", "crates/util/src/lib.rs"),
+            edge("crates/util/src/lib.rs", "crates/cli/src/main.rs"),
+            edge("crates/core/src/lib.rs", "README.md"),
+        ]);
+        assert!(findings.is_empty(), "{findings:?}");
+    }
+
+    #[test]
+    fn a_layer_that_matches_nothing_makes_the_rule_stale() {
+        let (_, stale) = layered(&[edge("crates/cli/src/main.rs", "crates/core/src/lib.rs")]);
+        assert_eq!(stale, vec!["layering".to_owned()], "`lang` matches nothing");
+    }
+
+    #[test]
+    fn a_layers_rule_must_order_at_least_two_defined_modules() {
+        let base = "[modules]\na = \"a/**\"\nb = \"b/**\"\n[[module_rules]]\nid = \"r\"\n";
+        for (layers, expected) in [
+            ("[\"a\"]", "at least two"),
+            ("[\"a\", \"b\", \"a\"]", "`a` twice"),
+            ("[\"a\", \"typo\"]", "not defined"),
+        ] {
+            let error = parse_error(&format!("{base}layers = {layers}\n"));
+            assert!(error.contains(expected), "{layers}: {error}");
+        }
+    }
+
     #[test]
     fn an_approved_list_rejects_anything_unlisted() {
         let rules = Ruleset::parse(
@@ -1144,7 +1277,7 @@ allowed_in = ["cli"]
     fn a_rule_with_no_kind_is_an_error() {
         let error = parse_error("[modules]\na = \"a/**\"\n[[module_rules]]\nid = \"r\"\n");
         assert!(
-            error.contains("no deny, independent, allow_only, or crosses_workspace"),
+            error.contains("no deny, independent, allow_only, layers, or crosses_workspace"),
             "{error}"
         );
     }
@@ -1155,8 +1288,8 @@ allowed_in = ["cli"]
     fn unimplemented_rule_kinds_are_rejected_explicitly() {
         for (field, text) in [
             (
-                "layers",
-                "[modules]\na = \"a/**\"\n[[module_rules]]\nid = \"r\"\nlayers = [\"a\"]\n",
+                "require",
+                "[modules]\na = \"a/**\"\nb = \"b/**\"\n[[module_rules]]\nid = \"r\"\nrequire = { from = \"a\", to = \"b\" }\n",
             ),
             (
                 "transitive",

@@ -247,7 +247,7 @@ fn fixture(name: &str) -> Utf8PathBuf {
 #[test]
 fn both_scopes_refuse_a_ruleset_that_does_not_load() {
     let providers = tropism_lang::registry();
-    let root = fixture("rules-layers");
+    let root = fixture("rules-unimplemented");
     let options = Options::default();
 
     for scope in [
@@ -258,13 +258,13 @@ fn both_scopes_refuse_a_ruleset_that_does_not_load() {
             .err()
             .expect("check must refuse a ruleset that does not load")
             .to_string();
-        assert!(error.contains("`layers`"), "{error}");
+        assert!(error.contains("`require`"), "{error}");
     }
 
     let error = pipeline::analyze(&root, &providers, &options)
         .expect_err("analyze must refuse a ruleset that does not load")
         .to_string();
-    assert!(error.contains("`layers`"), "{error}");
+    assert!(error.contains("`require`"), "{error}");
 }
 
 /// `--rules` is read by the same loader, so an override is refused the same way.
@@ -272,7 +272,7 @@ fn both_scopes_refuse_a_ruleset_that_does_not_load() {
 fn a_broken_rules_override_is_refused_too() {
     let providers = tropism_lang::registry();
     let options = Options {
-        rules_path: Some(fixture("rules-layers").join("tropism.toml")),
+        rules_path: Some(fixture("rules-unimplemented").join("tropism.toml")),
         ..Options::default()
     };
     let error = pipeline::check(
@@ -284,7 +284,7 @@ fn a_broken_rules_override_is_refused_too() {
     .err()
     .expect("check must refuse a --rules file that does not load")
     .to_string();
-    assert!(error.contains("`layers`"), "{error}");
+    assert!(error.contains("`require`"), "{error}");
 }
 
 /// The contrast: the same source and the same intent, written as a rule kind that
@@ -307,4 +307,43 @@ fn the_same_intent_as_an_implemented_rule_reports_the_violation() {
         .filter(|finding| finding.check == CheckId::ModuleRule)
         .count();
     assert_eq!(rule_findings, 1, "{:?}", violations(&outcome));
+}
+
+/// `layers` through the whole pipeline, in both scopes — issue #43's reproduction,
+/// once refused as unimplemented and now enforced. The violation is `core -> cli`,
+/// so it belongs to `core/core.go`; a change to `cli/cli.go` did not introduce it.
+#[test]
+fn layers_is_enforced_in_both_scopes() {
+    let providers = tropism_lang::registry();
+    let root = fixture("rules-layers");
+    let options = Options::default();
+
+    for (scope, expected) in [
+        (CheckScope::Repository, 1),
+        (
+            CheckScope::Files(vec![Utf8PathBuf::from("core/core.go")]),
+            1,
+        ),
+        (CheckScope::Files(vec![Utf8PathBuf::from("cli/cli.go")]), 0),
+    ] {
+        let outcome = pipeline::check(&root, &providers, &options, &scope).expect("check failed");
+        let found: Vec<String> = outcome
+            .report
+            .findings()
+            .filter(|finding| finding.check == CheckId::ModuleRule)
+            .map(|finding| finding.message.clone())
+            .collect();
+        assert_eq!(found.len(), expected, "{scope:?}: {found:?}");
+        assert!(
+            found.iter().all(|m| m.contains("a layer above it")),
+            "{found:?}"
+        );
+    }
+
+    let report = pipeline::analyze(&root, &providers, &options).expect("analysis failed");
+    let found = report
+        .findings()
+        .filter(|finding| finding.check == CheckId::ModuleRule)
+        .count();
+    assert_eq!(found, 1, "analyze must agree with check");
 }

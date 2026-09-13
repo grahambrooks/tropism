@@ -91,7 +91,8 @@ translation unit, and a rule about it should reach both:
 store = { paths = ["include/shop/store.hpp", "src/store.cpp"] }
 ```
 
-Then the rules. There are exactly three module rule kinds and four package rule shapes — see
+Then the rules. There are five module rule kinds — `deny`, `independent`, `allow_only`, `layers`, and
+`crosses_workspace` — and four package rule shapes — see
 [references/rule-reference.md](references/rule-reference.md) for the complete syntax, including the
 kinds that are *specified but not implemented* and will be rejected at parse time.
 

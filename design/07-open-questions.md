@@ -253,8 +253,8 @@ follows from it:
 3. **A baseline for whole-repository runs** — D8, designed in [17-baselines.md](17-baselines.md).
    Once `check` exists the ratchet covers the commit path, and the gap left is the CI job that checks
    everything. That is where a baseline earns its place, and not before.
-4. **The unimplemented rule kinds** — `layers`, `require`, `transitive`, and version constraints,
-   all currently rejected at parse time rather than silently ignored.
+4. **The unimplemented rule kinds** — `require`, `transitive`, and version constraints, all
+   currently rejected at parse time rather than silently ignored. `layers` is built.
 5. **MCP, scoped down** — three tools rather than seven. Last, not first: see
    [05-interfaces.md](05-interfaces.md).
 

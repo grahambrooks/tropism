@@ -2,8 +2,8 @@
 //!
 //! `0` clean, `1` findings at or above `--fail-on`, `2` could not run. Conflating
 //! `0` and `2` means a broken configuration looks like a passing build, which is
-//! exactly what issue #43 reported: a ruleset using `layers` exited 0 from both
-//! commands. See `design/05-interfaces.md`.
+//! exactly what issue #43 reported: a ruleset using an unimplemented rule kind
+//! exited 0 from both commands. See `design/05-interfaces.md`.
 
 use std::process::{Command, Output};
 
@@ -32,24 +32,28 @@ fn analyze(root: &str) -> Output {
 
 #[test]
 fn a_ruleset_that_does_not_load_exits_2_from_both_commands() {
-    let root = fixture("rules-layers");
+    let root = fixture("rules-unimplemented");
     for (command, output) in [("check", check(&root)), ("analyze", analyze(&root))] {
         let stderr = String::from_utf8_lossy(&output.stderr);
         assert_eq!(output.status.code(), Some(2), "{command}: {stderr}");
-        assert!(stderr.contains("`layers`"), "{command}: {stderr}");
+        assert!(stderr.contains("`require`"), "{command}: {stderr}");
     }
 }
 
+/// One violation, under `allow_only` and under `layers` — the latter being #43's
+/// own reproduction, which exited 2 until `layers` was built.
 #[test]
-fn the_same_violation_under_an_implemented_rule_exits_1_from_both_commands() {
-    let root = fixture("rules-allow-only");
-    for (command, output) in [("check", check(&root)), ("analyze", analyze(&root))] {
-        assert_eq!(
-            output.status.code(),
-            Some(1),
-            "{command}: {}{}",
-            String::from_utf8_lossy(&output.stdout),
-            String::from_utf8_lossy(&output.stderr)
-        );
+fn a_violation_under_an_implemented_rule_exits_1_from_both_commands() {
+    for name in ["rules-allow-only", "rules-layers"] {
+        let root = fixture(name);
+        for (command, output) in [("check", check(&root)), ("analyze", analyze(&root))] {
+            assert_eq!(
+                output.status.code(),
+                Some(1),
+                "{name} {command}: {}{}",
+                String::from_utf8_lossy(&output.stdout),
+                String::from_utf8_lossy(&output.stderr)
+            );
+        }
     }
 }

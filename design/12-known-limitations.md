@@ -320,11 +320,14 @@ time dominates the signing work.
 
 ## Deferred — rules
 
-### D6. `layers`, `require`, and `transitive` are unimplemented
+### D6. `require` and `transitive` are unimplemented
 
 Specified in [11-dependency-rules.md](11-dependency-rules.md), **rejected at parse time with an
 error naming the field** so a ruleset never appears to enforce more than it does. `require` is
 negative-shaped and inherits S1's weakness; it should ship capped at Medium confidence.
+
+`layers` was the third, and is built: relaxed (a layer may reach any layer below it) and open (an
+edge touching a module outside the stack is out of scope), as 11-dependency-rules.md specifies.
 
 The rejection has to reach the exit code, and until issue #43 it did not. `check` discarded the
 error and reported `0 rule(s)`; `analyze` rendered the rule checks as `failed` but gated only on

@@ -175,17 +175,24 @@ severity = "warning"
 
 Rule kinds:
 
-| Kind          | Meaning                                        | Shape        |
-| ------------- | ---------------------------------------------- | ------------ |
-| `deny`        | `from` must not depend on any of `to`          | positive     |
-| `independent` | no member may depend on any other member       | positive     |
-| `allow_only`  | `from` may depend only on `to` (and itself)    | positive     |
-| `layers`      | ordered; each may depend only on later entries | positive     |
-| `require`     | `from` must depend on `to`                     | **negative** |
+| Kind          | Meaning                                              | Shape        |
+| ------------- | ---------------------------------------------------- | ------------ |
+| `deny`        | `from` must not depend on any of `to`                | positive     |
+| `independent` | no member may depend on any other member             | positive     |
+| `allow_only`  | `from` may depend only on `to` (and itself)          | positive     |
+| `layers`      | ordered, top first; none may depend on one above it  | positive     |
+| `require`     | `from` must depend on `to`                           | **negative** |
 
 `deny`, `independent`, `allow_only`, and `layers` all reduce to the same question — does an edge
 exist that should not — so one analyzer evaluates all four. `require` is the inverse and is reported
 at `Confidence::Medium` at best, because an unseen dependency mechanism could satisfy it invisibly.
+
+**`layers` is relaxed and open.** Relaxed: a layer may depend on *any* layer below it, not only the
+adjacent one, so `cli → core` passes under `["cli", "lang", "core"]`. Open: an edge with either end
+outside the stack is not the rule's business, exactly as for `deny` and `independent`, so `lang →
+util` passes when `util` is unlisted. Both are what a stack says and no more; a team that wants a
+layer closed, or an entry point forced through the next layer down, adds `allow_only`. Fewer than two
+layers, or a layer listed twice, is a parse error.
 
 **Transitive by default is wrong.** A `deny` rule matches a *direct* edge unless `transitive = true`
 is set. Direct edges are unambiguous; transitive ones depend on the completeness of the whole graph,
@@ -245,7 +252,7 @@ Saying so is better than a half-implementation that silently misses most depende
 ## Implementation status
 
 Implemented and enforced: `exclude`, `[[workspaces]]`, `deny`, `independent`, `allow_only`,
-`crosses_workspace`, package denylists with `replacement`, `allowed_in` scoping, closed-world
+`layers`, `crosses_workspace`, package denylists with `replacement`, `allowed_in` scoping, closed-world
 approved lists (`unlisted = "deny"`), and stale-rule detection.
 
 `crosses_workspace = true` is the one rule kind that **names no module**. It forbids any edge leaving
@@ -265,7 +272,7 @@ assign a severity to: it resolves today through hoisting and breaks when the pac
 built alone, and whether that blocks a commit is the team's judgement. That is precisely the argument
 for a rule over an inferred check.
 
-Not implemented: `layers`, `require`, `transitive`, and version constraints. These are **rejected at
+Not implemented: `require`, `transitive`, and version constraints. These are **rejected at
 parse time with an error naming the field**, rather than ignored — a ruleset must never appear to
 enforce more than it does. A ruleset that fails to load stops every command with exit `2`, in both
 scopes; it is a configuration error, never an empty ruleset.

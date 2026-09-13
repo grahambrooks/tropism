@@ -1,0 +1,14 @@
+# Issue #43. `require` is specified but not implemented, so this ruleset must fail
+# to load — and a ruleset that fails to load must fail the run with exit 2, never
+# pass as zero rules.
+schema_version = 1
+
+[modules]
+core = "core/**"
+cli = "cli/**"
+
+[[module_rules]]
+id = "cli-uses-core"
+require = { from = "cli", to = "core" }
+severity = "error"
+reason = "the CLI is an adapter over core"

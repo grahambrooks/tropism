@@ -17,10 +17,12 @@ The entrypoint wires up the api and nothing else. Reaching into storage directly
 couples the command to a schema it should never see.
 """
 
-# SATISFIED. Storage is the bottom layer and must stay unaware of what calls it.
+# SATISFIED. The service is a stack — cmd over api over store — and nothing may
+# reach upward. main.go reaching straight into storage skips a layer, which a stack
+# allows; the rule above is what forbids it.
 [[module_rules]]
 id = "storage-is-the-bottom-layer"
-deny = { from = "store", to = ["api", "cmd"] }
+layers = ["cmd", "api", "store"]
 severity = "error"
 reason = "Storage must not know about the layers above it."
 

@@ -15,7 +15,9 @@ Planted traps, which tropism must **not** report:
 - **Violated** — `entrypoint-goes-through-the-api`: `main.go` reaches past the api
   layer straight into `store`. No general check can state this; it is true only
   because the team decided the layering.
-- **Satisfied** — `storage-is-the-bottom-layer`: `store` depends on nothing above it.
+- **Satisfied** — `storage-is-the-bottom-layer`: a `layers` stack, `cmd` over `api` over
+  `store`, and nothing reaches upward. `main.go` skipping straight to `store` is allowed by a stack;
+  the rule above is what forbids it.
 - **Violated** — `approved-dependencies`: the ruleset is closed-world
   (`unlisted = "deny"`), and `golang.org/x/sync` is not on the list.
 
