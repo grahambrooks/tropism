@@ -6,11 +6,11 @@ exclude = ["demo"]
 resolver = "3"
 
 [workspace.package]
-# CalVer, committed rather than injected. It used to be permanently 0.0.0 with the
-# version computed and injected at release time, which avoided a push loop — but
-# `dist` is tag-driven and reads the version from here, and a committed version is
-# also what `tropism --version`, every installer, and every registry report. Bump
-# it with `make release`, never by hand. See design/13-build-and-release.md.
+# CalVer, committed rather than injected: a committed version is what
+# `tropism --version`, the Homebrew formula, and crates.io all report. The release
+# tag (vYYYY.M.N) is the version — the release workflow (release-kit v2) stamps it
+# into the build and lands the bump back on main. Never bump it by hand; `make
+# release` bumps, tags, and pushes. See design/13-build-and-release.md.
 version = "2026.9.2"
 edition = "2024"
 license = "MIT"
@@ -66,8 +66,3 @@ unsafe_code = "forbid"
 
 [workspace.lints.clippy]
 all = { level = "warn", priority = -1 }
-
-# The profile that 'dist' will build with
-[profile.dist]
-inherits = "release"
-lto = "thin"

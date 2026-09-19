@@ -7,11 +7,6 @@ rust-version.workspace = true
 repository.workspace = true
 description = "MCP server exposing tropism analysis to coding agents"
 
-# Config for 'dist'
-[package.metadata.dist]
-# Whether to consider the binaries in a package for distribution (defaults true)
-dist = false
-
 [[bin]]
 name = "tropism-mcp"
 path = "src/main.rs"

@@ -1,15 +1,13 @@
 # Convenience targets for cutting a release.
 #
-# The release pipeline is `dist` (cargo-dist), which is **tag-driven**: it reads
-# the version from Cargo.toml and expects a matching tag. That is the one thing
-# this repository used to do differently — the version was permanently 0.0.0 and
-# CalVer was computed at release time and injected, never committed, to avoid a
-# push loop and release-bump noise in the history.
-#
-# Adoption won that argument. A committed version is what every installer, every
-# package registry, and `tropism --version` all read, and it is what dist needs to
-# match a tag against. So the version now lives in Cargo.toml, and this file is
-# what keeps bumping it from being a chore anyone has to remember the steps for.
+# The release pipeline is the standard release-kit v2 workflow
+# (.github/workflows/release.yml + scripts/release.py, configured by .release.env),
+# which is **tag-driven**: the tag is the version. It stamps the tag's version into
+# the build, and after publishing lands the bump (and the regenerated Homebrew
+# formula) back on main through a pull request. A committed version is what
+# `tropism --version`, the formula, and crates.io all read, and this file is what
+# keeps bumping it — including the internal dependency versions the workflow does
+# not touch — from being a chore anyone has to remember the steps for.
 #
 #   make release        cut the next CalVer release
 #   make release-dry    print exactly what `make release` would do, and stop
@@ -17,8 +15,8 @@
 #   make check          what CI runs, locally
 #
 # CalVer is YYYY.M.MICRO, where MICRO counts the releases already cut this month.
-# The month has no leading zero: 2026.08.1 is not valid SemVer, and dist, cargo,
-# and npm all require SemVer.
+# The month has no leading zero: 2026.08.1 is not valid SemVer, and cargo
+# requires SemVer.
 
 SHELL := /usr/bin/env bash
 .SHELLFLAGS := -eu -o pipefail -c
@@ -37,7 +35,7 @@ help:
 	@echo 'make version      print the next version'
 	@echo 'make check        fmt, clippy, tests, and tropism on itself'
 	@echo 'make check-scripts  evaluation/ shell scripts, against real bash 3.2'
-	@echo 'make plan         what dist would build for the current version'
+	@echo 'make plan         what the release workflow would build for the next tag'
 	@echo 'make alerts       Dependabot alerts, split demo fixtures from real ones'
 
 .PHONY: version
@@ -73,7 +71,7 @@ check-scripts:
 
 .PHONY: plan
 plan:
-	dist plan
+	python3 scripts/release.py plan '$(TAG)'
 
 # Dependabot alerts cannot be filtered by path, and every manifest under demo/ is
 # a deliberately-broken fixture, so the real count is buried unless it is split
@@ -142,8 +140,7 @@ release: release-guard check
 	@echo '  https://github.com/grahambrooks/tropism/actions/workflows/release.yml'
 	@echo '  https://github.com/grahambrooks/tropism/releases/tag/$(TAG)'
 	@echo
-	@echo 'When it finishes, homebrew-formula.yml opens an auto-merging PR updating'
-	@echo 'Formula/tropism.rb. Nothing here bumps the formula: its version and its'
-	@echo 'checksums have to land together, and the checksums do not exist yet.'
-	@echo '  https://github.com/grahambrooks/tropism/actions/workflows/homebrew-formula.yml'
+	@echo 'When it finishes, it opens and merges a PR regenerating Formula/tropism.rb'
+	@echo 'from the published checksums. Nothing here bumps the formula: its version'
+	@echo 'and its checksums have to land together, and the checksums do not exist yet.'
 	@echo 'Remember to `git pull` before the next release — that PR lands on main.'

@@ -165,39 +165,41 @@ ratchet, and `crates/tropism-lang/tests/check.rs` pins it from both directions.
 
 ## Build and release
 
-Releases are cut by **`make release`** and built by **`dist` (cargo-dist)**. Never bump the version
-by hand: the Makefile computes CalVer from the tag count, writes it to `Cargo.toml`, refreshes
-`Cargo.lock`, commits, tags, and pushes. The **tag** is what starts the release.
+Releases are cut by **`make release`** and built by the standard **release-kit v2** workflow.
+Never bump the version by hand: the Makefile computes CalVer from the tag count, writes it to
+`Cargo.toml` (workspace version *and* the internal `tropism-core`/`tropism-lang` dependency
+versions), refreshes `Cargo.lock`, commits, tags, and pushes. The **tag** (`vYYYY.M.N`) is what
+starts the release, and is the version the release builds.
 
 ```sh
 make release-dry     # what it would do
 make release         # do it — runs `make check` first and refuses a dirty tree
+make plan            # the build matrix the workflow would run for the next tag
 ```
 
-Two things to know before touching any of it:
+Things to know before touching any of it:
 
-- **`dist` owns `.github/workflows/release.yml` and regenerates it.** Anything hand-added there is
-  lost on the next `dist generate`. Config lives in `dist-workspace.toml`; crates.io publishing
-  lives in its own `publish-crate.yml` for exactly this reason, and stays manual because a
-  crates.io version can be yanked but never reused.
+- **`.github/workflows/release.yml` and `scripts/release.py` are byte-identical across
+  grahambrooks' Rust tools — never edit them here.** Everything specific to tropism lives in
+  `.release.env`: the shipped binaries (`tropism`, `tropism-mcp`), and the targets beyond the
+  standard four (Windows, and x86-64 musl). Re-sync them with release-kit's `stamp.py`. Each
+  target is archived as `tropism-<tag>-<target>.tar.gz` (`.zip` on Windows) with the binaries at
+  the archive root, beside a `SHA256SUMS`.
+- **crates.io publishing lives in its own `publish-crate.yml`** and stays manual, because a
+  crates.io version can be yanked but never reused (`PUBLISH_CRATE` is off in `.release.env`).
 - **The Homebrew formula is generated, never hand-edited, and `make release` must not touch it.**
-  `Formula/tropism.rb` lives in this repo (not a separate tap), and `dist` already publishes a
-  complete formula — version *and* every `sha256` — as the `tropism.rb` release asset.
-  `.github/workflows/homebrew-formula.yml` copies that asset behind
-  `.github/homebrew-formula-header.txt` and lands it through an auto-merging pull request. Bumping
-  the version in the formula at release time would name tarballs that do not exist yet and break
-  `brew install` until CI caught up; keeping version and checksums in one commit is the whole point.
-  See §11 of [design/13-build-and-release.md](design/13-build-and-release.md) for why the trigger is
-  `workflow_run` rather than `on: release`, and why the commit goes through the REST API.
+  `Formula/tropism.rb` lives in this repo (not a separate tap). After the archives are published,
+  the release workflow renders it from `SHA256SUMS` and lands it — together with the Cargo.toml
+  version — through a pull request it opens and merges. Bumping the version in the formula at
+  release time would name tarballs that do not exist yet and break `brew install` until CI caught
+  up; keeping version and checksums in one commit is the whole point.
 - **The version is committed, not injected.** That reverses the original design, deliberately —
-  [design/15-dist-evaluation.md](design/15-dist-evaluation.md) records the evaluation and why
-  adoption overruled it. The short version: judged on maintainer ergonomics the old pipeline won
-  because it already existed; judged on *user* ergonomics, which is what decides adoption, a
-  one-line installer that needs no admin was never close.
+  [design/15-dist-evaluation.md](design/15-dist-evaluation.md) records the evaluation that led to
+  `dist`, which has since been replaced by release-kit v2 so every tool releases the same way.
 
 **tropism is not a pure-Rust binary.** Every tree-sitter grammar compiles C, so cross-compilation
-needs a cross C toolchain and each target is built on a native runner. dist 0.32 can cross-compile
-via zigbuild/xwin; that is untested here and the native-runner matrix is deliberate.
+needs a cross C toolchain. The native targets build on native runners; x86_64-apple-darwin is
+cross-compiled on Apple Silicon, and x86_64-unknown-linux-musl is built with `cross`.
 
 **The name is settled, but re-verify before the first crates.io publish.** `tropism`,
 `tropism-core`, `tropism-lang`, and `tropism-mcp` were all free as of 2026-07-31, so the crate, the
@@ -205,9 +207,9 @@ binary, and the command are all `tropism`. Nothing reserves a name, and nothing 
 yet — `publish-crate.yml` has never run.
 
 The highest-value distribution work remaining is **code signing**, not more channels — specified in
-[design/16-signing.md](design/16-signing.md). Build provenance attestation already ships and is
-*not* the same thing: it proves where an artifact came from, and answers nothing the operating
-system asks before running it.
+[design/16-signing.md](design/16-signing.md). Build provenance attestation (which `dist` emitted,
+and release-kit v2 does not) is *not* the same thing: it proves where an artifact came from, and
+answers nothing the operating system asks before running it.
 
 **Dependabot alerts on `demo/` are noise by construction** and cannot be filtered by path — alerts
 come from the dependency graph, which finds every manifest by filename, and auto-triage rules match
@@ -372,8 +374,7 @@ No trait change was needed for any of them, which is the first real evidence tha
 
 `tropism check [FILES...]` is built, with `--staged` and `--since <ref>`, and `.pre-commit-hooks.yaml`
 ships so other repositories can consume the hook. The release pipeline cuts CalVer binaries for six
-targets on every green push to main, with checksums and provenance; crates.io publishing is wired but
-deliberately manual.
+targets on every release tag, with checksums; crates.io publishing is wired but deliberately manual.
 
 Workspace boundaries are first-class: inferred from each ecosystem's own declaration, overridable
 with `[[workspaces]]`, inspectable with `tropism workspaces`, and enforceable with a

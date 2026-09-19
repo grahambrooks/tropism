@@ -56,7 +56,7 @@ Pronounced *TROH-pizm*.
 
 ## Quick start
 
-One line, no admin rights, no Rust toolchain:
+No admin rights, no Rust toolchain:
 
 ```sh
 # macOS / Linux — Homebrew
@@ -75,24 +75,14 @@ with `brew trust grahambrooks/tropism` is *not* enough to get `brew tap` past it
 Older Homebrew has no `brew trust` and needs only the last two lines.
 
 ```sh
-# macOS / Linux — installer script
-curl --proto '=https' --tlsv1.2 -LsSf https://github.com/grahambrooks/tropism/releases/latest/download/tropism-installer.sh | sh
+# Any platform with bx — downloads the release archive for this machine and runs it
+bx grahambrooks/tropism check
 ```
-
-```powershell
-# Windows
-powershell -ExecutionPolicy Bypass -c "irm https://github.com/grahambrooks/tropism/releases/latest/download/tropism-installer.ps1 | iex"
-```
-
-**The Windows installer never asks for elevation.** It installs under your profile and adds that
-directory to your *user* PATH (`HKEY_CURRENT_USER\Environment`), so it works on a locked-down
-corporate workstation where you are not a local administrator. Set `TROPISM_INSTALL_DIR` to put it
-somewhere else.
 
 Or take the archive for your platform from [releases](https://github.com/grahambrooks/tropism/releases)
-— Linux (gnu and musl, x86-64 and arm64), macOS (Intel and Apple silicon), and Windows. Every
-release carries `sha256.sum` and GitHub build-provenance attestation, so a downloaded binary traces
-back to the workflow run and commit that produced it.
+— Linux (gnu x86-64 and arm64, musl x86-64), macOS (Intel and Apple silicon), and Windows — and put
+`tropism` (and `tropism-mcp`, the MCP server) on your PATH. The binaries sit at the root of each
+archive, and every release carries a `SHA256SUMS`.
 
 ```sh
 tropism check                        # the rules, over everything
