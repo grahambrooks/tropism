@@ -1,0 +1,33 @@
+.github/workflows/release.yml
+  s_58a2383c561445::t_8263668d596cf7 1,3-4,6-16,18-20,25-41,45-46,48-55,57,59,61-63,65-68,70,72-73,75-79,82-90,92-116,118-124,126,128-131,133-139,141-147,149-150,152-177,179-183,185,187-199
+.pre-commit-hooks.yaml
+  s_58a2383c561445::t_75da1ad1a75318 11-12
+.release.env
+  s_58a2383c561445::t_c0355ae581b9bc 1-10
+CLAUDE.md
+  s_58a2383c561445::t_3a75a17fa4d14b 168-172,177,180,182-189,191-195,197-198,201-202,210-212,377
+Cargo.toml
+  s_58a2383c561445::t_17963a5ce27eec 9-13
+Makefile
+  s_58a2383c561445::t_c9836577b9c83d 3-10,18-19,38,74,143-145
+README.md
+  s_58a2383c561445::t_067caa3a463072 59,78-79,83-85
+scripts/release.py
+  s_58a2383c561445::t_8560494cd4e6e7 1-276
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "caa2f8ffdefe8982111013917cdd240370ac554b",
+  "prompts": {},
+  "sessions": {
+    "s_58a2383c561445": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "7d5dfd7b-f2f0-43a7-a1c4-efe732817d53",
+        "model": "claude-opus-5"
+      },
+      "human_author": "Graham Brooks <graham@grahambrooks.com>"
+    }
+  }
+}
