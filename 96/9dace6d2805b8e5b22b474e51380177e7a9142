@@ -1,0 +1,19 @@
+Makefile
+  s_d154e67d3fb7f6::t_3a22180cbae155 40,148-152
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "969dace6d2805b8e5b22b474e51380177e7a9142",
+  "prompts": {},
+  "sessions": {
+    "s_d154e67d3fb7f6": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "a5b5c2f5-f320-48c4-a7d2-a12fe9dbdf69",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Graham Brooks <graham@grahambrooks.com>"
+    }
+  }
+}
