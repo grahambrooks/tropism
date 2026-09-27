@@ -37,6 +37,7 @@ help:
 	@echo 'make check-scripts  evaluation/ shell scripts, against real bash 3.2'
 	@echo 'make plan         what the release workflow would build for the next tag'
 	@echo 'make alerts       Dependabot alerts, split demo fixtures from real ones'
+	@echo 'make watch-ci     after pushing, wait for every CI run on HEAD'
 
 .PHONY: version
 version:
@@ -144,3 +145,8 @@ release: release-guard check
 	@echo 'from the published checksums. Nothing here bumps the formula: its version'
 	@echo 'and its checksums have to land together, and the checksums do not exist yet.'
 	@echo 'Remember to `git pull` before the next release — that PR lands on main.'
+
+.PHONY: watch-ci
+watch-ci:
+	@command -v watch-ci >/dev/null || { echo "watch-ci not on PATH: ln -s ~/dev/projects/agentic-twin/scripts/watch-ci.sh ~/.local/bin/watch-ci" >&2; exit 1; }
+	watch-ci
