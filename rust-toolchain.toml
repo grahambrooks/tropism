@@ -16,5 +16,5 @@
 # floor is real rather than aspirational.
 
 [toolchain]
-channel = "1.98.1"
+channel = "1.99.0"
 components = ["rustfmt", "clippy"]
