@@ -26,6 +26,38 @@ const BUILTIN_ROOTS: &[&str] = &["std", "core", "alloc", "proc_macro", "test"];
 /// crate under test, so they can never form a cycle with it.
 const SEPARATE_TARGET_DIRS: &[&str] = &["tests", "benches", "examples"];
 
+/// Crates whose library is named differently from their package.
+///
+/// Cargo derives a library's name from its package, `-` becoming `_`, unless the
+/// package's own `[lib] name` overrides it, and that manifest lives in the
+/// registry, which a hermetic tool never reads. The residue is small, as with
+/// Python's import names: `use md5::Md5` from the `md-5` package. Consulted only
+/// when the package is declared, so an entry can attribute a use, never invent a
+/// missing dependency. Every entry is a widely used crate whose `[lib] name`
+/// differs.
+const LIB_TO_PACKAGE: &[(&str, &str)] = &[
+    ("crypto", "rust-crypto"),
+    ("ini", "rust-ini"),
+    ("md5", "md-5"),
+    ("sha1", "sha-1"),
+    ("xml", "xml-rs"),
+];
+
+/// Item kinds that put a name in scope, so a bare `use name` or `use name::x` in
+/// the same scope means that item, not a crate.
+const NAMING_ITEMS: &[&str] = &[
+    "const_item",
+    "enum_item",
+    "function_item",
+    "macro_definition",
+    "mod_item",
+    "static_item",
+    "struct_item",
+    "trait_item",
+    "type_item",
+    "union_item",
+];
+
 struct CargoVersionOps;
 
 impl VersionOps for CargoVersionOps {
@@ -190,12 +222,19 @@ impl LanguageProvider for RustProvider {
                 // `tree_sitter_go`, so matching is on the normalized form while the
                 // *declared* spelling is what gets reported.
                 let normalized = normalize_crate_name(root);
+                let renamed = LIB_TO_PACKAGE
+                    .iter()
+                    .find(|(lib, _)| *lib == root)
+                    .map(|(_, package)| normalize_crate_name(package));
                 let declared = ctx
                     .declared
                     .iter()
                     .map(|dep| dep.name.as_str())
                     .chain(ctx.sibling_packages.iter().map(String::as_str))
-                    .find(|name| normalize_crate_name(name) == normalized);
+                    .find(|name| {
+                        let name = normalize_crate_name(name);
+                        name == normalized || renamed.as_ref() == Some(&name)
+                    });
 
                 match (declared, import.form) {
                     (Some(name), _) => ImportTarget::External(name.to_owned()),
@@ -604,6 +643,21 @@ fn collect(node: tree_sitter::Node<'_>, source: &[u8], out: &mut Vec<Import>) {
                 && let Ok(raw) = argument.utf8_text(source)
                 && let Some(prefix) = use_prefix(raw)
             {
+                // `pub use helper as alias;` beside `fn helper`, or `use
+                // helpers::make;` beside `mod helpers;`, names an item declared
+                // in this scope. Rust rejects a crate of the same name as
+                // ambiguous, so it is never a crate. Without this, both were
+                // reported as missing dependencies: a re-export alias in insight,
+                // and an integration test's own helper module.
+                let root = prefix.split("::").next().unwrap_or_default();
+                let prefix = if node
+                    .parent()
+                    .is_some_and(|scope| declares(scope, root, source))
+                {
+                    format!("self::{prefix}")
+                } else {
+                    prefix
+                };
                 out.push(Import::statement(
                     prefix,
                     node.start_position().row as u32 + 1,
@@ -632,6 +686,22 @@ fn collect(node: tree_sitter::Node<'_>, source: &[u8], out: &mut Vec<Import>) {
     for child in node.children(&mut cursor) {
         collect(child, source, out);
     }
+}
+
+/// Whether `scope` (a file, module body or block) directly declares an item named
+/// `name`.
+fn declares(scope: tree_sitter::Node<'_>, name: &str, source: &[u8]) -> bool {
+    if name.is_empty() {
+        return false;
+    }
+    let mut cursor = scope.walk();
+    scope.children(&mut cursor).any(|item| {
+        NAMING_ITEMS.contains(&item.kind())
+            && item
+                .child_by_field_name("name")
+                .and_then(|n| n.utf8_text(source).ok())
+                == Some(name)
+    })
 }
 
 /// The module prefix of a `use` path.
@@ -1256,6 +1326,50 @@ version = "2.0.0"
             RustProvider.resolve_import(&import, Utf8Path::new("src/lib.rs"), &ctx),
             ImportTarget::Unresolved { .. }
         ));
+    }
+
+    #[test]
+    fn a_use_naming_an_item_in_the_same_scope_is_local() {
+        // insight's `pub use execute_postgres_query as execute_query_v2;`, and an
+        // integration test's `mod test_helpers; use test_helpers::make;`.
+        assert_eq!(
+            extract("fn helper() {}\npub use helper as alias;\n"),
+            ["self::helper"]
+        );
+        assert_eq!(
+            extract("mod test_helpers;\nuse test_helpers::make;\n"),
+            ["self::test_helpers::make"]
+        );
+        // Only the scope the `use` is in: an item in a nested module doesn't count.
+        assert_eq!(
+            extract("mod inner { pub fn serde() {} }\nuse serde::Deserialize;\n"),
+            ["serde::Deserialize"]
+        );
+        assert!(
+            matches!(
+                resolve(
+                    "tests/it.rs",
+                    "self::test_helpers::make",
+                    &["src/lib.rs"],
+                    &[]
+                ),
+                ImportTarget::Internal(_)
+            ),
+            "local, so never a missing dependency"
+        );
+    }
+
+    #[test]
+    fn a_library_named_unlike_its_package_matches_the_declared_package() {
+        assert_eq!(
+            resolve("src/lib.rs", "md5::Md5", &[], &["md-5"]),
+            ImportTarget::External("md-5".to_owned())
+        );
+        // Undeclared, it is still reported under the name the code imports.
+        assert_eq!(
+            resolve("src/lib.rs", "md5::Md5", &[], &[]),
+            ImportTarget::External("md5".to_owned())
+        );
     }
 
     #[test]
