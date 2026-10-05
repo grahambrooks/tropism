@@ -2008,6 +2008,7 @@ dependencies = [
  "clap",
  "insta",
  "ratatui",
+ "serde",
  "serde_json",
  "tropism-core",
  "tropism-lang",

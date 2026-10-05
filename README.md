@@ -232,6 +232,8 @@ tropism check                        # rules only, whole repository
 tropism check src/a.rs src/b.ts      # rules only, scoped to these files
 tropism check --staged               # ...to what is staged
 tropism check --since origin/main    # ...to what a branch introduced
+
+tropism export --mirrors DIR --state DIR   # JSON Lines records for software-analytics
 ```
 
 Exit codes are the CI contract: `0` ran clean, `1` findings at or above `--fail-on`, `2` could not

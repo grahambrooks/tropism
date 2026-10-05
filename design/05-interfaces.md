@@ -95,6 +95,24 @@ is a mechanical mapping from the JSON above and is worth having early.
 Text output leads with per-project check status — including anything unavailable — before findings,
 so a human sees "3 checks did not run" rather than reading a short list as a clean bill of health.
 
+### `tropism export`: records for software-analytics
+
+```
+tropism export --mirrors DIR --state DIR [--since N]
+```
+
+Analyzes every git mirror under `DIR` (laid out `<owner>/<name>`, as software-analytics'
+insight-collect keeps them) and writes its delivery-schema records as JSON Lines on stdout: one
+`conformance_snapshot` per repository and commit (findings by check, rules configured, checks
+unavailable) and one `conformance_finding` per finding, keyed `<repo>:<finding id>` so a finding can
+be followed across commits. Each exported commit gets a sequence number (`source_seq`) kept in
+`<state>/export.json`; a repository whose commit is unchanged and at or below `--since` is skipped,
+and one sent but not yet confirmed is sent again with the same record ids. It exits 0 unless the run
+itself failed: a repository that fails is reported on stderr and retried next run.
+
+`git` runs here only to read each mirror's commit and commit time, in the CLI, as `check --staged`
+does; tropism-core still sees a directory.
+
 ### The interactive browser (`--format tui`)
 
 A `ratatui` two-pane browser: a navigable list of projects, findings, and unavailable checks on the

@@ -3,6 +3,7 @@
 //! A thin adapter over `tropism-core`: parse arguments, run the analysis, render.
 //! Any question answerable here is answerable over MCP with the same result.
 
+mod export;
 mod git;
 mod render;
 
@@ -57,6 +58,30 @@ enum Command {
     /// project's module set, and the provider's own rules — and the finding it
     /// produces names none of them.
     Explain(ExplainArgs),
+
+    /// Write dependency and conformance records for software-analytics.
+    ///
+    /// Analyzes every git mirror under `--mirrors` (laid out `<owner>/<name>`)
+    /// and writes delivery-schema records as JSON Lines on stdout: one
+    /// `conformance_snapshot` per repository and commit, one
+    /// `conformance_finding` per finding. Repositories whose commit is
+    /// unchanged and already confirmed by `--since` are skipped.
+    Export(ExportArgs),
+}
+
+#[derive(Args)]
+struct ExportArgs {
+    /// Directory of git mirrors, `<owner>/<name>` each.
+    #[arg(long)]
+    mirrors: Utf8PathBuf,
+
+    /// Directory for the export's state (sequence numbers per commit).
+    #[arg(long)]
+    state: Utf8PathBuf,
+
+    /// The highest `source_seq` the caller has stored.
+    #[arg(long, default_value_t = 0)]
+    since: u64,
 }
 
 #[derive(Args)]
@@ -200,7 +225,24 @@ fn main() -> ExitCode {
         Command::Check(args) => run(check(args)),
         Command::Workspaces(args) => run(workspaces(args)),
         Command::Explain(args) => run(explain(args)),
+        Command::Export(args) => run(export(args)),
     }
+}
+
+/// Records, not findings to gate on: exits 0 unless the run itself failed.
+/// A repository that fails is reported and retried on the next run.
+fn export(args: ExportArgs) -> anyhow::Result<u8> {
+    let opts = export::ExportOptions {
+        mirrors: args.mirrors,
+        state: args.state,
+        since: args.since,
+    };
+    let summary = export::export(&opts, &mut std::io::stdout().lock())?;
+    eprintln!(
+        "tropism export: {} repositories, {} exported, {} unchanged, {} failed, {} records",
+        summary.repositories, summary.exported, summary.unchanged, summary.failed, summary.records
+    );
+    Ok(EXIT_CLEAN)
 }
 
 /// Neither `workspaces` nor `explain` is a check, so neither has findings to gate
