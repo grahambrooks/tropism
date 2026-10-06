@@ -106,9 +106,10 @@ insight-collect keeps them) and writes its delivery-schema records as JSON Lines
 `conformance_snapshot` per repository and commit (findings by check, rules configured, checks
 unavailable) and one `conformance_finding` per finding, keyed `<repo>:<finding id>` so a finding can
 be followed across commits. Each exported commit gets a sequence number (`source_seq`) kept in
-`<state>/export.json`; a repository whose commit is unchanged and at or below `--since` is skipped,
-and one sent but not yet confirmed is sent again with the same record ids. It exits 0 unless the run
-itself failed: a repository that fails is reported on stderr and retried next run.
+`<state>/export.json` with the tropism version that exported it; a repository whose commit and
+tropism version are unchanged and at or below `--since` is skipped (an upgrade re-exports, since it
+can change the findings), and one sent but not yet confirmed is sent again with the same record
+ids. It exits 0 unless the run itself failed: a repository that fails is reported on stderr and retried next run.
 
 `git` runs here only to read each mirror's commit and commit time, in the CLI, as `check --staged`
 does; tropism-core still sees a directory.

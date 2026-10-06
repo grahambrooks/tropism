@@ -14,9 +14,10 @@
 //!
 //! **Cursor.** As `symgraph export`: each exported commit gets a sequence
 //! number (`source_seq`), kept in `<state>/export.json`. A repository is
-//! exported again only when its commit changed, or when its last export is
-//! newer than the `--since` cursor (sent, but not confirmed). Record ids name
-//! the commit, so a re-sent export is idempotent.
+//! exported again when its commit changed, when tropism's version changed
+//! (an upgrade can change the findings for the same commit), or when its last
+//! export is newer than the `--since` cursor (sent, but not confirmed). Record
+//! ids name the commit, so a re-sent export replaces the earlier one.
 //!
 //! **git.** As with `--staged` and `--since` on `check`, `git` runs only in the
 //! CLI, and only to read each mirror's commit; tropism-core still sees a plain
@@ -63,8 +64,15 @@ struct State {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 struct Exported {
     commit: String,
+    /// The tropism that exported it. Absent in state written before this
+    /// was kept, which re-exports once.
+    #[serde(default)]
+    version: String,
     seq: u64,
 }
+
+/// What an export is keyed by, besides the commit.
+const VERSION: &str = env!("CARGO_PKG_VERSION");
 
 /// Export every mirror's records to `out`. A repository that fails is
 /// reported on stderr and left for the next run; the others still export.
@@ -89,12 +97,14 @@ pub fn export(opts: &ExportOptions, out: &mut impl Write) -> Result<ExportSummar
             }
         };
         let seq = match state.repositories.get(&repo) {
-            Some(prev) if prev.commit == commit && prev.seq <= opts.since => {
-                summary.unchanged += 1;
-                continue;
+            Some(prev) if prev.commit == commit && prev.version == VERSION => {
+                if prev.seq <= opts.since {
+                    summary.unchanged += 1;
+                    continue;
+                }
+                // Sent before but not confirmed: the same records again.
+                prev.seq
             }
-            // Sent before but not confirmed: the same records again.
-            Some(prev) if prev.commit == commit => prev.seq,
             _ => {
                 state.next_seq += 1;
                 state.next_seq
@@ -108,7 +118,14 @@ pub fn export(opts: &ExportOptions, out: &mut impl Write) -> Result<ExportSummar
                 }
                 summary.records += records.len();
                 summary.exported += 1;
-                state.repositories.insert(repo, Exported { commit, seq });
+                state.repositories.insert(
+                    repo,
+                    Exported {
+                        commit,
+                        version: VERSION.to_owned(),
+                        seq,
+                    },
+                );
             }
             Err(e) => {
                 eprintln!("tropism export: {repo}: {e:#}");
@@ -450,6 +467,16 @@ mod tests {
         let (confirmed, none) = run(&mirrors, &state, 1);
         assert_eq!((confirmed.exported, confirmed.unchanged), (0, 1));
         assert!(none.is_empty());
+
+        // Another tropism exported it: the same commit again, as a new export,
+        // since its findings may differ.
+        let path = state.join("export.json");
+        let text = std::fs::read_to_string(&path).unwrap();
+        std::fs::write(&path, text.replace(VERSION, "2000.1.1")).unwrap();
+        let (upgraded, records) = run(&mirrors, &state, 1);
+        assert_eq!(upgraded.exported, 1);
+        assert_eq!(records[0]["source_seq"], 2);
+        assert_eq!(records[0]["commit"], commit.as_str());
         let _ = std::fs::remove_dir_all(&dir);
     }
 }
