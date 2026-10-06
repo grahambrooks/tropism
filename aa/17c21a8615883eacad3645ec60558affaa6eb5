@@ -1,0 +1,21 @@
+crates/tropism/src/export.rs
+  s_6c8864d1d71304::t_9990d438138a77 17-20,67-70,74-76,100-106,121-128,470-479
+design/05-interfaces.md
+  s_6c8864d1d71304::t_9c24d6006b0fc5 109-112
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "aa17c21a8615883eacad3645ec60558affaa6eb5",
+  "prompts": {},
+  "sessions": {
+    "s_6c8864d1d71304": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "376d933a-1b6e-458c-a29f-4f695ab3e7be",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Graham Brooks <graham@grahambrooks.com>"
+    }
+  }
+}
