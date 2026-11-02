@@ -3,22 +3,31 @@
 **Not implemented.** This document is what it would take, verified against current
 documentation on 2026-08-01, so the work can start without re-deriving it.
 
+> **Written against `dist`, which was replaced by release-kit v2 on 2026-09-19.** Two consequences:
+> the dist-specific integration notes below (`local-artifacts-jobs`, `windows-signing`) no longer
+> apply — signing would now be added to release-kit, for every tool at once — and **tropism no
+> longer ships build-provenance attestation, nor the installers this document calls "the quiet
+> path"**. See [15-dist-evaluation.md](15-dist-evaluation.md) "Replaced". The case for signing,
+> and the SignPath Foundation recommendation, are unchanged — and stronger, since archives are now
+> the only path on Windows.
+
 Signing is the highest-value distribution work remaining. It is not about tidiness: on a locked-down
 corporate Windows workstation an unsigned binary is not merely warned about, it is **unrunnable**,
 and no amount of packaging works around that.
 
 ---
 
-## Attestation is not signing, and tropism already has one of them
+## Attestation is not signing
 
-Worth separating first, because they are easy to conflate and tropism ships one already.
+Worth separating first, because they are easy to conflate. tropism shipped the first under `dist`
+and ships neither today.
 
 | | What it proves | Who checks it | Status |
 | --- | --- | --- | --- |
-| **Build provenance attestation** | this artifact came from *that* commit, built by *that* workflow | a human, deliberately, with `gh attestation verify` | **shipping** — `github-attestations = true` |
+| **Build provenance attestation** | this artifact came from *that* commit, built by *that* workflow | a human, deliberately, with `gh attestation verify` | **absent since release-kit v2** (shipped v2026.8.x–v2026.9.2 under `dist`) |
 | **Code signature** | a named publisher vouches for this binary | the operating system, automatically, before it will run | **absent** |
 
-The attestation is real and verifiable today:
+Under `dist` it was real and verifiable — releases up to v2026.9.2 still are:
 
 ```
 $ gh attestation verify tropism-aarch64-apple-darwin.tar.xz --owner grahambrooks
@@ -135,7 +144,7 @@ corporate lockdown problem that motivated this work is a Windows problem.
 
 Nothing to do. There is no per-binary signing convention that any Linux desktop or CI enforces;
 distribution happens through package managers with their own repository signing, or through checksums.
-tropism already ships `sha256.sum` and provenance attestation, which is the norm and is sufficient.
+tropism ships `SHA256SUMS`, which is the norm. Provenance attestation would complete it (D47).
 
 ---
 
@@ -147,5 +156,5 @@ tropism already ships `sha256.sum` and provenance attestation, which is the norm
 3. **Sign Windows.** The platform where signing is the difference between running and not running.
 4. **Revisit macOS** only if evidence appears that anyone is blocked by Gatekeeper.
 
-Keep the attestation whichever way this goes. It answers a question signing does not, and it costs
-one config key.
+Restore the attestation whichever way this goes (D47). It answers a question signing does not. Under
+`dist` it cost one config key; under release-kit it belongs in the shared workflow.

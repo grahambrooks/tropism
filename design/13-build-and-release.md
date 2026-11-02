@@ -7,6 +7,13 @@
 > pushes; the tag triggers `dist`. See [15-dist-evaluation.md](15-dist-evaluation.md) for the
 > evaluation and the adoption decision, and note that the "version is injected, never committed"
 > design below is the one thing that did not survive it.
+>
+> **Superseded again, 2026-09-19: `dist` has been replaced by release-kit v2**, the release workflow
+> shared byte-for-byte across grahambrooks' Rust tools and configured by `.release.env`. The tag
+> still starts the release and the version is still committed. Gone with `dist`: the shell and
+> PowerShell installers, the npm package, and build-provenance attestation — see
+> [15-dist-evaluation.md](15-dist-evaluation.md) "Replaced" and D47 in
+> [12-known-limitations.md](12-known-limitations.md).
 
 GitHub Actions, continuous release, CalVer versioning, binary downloads, and crates.io publishing.
 

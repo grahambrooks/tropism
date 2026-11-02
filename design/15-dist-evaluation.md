@@ -1,6 +1,7 @@
 # 15 — Evaluating `dist` (cargo-dist) against the hand-written release pipeline
 
-**Status: evaluated, then ADOPTED.** See "Adopted" at the end for what changed and why the
+**Status: evaluated, ADOPTED, then REPLACED by release-kit v2 on 2026-09-19** — see "Replaced" at
+the end for what that cost. **Adopted:** See "Adopted" at the end for what changed and why the
 recommendation below was overruled. Everything here was run, not read about.
 `dist` 0.32.0 (released 2026-05-21), evaluated 2026-08-01 against the pipeline in
 [13-build-and-release.md](13-build-and-release.md), which has cut three releases.
@@ -191,3 +192,35 @@ against its priority:
 The lesson worth keeping: the evaluation compared dist against the pipeline on *maintainer*
 ergonomics, where the pipeline scored well because it already existed. Judged on *user* ergonomics,
 which is what decides adoption, it was never close.
+
+---
+
+## Replaced — 2026-09-19
+
+`dist` was replaced by **release-kit v2**, so that every one of grahambrooks' Rust tools releases
+the same way and works with `bx` and the gb-agent-skills marketplaces. `release.yml` and
+`scripts/release.py` are now byte-identical across those tools; everything tropism-specific is in
+`.release.env`. What it builds: `tropism` and `tropism-mcp` for six targets, as `.tar.gz` (`.zip` on
+Windows) with a `SHA256SUMS`, plus the Homebrew formula, landed by a pull request.
+
+**What did not come across**, decided in #53:
+
+| Lost with `dist`                         | What covers it now                                                         |
+| ---------------------------------------- | -------------------------------------------------------------------------- |
+| `tropism-installer.sh`                   | Homebrew and `bx` on macOS/Linux. `curl \| sh` was never the recommended path — see 13 §5 |
+| `tropism-installer.ps1` (no-admin Windows) | **Nothing.** The archive, unpacked by hand onto PATH. This is the real loss |
+| the npm package                          | Nothing; it was never documented as a channel                              |
+| build-provenance attestation             | `SHA256SUMS` only — integrity, not provenance                              |
+
+The `…/releases/latest/download/tropism-installer.*` links have returned 404 since v2026.9.3. No
+document in this repository links them.
+
+Note what this does to the reasoning in "Adopted" above. dist was adopted *for* the no-admin
+PowerShell installer, on the argument that user ergonomics decide adoption — and that installer is
+the one thing release-kit does not replace. The argument has not been answered; it has been traded
+against uniformity across tools. If corporate Windows adoption becomes the priority again, the
+answer is not to restore dist but a channel the organisation already approves — PyPI via maturin,
+or winget — and signing, which [16-signing.md](16-signing.md) still describes. Attestation would
+have to be added to release-kit itself, since `release.yml` cannot be edited here; a separate
+workflow attesting assets after publication would name *itself* as the builder, which is a
+provenance claim that is not true. Tracked as D47 in [12-known-limitations.md](12-known-limitations.md).

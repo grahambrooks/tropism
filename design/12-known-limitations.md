@@ -316,6 +316,20 @@ This unblocked two things at once — the first release, and the SignPath Founda
 [16-signing.md](16-signing.md), whose eligibility test is an OSI-approved licence and whose lead
 time dominates the signing work.
 
+### D47. Moving off `dist` dropped the installers, the npm package, and attestation
+
+release-kit v2 (2026-09-19) ships archives, `SHA256SUMS`, and the Homebrew formula. It does not
+ship `tropism-installer.sh`/`.ps1`, an npm package, or build-provenance attestation, all of which
+`dist` generated. macOS and Linux are covered by Homebrew and `bx`. **Two real gaps remain:**
+
+- **No-admin Windows install.** The PowerShell installer was the reason `dist` was adopted. Windows
+  users now unpack a `.zip` onto PATH by hand. The fix is a channel an organisation already
+  approves (PyPI via maturin, winget), and signing — [16-signing.md](16-signing.md) — not dist.
+- **Provenance.** Must be added to release-kit's shared workflow; `release.yml` is not edited per
+  tool. A separate post-publish workflow would attest as itself, not as the build — do not do that.
+
+Decided and recorded in #53; see [15-dist-evaluation.md](15-dist-evaluation.md) "Replaced".
+
 ---
 
 ## Deferred — rules
