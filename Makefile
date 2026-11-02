@@ -121,8 +121,12 @@ release: release-guard check
 	# and strips the `path` from what it uploads. They are the same CalVer as
 	# the workspace, so they move with it — left behind, publish-crate.yml
 	# would upload tropism-lang pinned to a tropism-core that predates it.
-	perl -pi -e 's/^(tropism-(?:core|lang) = \{ path = "[^"]*", version = )"[^"]*"/$$1"$(VERSION)"/' Cargo.toml
-	@test "$$(grep -c '^tropism-\(core\|lang\) = {.*version = "$(VERSION)" }$$' Cargo.toml)" = 2 \
+	# The requirement is `>=`, not the default caret: release-kit stamps only
+	# [workspace.package], so a tag cut without this target leaves these behind,
+	# and `^2026.x` cannot match a 2027.x workspace member — the build fails to
+	# resolve. A floor with no ceiling keeps any such tag building (#52).
+	perl -pi -e 's/^(tropism-(?:core|lang) = \{ path = "[^"]*", version = )"[^"]*"/$$1">=$(VERSION)"/' Cargo.toml
+	@test "$$(grep -c '^tropism-\(core\|lang\) = {.*version = ">=$(VERSION)" }$$' Cargo.toml)" = 2 \
 		|| { echo 'release: failed to set the internal dependency versions'; exit 1; }
 	# Cargo.lock records the workspace members' own versions, so it moves too.
 	cargo update --workspace --offline
