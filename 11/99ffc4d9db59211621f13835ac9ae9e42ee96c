@@ -1,0 +1,21 @@
+Makefile
+  s_9d5947660cab8f::t_70903fa92a4a25 124-129
+Cargo.toml
+  s_9d5947660cab8f::t_d8825eeb448e64 28-29
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "1199ffc4d9db59211621f13835ac9ae9e42ee96c",
+  "prompts": {},
+  "sessions": {
+    "s_9d5947660cab8f": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "e4505cdb-759b-4fd6-979d-fedecc7c1f0f",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Graham Brooks <graham@grahambrooks.com>"
+    }
+  }
+}
