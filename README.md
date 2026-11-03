@@ -342,7 +342,7 @@ pre-commit-compatible hook runner that is a single Rust binary with no Python ru
 
 ```sh
 brew install prek     # or: cargo install prek
-prek install          # write the git hook shim
+make hooks            # write the git hook shims (pre-commit and pre-push)
 prek run tropism -a   # run just this hook over everything, without committing
 ```
 

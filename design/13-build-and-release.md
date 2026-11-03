@@ -14,6 +14,10 @@
 > PowerShell installers, the npm package, and build-provenance attestation — see
 > [15-dist-evaluation.md](15-dist-evaluation.md) "Replaced" and D47 in
 > [12-known-limitations.md](12-known-limitations.md).
+>
+> **And again, 2026-11-03: `make release` no longer bumps or commits anything.** It is release-kit's
+> shared release.mk: it tags `origin/main` with the next `vYYYY.M.D` and pushes only the tag; the
+> release workflow stamps the version and lands the bump through its release PR.
 
 GitHub Actions, continuous release, CalVer versioning, binary downloads, and crates.io publishing.
 

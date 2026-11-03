@@ -168,17 +168,24 @@ ratchet, and `crates/tropism-lang/tests/check.rs` pins it from both directions.
 
 ## Build and release
 
-Releases are cut by **`make release`** and built by the standard **release-kit v2** workflow.
-Never bump the version by hand: the Makefile computes CalVer from the tag count, writes it to
-`Cargo.toml` (workspace version *and* the internal `tropism-core`/`tropism-lang` dependency
-versions), refreshes `Cargo.lock`, commits, tags, and pushes. The **tag** (`vYYYY.M.N`) is what
-starts the release, and is the version the release builds.
+Releases are cut by **`make release`** (release.mk, stamped from release-kit — never edit it here)
+and built by the standard **release-kit v2** workflow. `make release` is tag-only: it computes the
+next CalVer — today's UTC date, `vYYYY.M.D`, incremented while that tag exists — tags
+`origin/main` and pushes the tag. Nothing is bumped or committed locally, so the working tree and
+branch don't matter. The workflow stamps the version into `[workspace.package]` (which every crate
+inherits) and `Cargo.lock`, builds, publishes, and lands the bump on main through its release PR.
+Never bump the version by hand.
 
 ```sh
 make release-dry     # what it would do
-make release         # do it — runs `make check` first and refuses a dirty tree
+make release         # do it
 make plan            # the build matrix the workflow would run for the next tag
 ```
+
+The internal `tropism-core`/`tropism-lang` requirements in `[workspace.dependencies]` are `>=`
+floors, so a stamped workspace always satisfies them; the workflow does not move those floors.
+Raise them by hand before a crates.io publish if a published crate must require its matching
+sibling version.
 
 Things to know before touching any of it:
 
@@ -323,7 +330,7 @@ cargo build -p tropism --no-default-features # must still build without ratatui
 ./target/debug/tropism workspaces .             # boundaries, their provenance, and what crosses them
 ./target/debug/tropism explain src/a.rs         # why each import in one file classified as it did
 
-prek install                                 # wire the hooks (prek.toml)
+make hooks                                   # wire the hooks (prek.toml)
 prek run tropism -a                          # the commit-time hook, without committing
 prek run tropism-all --hook-stage pre-push -a   # the whole-repository one
 ```
