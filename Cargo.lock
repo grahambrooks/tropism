@@ -2321,7 +2321,7 @@ dependencies = [
 
 [[package]]
 name = "tropism"
-version = "2026.11.1"
+version = "2026.11.2"
 dependencies = [
  "annotate-snippets",
  "anstream",
@@ -2339,7 +2339,7 @@ dependencies = [
 
 [[package]]
 name = "tropism-core"
-version = "2026.11.1"
+version = "2026.11.2"
 dependencies = [
  "anyhow",
  "blake3",
@@ -2356,7 +2356,7 @@ dependencies = [
 
 [[package]]
 name = "tropism-lang"
-version = "2026.11.1"
+version = "2026.11.2"
 dependencies = [
  "anyhow",
  "camino",
@@ -2379,7 +2379,7 @@ dependencies = [
 
 [[package]]
 name = "tropism-mcp"
-version = "2026.11.1"
+version = "2026.11.2"
 dependencies = [
  "anyhow",
  "camino",
