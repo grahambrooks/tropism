@@ -60,6 +60,11 @@ quick-xml = "0.42.0"
 toml = "1.1.4"
 petgraph = "0.8.3"
 insta = "1.48.0"
+# The MCP server (build-order step 6). rmcp is the official Rust MCP SDK; stdio is
+# the only transport an agent-launched local server needs, so nothing HTTP is built.
+# Verified against crates.io on 2026-11-02; see design/08-crates.md.
+rmcp = { version = "3.8.0", default-features = false, features = ["server", "macros", "transport-io"] }
+tokio = { version = "1.54.1", default-features = false, features = ["rt", "macros", "io-std"] }
 
 [workspace.lints.rust]
 unsafe_code = "forbid"

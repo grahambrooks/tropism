@@ -139,7 +139,8 @@ formats stay buildable without the heaviest dependency in the workspace.
 
 ## MCP server
 
-**Status: last in the build order, and deliberately smaller than first specified.**
+**Status: built — the three tools below, in `crates/tropism-mcp`, over stdio with `rmcp`.** Last in
+the build order, and deliberately smaller than first specified.
 [09-product-review.md](09-product-review.md) once made this surface the product. Its own gate —
 "validate that `tropism_package_path` is answerable" — failed once all ten languages existed: four
 ecosystems have no lockfile edges at all, so the flagship query is dead in four of ten supported
@@ -204,6 +205,16 @@ Design rules for these tools:
   that means clean or unavailable.
 - **Analysis is cached per scan root** within a server session, so `summary` followed by three
   `findings` calls does not re-analyze the tree four times. Invalidate on file mtime change.
+  **Not built**, deliberately: with no paginated finding stream there is nothing to page through,
+  every tool is one analysis per call, and D39 put a 3,000-file run at about 0.1 s. A cache whose
+  invalidation must walk the tree anyway would buy little and could serve a stale verdict. Build it
+  with `tropism_findings`, not before.
+
+As built, every tool takes an optional `path` (default: the server's working directory, or its first
+argument), returns structured JSON, and reports a bad path or invalid ruleset as a tool error rather
+than an empty result. `tropism_check` adds `gate` — `pass`, `fail` (a finding at `error`, the hook's
+default `--fail-on`), or `unavailable` (no ruleset) — and pages findings with `limit`/`offset`,
+saying when it `truncated`. `violations_elsewhere` is `null` for a scoped run, never a guessed zero.
 
 `tropism_package_path` was written up here as the flagship: "why is this package here?" is the
 question an agent most often needs answered when acting on a dependency finding, and it is exactly

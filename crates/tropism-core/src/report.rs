@@ -8,7 +8,7 @@ use std::collections::BTreeMap;
 use camino::Utf8PathBuf;
 use serde::{Deserialize, Serialize};
 
-use crate::model::Project;
+use crate::model::{Language, Project};
 
 /// The report contract's version. **Not** `tropism.toml`'s `schema_version`, which
 /// versions the ruleset file format and is unrelated.
@@ -483,6 +483,74 @@ impl Report {
             .max()
     }
 
+    /// Counts, not findings: what a caller with a small budget reads first.
+    ///
+    /// Built for the MCP server's `tropism_summary`, whose consumer is an agent
+    /// with a limited context window, but it is a projection of the report and
+    /// nothing else, so it lives here. Checks that did not produce an answer are
+    /// listed alongside the counts rather than omitted from them — zero findings
+    /// from a check that never ran is not zero.
+    pub fn summary(&self) -> Summary {
+        let mut totals: BTreeMap<CheckId, usize> = BTreeMap::new();
+        let mut by_severity: BTreeMap<Severity, usize> = BTreeMap::new();
+        let mut not_run: BTreeMap<(CheckId, &'static str, String), Vec<Utf8PathBuf>> =
+            BTreeMap::new();
+        let mut projects = Vec::new();
+
+        for project in &self.projects {
+            let mut findings = BTreeMap::new();
+            for (check, status) in &project.checks {
+                match status {
+                    CheckStatus::Ran { finding_count } => {
+                        *totals.entry(*check).or_default() += finding_count;
+                        if *finding_count > 0 {
+                            findings.insert(*check, *finding_count);
+                        }
+                    }
+                    CheckStatus::Unavailable { reason } => not_run
+                        .entry((*check, "unavailable", reason.clone()))
+                        .or_default()
+                        .push(project.project.root.clone()),
+                    CheckStatus::Failed { error } => not_run
+                        .entry((*check, "failed", error.clone()))
+                        .or_default()
+                        .push(project.project.root.clone()),
+                }
+            }
+            for finding in &project.findings {
+                *by_severity.entry(finding.severity).or_default() += 1;
+            }
+            if !findings.is_empty() {
+                projects.push(ProjectSummary {
+                    root: project.project.root.clone(),
+                    language: project.project.language,
+                    findings,
+                });
+            }
+        }
+
+        Summary {
+            schema_version: self.schema_version,
+            tropism_version: self.tropism_version.clone(),
+            scan_root: self.scan_root.clone(),
+            project_count: self.projects.len(),
+            totals,
+            by_severity,
+            projects,
+            not_run: not_run
+                .into_iter()
+                .map(|((check, status, reason), projects)| NotRun {
+                    check,
+                    status,
+                    reason,
+                    projects,
+                })
+                .collect(),
+            skipped_files: self.skipped.len(),
+            excluded: self.excluded.clone(),
+        }
+    }
+
     /// Checks that did not run, as `(project, check, reason)`. Surfaced prominently
     /// by every renderer — an empty finding list means nothing without this.
     pub fn unavailable(&self) -> impl Iterator<Item = (&Utf8PathBuf, CheckId, &str)> {
@@ -564,4 +632,41 @@ mod tests {
         assert_eq!(unavailable.len(), 1, "zero findings must not read as clean");
         assert_eq!(unavailable[0].1, CheckId::VersionConflict);
     }
+}
+
+/// [`Report::summary`]: counts per check, and what could not run.
+#[derive(Debug, Clone, PartialEq, Serialize)]
+pub struct Summary {
+    pub schema_version: u32,
+    pub tropism_version: String,
+    pub scan_root: Utf8PathBuf,
+    pub project_count: usize,
+    /// Findings per check, summed over every project where the check ran.
+    pub totals: BTreeMap<CheckId, usize>,
+    pub by_severity: BTreeMap<Severity, usize>,
+    /// Only projects with at least one finding, so a clean monorepo stays small.
+    pub projects: Vec<ProjectSummary>,
+    /// Checks that produced no answer, grouped by why. Never omitted: an agent
+    /// cannot infer that a check did not run from a count of zero.
+    pub not_run: Vec<NotRun>,
+    pub skipped_files: usize,
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    pub excluded: Vec<Exclusion>,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize)]
+pub struct ProjectSummary {
+    pub root: Utf8PathBuf,
+    pub language: Language,
+    pub findings: BTreeMap<CheckId, usize>,
+}
+
+/// One check that did not run, for one reason, and the projects it applies to.
+#[derive(Debug, Clone, PartialEq, Serialize)]
+pub struct NotRun {
+    pub check: CheckId,
+    /// `unavailable` or `failed`, as in [`CheckStatus`].
+    pub status: &'static str,
+    pub reason: String,
+    pub projects: Vec<Utf8PathBuf>,
 }

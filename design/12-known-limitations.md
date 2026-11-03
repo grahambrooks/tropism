@@ -622,9 +622,9 @@ Never implemented; reports `Unavailable` with that reason. Deferred in
 
 ## Not built
 
-The MCP server ([05-interfaces.md](05-interfaces.md)), `--format sarif`, and six of the ten target
-languages: Python, Java, C++, Swift, Ruby, and TypeScript as a first-class provider distinct from
-JavaScript.
+`--format sarif`, and the four deferred MCP tools ([05-interfaces.md](05-interfaces.md)). *(This
+section once also listed the MCP server itself — built in #51 as three tools — and six of the ten
+languages, all since built.)*
 
 Per [10-js-evaluation.md](10-js-evaluation.md) the MCP server should come **before** more languages:
 two slices produced two different failure modes, and a third would produce a third without changing

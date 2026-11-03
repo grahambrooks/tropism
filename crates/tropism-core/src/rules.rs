@@ -246,6 +246,39 @@ struct PackageRule {
     allowed: Vec<String>,
 }
 
+/// Which half of the ruleset a rule belongs to.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, serde::Serialize)]
+#[serde(rename_all = "snake_case")]
+pub enum RuleScope {
+    /// Constrains which module may depend on which: `[[module_rules]]`.
+    Module,
+    /// Constrains which packages may be used, and where: `[[package_rules]]`.
+    Package,
+}
+
+/// One rule, described rather than evaluated.
+///
+/// The ruleset's compiled form is private to this module, so this is how a
+/// surface lists the rules — with each one's `reason`, which is the part a reader
+/// most needs and the part a finding can only quote.
+#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize)]
+pub struct RuleDescriptor {
+    pub id: String,
+    pub scope: RuleScope,
+    /// The rule's form, spelled as in `tropism.toml`: `deny`, `independent`,
+    /// `allow_only`, `layers`, `crosses_workspace` for a module rule; `deny`,
+    /// `allowed_in`, or `allow` for a package rule.
+    pub kind: &'static str,
+    pub severity: Severity,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub reason: Option<String>,
+    /// Modules the rule names — or, for a package rule, the modules it is allowed in.
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    pub modules: Vec<String>,
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    pub packages: Vec<String>,
+}
+
 /// Paths kept out of the analysis entirely.
 ///
 /// Deliberate blind spots, so they are counted and reported: a repository that
@@ -556,6 +589,65 @@ impl Ruleset {
     /// sentence reading "0 rule(s)" is the one that tells them it did not.
     pub fn rule_count(&self) -> usize {
         self.module_rules.len() + self.package_rules.len()
+    }
+
+    /// Where this ruleset was read from, as given.
+    pub fn source(&self) -> &Utf8Path {
+        &self.source
+    }
+
+    /// Every rule, in file order, as a consumer outside this module may see it.
+    ///
+    /// Module rules first, then package rules — the order `evaluate` runs them in.
+    /// A closed-world ruleset adds no entry here: its implicit "everything else is
+    /// forbidden" rule has no id of its own, and its findings carry `unlisted`.
+    pub fn describe(&self) -> Vec<RuleDescriptor> {
+        let module = self.module_rules.iter().map(|rule| RuleDescriptor {
+            id: rule.id.clone(),
+            scope: RuleScope::Module,
+            kind: match rule.kind {
+                ModuleRuleKind::Deny { .. } => "deny",
+                ModuleRuleKind::Independent(_) => "independent",
+                ModuleRuleKind::AllowOnly { .. } => "allow_only",
+                ModuleRuleKind::Layers(_) => "layers",
+                ModuleRuleKind::CrossesWorkspace => "crosses_workspace",
+            },
+            severity: rule.severity,
+            reason: rule.reason.as_deref().map(str::trim).map(str::to_owned),
+            modules: kind_modules(&rule.kind),
+            packages: Vec::new(),
+        });
+        let package = self.package_rules.iter().map(|rule| {
+            let kind = if !rule.denied.is_empty() {
+                "deny"
+            } else if !rule.scoped.is_empty() {
+                "allowed_in"
+            } else {
+                "allow"
+            };
+            let packages = rule
+                .denied
+                .iter()
+                .chain(&rule.scoped)
+                .chain(&rule.allowed)
+                .cloned()
+                .collect();
+            RuleDescriptor {
+                id: rule.id.clone(),
+                scope: RuleScope::Package,
+                kind,
+                severity: rule.severity,
+                reason: rule.reason.as_deref().map(str::trim).map(str::to_owned),
+                modules: rule.allowed_in.clone(),
+                packages,
+            }
+        });
+        module.chain(package).collect()
+    }
+
+    /// Whether every dependency must be approved by some package rule.
+    pub fn closed_world(&self) -> bool {
+        self.closed_world
     }
 
     /// Evaluates every rule, returning findings plus the ids of rules that matched

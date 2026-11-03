@@ -282,7 +282,7 @@ fn explain(args: ExplainArgs) -> anyhow::Result<u8> {
         use_rules: !args.no_rules,
         rules_only: false,
     };
-    let file = normalize(&args.file, &args.path);
+    let file = pipeline::normalize_path(&args.file, &args.path);
     let mut report = pipeline::explain(&args.path, &providers, &options, &file)?;
 
     if let Some(filter) = &args.import {
@@ -345,7 +345,7 @@ fn check(args: CheckArgs) -> anyhow::Result<u8> {
         Some(files) => CheckScope::Files(
             files
                 .iter()
-                .map(|file| normalize(file, &args.path))
+                .map(|file| pipeline::normalize_path(file, &args.path))
                 .collect(),
         ),
     };
@@ -371,21 +371,6 @@ fn check(args: CheckArgs) -> anyhow::Result<u8> {
         .max_severity()
         .is_some_and(|max| max >= args.fail_on);
     Ok(if triggered { EXIT_FINDINGS } else { EXIT_CLEAN })
-}
-
-/// A path as the report spells it: relative to the scan root, `/`-separated.
-///
-/// Hook frameworks pass repository-relative paths and humans pass whatever their
-/// shell completed, so `./src/a.rs`, `src/a.rs`, and an absolute path all have to
-/// name the same file. A path that cannot be made relative is passed through
-/// unchanged — it will simply match nothing, which is the right outcome for a file
-/// outside the scan root.
-fn normalize(file: &Utf8PathBuf, scan_root: &Utf8PathBuf) -> Utf8PathBuf {
-    let relative = file
-        .strip_prefix(scan_root)
-        .or_else(|_| file.strip_prefix("./"))
-        .unwrap_or(file);
-    Utf8PathBuf::from(relative.as_str().replace('\\', "/"))
 }
 
 fn analyze(args: AnalyzeArgs) -> anyhow::Result<u8> {

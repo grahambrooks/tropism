@@ -207,6 +207,131 @@ pub fn check(
     })
 }
 
+/// A path as the report spells it: relative to the scan root, `/`-separated.
+///
+/// Hook frameworks pass repository-relative paths, humans pass whatever their
+/// shell completed, and agents pass absolute paths, so `./src/a.rs`, `src/a.rs`,
+/// and an absolute path all have to name the same file. A path that cannot be made
+/// relative is passed through unchanged — it will simply match nothing, which is
+/// the right outcome for a file outside the scan root.
+///
+/// Shared by every surface that builds a [`CheckScope::Files`], so the CLI and
+/// the MCP server cannot disagree about which file a path names.
+pub fn normalize_path(file: &Utf8Path, scan_root: &Utf8Path) -> Utf8PathBuf {
+    let relative = file
+        .strip_prefix(scan_root)
+        .or_else(|_| file.strip_prefix("./"))
+        .unwrap_or(file);
+    Utf8PathBuf::from(relative.as_str().replace('\\', "/"))
+}
+
+/// Whether a rule holds over the whole repository.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, serde::Serialize)]
+#[serde(rename_all = "snake_case")]
+pub enum RuleVerdict {
+    /// Checked something, and nothing broke it.
+    Satisfied,
+    /// At least one dependency breaks it.
+    Violated,
+    /// Matched nothing to check. A rule protecting a renamed module protects
+    /// nothing, and must not read as satisfied.
+    Stale,
+}
+
+#[derive(Debug, Clone, serde::Serialize)]
+pub struct RuleStatus {
+    #[serde(flatten)]
+    pub rule: crate::rules::RuleDescriptor,
+    pub verdict: RuleVerdict,
+    pub violations: usize,
+    /// The first few violations, in report order. `violations` is the true count.
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    pub examples: Vec<Finding>,
+}
+
+/// What `tropism_rules` reports: the ruleset, each rule evaluated.
+#[derive(Debug, Clone, serde::Serialize)]
+pub struct RulesReport {
+    pub schema_version: u32,
+    pub scan_root: Utf8PathBuf,
+    pub ruleset: Utf8PathBuf,
+    pub rules: Vec<RuleStatus>,
+    /// Set for a closed-world ruleset (`unlisted = "deny"`): dependencies no
+    /// package rule approves. They belong to no rule id, so they are counted here.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub unlisted_violations: Option<usize>,
+}
+
+/// Evaluates the ruleset over the whole repository and reports a verdict per rule.
+///
+/// `Ok(None)` when there is no ruleset to evaluate. The run is the same rules-only
+/// pass `tropism check` makes with no file list, so the verdicts agree with the
+/// hook's by construction. `examples` caps the findings carried per rule.
+pub fn rules(
+    scan_root: &Utf8Path,
+    providers: &[&dyn LanguageProvider],
+    options: &Options,
+    examples: usize,
+) -> Result<Option<RulesReport>, DiscoveryError> {
+    let options = Options {
+        respect_ignore: options.respect_ignore,
+        rules_path: options.rules_path.clone(),
+        use_rules: true,
+        rules_only: true,
+    };
+    let Some(ruleset) = load_ruleset(scan_root, &options)? else {
+        return Ok(None);
+    };
+    let report = analyze_scoped(scan_root, providers, &options, None, Some(&ruleset))?;
+
+    let mut by_rule: BTreeMap<String, Vec<&Finding>> = BTreeMap::new();
+    let mut stale: BTreeSet<String> = BTreeSet::new();
+    for finding in report.findings() {
+        if !CheckId::RULES.contains(&finding.check) {
+            continue;
+        }
+        let Some(id) = finding.details.get("rule_id").and_then(|v| v.as_str()) else {
+            continue;
+        };
+        if finding.details.get("stale").and_then(|v| v.as_bool()) == Some(true) {
+            stale.insert(id.to_owned());
+        } else {
+            by_rule.entry(id.to_owned()).or_default().push(finding);
+        }
+    }
+
+    let rules = ruleset
+        .describe()
+        .into_iter()
+        .map(|rule| {
+            let found = by_rule.get(&rule.id).map(Vec::as_slice).unwrap_or_default();
+            let verdict = if stale.contains(&rule.id) {
+                RuleVerdict::Stale
+            } else if found.is_empty() {
+                RuleVerdict::Satisfied
+            } else {
+                RuleVerdict::Violated
+            };
+            RuleStatus {
+                verdict,
+                violations: found.len(),
+                examples: found.iter().take(examples).map(|f| (*f).clone()).collect(),
+                rule,
+            }
+        })
+        .collect();
+
+    Ok(Some(RulesReport {
+        schema_version: crate::report::SCHEMA_VERSION,
+        scan_root: scan_root.to_owned(),
+        ruleset: ruleset.source().to_owned(),
+        rules,
+        unlisted_violations: ruleset
+            .closed_world()
+            .then(|| by_rule.get("unlisted").map_or(0, Vec::len)),
+    }))
+}
+
 fn count_source_files(report: &Report) -> usize {
     report.projects.iter().map(|p| p.source_file_count).sum()
 }

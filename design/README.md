@@ -51,7 +51,8 @@ deliberately-broken demo project per language, each asserted by
 **The gap between here and a usable product is two things:** `tropism check [FILES...]`
 ([14](14-incremental-checking.md)) and the release pipeline ([13](13-build-and-release.md)). Neither
 is large. Until both exist nobody outside this repository can run tropism at all, which makes them
-the only work that matters. Also unbuilt, and further down: three rule kinds, and the MCP server.
+the only work that matters. Also unbuilt, and further down: three rule kinds. (The MCP server has since been built, as the
+three tools in [05](05-interfaces.md).)
 
 The last five languages needed **no trait change**, which is the first real evidence that
 `LanguageProvider` is the right shape: the first four each forced one

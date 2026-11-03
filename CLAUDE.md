@@ -16,8 +16,9 @@ Two scopes over one analysis and one ruleset:
   scoped to the files given. See [design/14-incremental-checking.md](design/14-incremental-checking.md).
 - **`tropism analyze`** — the whole repository, in CI or by hand. Every check.
 
-A third surface, an **MCP server** for coding agents, is specified and deliberately last — see
-"Dependency rules" below for why it moved.
+A third surface, an **MCP server** for coding agents (`tropism-mcp`), exposes the same ruleset over
+stdio as three tools — `tropism_check`, `tropism_rules`, `tropism_summary`. It was deliberately built
+last, and deliberately small — see "Dependency rules" below for why.
 
 ## What it detects
 
@@ -153,9 +154,11 @@ whole-repository run, where a human reads the output before acting; only what is
 automatically runs at commit time.
 
 `tropism check` and the release pipeline are both built, so the hook is real and binaries ship. The
-MCP server was once the recommended next build and is now last: its flagship query needs a resolved
+MCP server was once the recommended next build and was built last: its flagship query needs a resolved
 tree, and four of the ten ecosystems have no lockfile edges — see the revision at the end of
-[design/09-product-review.md](design/09-product-review.md).
+[design/09-product-review.md](design/09-product-review.md). What shipped is the three-tool surface
+that survived that review; `tropism_check` is a thin adapter over `pipeline::check`, so the agent and
+the hook get the same answer by construction.
 
 **Scoping is the part to understand before changing `check`.** A violation is an edge, an edge has
 two ends, and the violation belongs to the file at the *source* end. If `api/user.ts` gains an import
@@ -278,8 +281,8 @@ backend that is never enabled and from a UEFI-only crate. Nothing is wrong with 
 `design/` holds the spec — architecture, data model, the language-provider trait, per-check
 algorithms, CLI/MCP surfaces, testing strategy, verified crate choices, and open questions. Start at
 [design/README.md](design/README.md), and read the relevant document before implementing in that
-area: much of it is not re-derivable from the code, and the parts still unbuilt (the MCP server, the
-remaining rule kinds) exist only there.
+area: much of it is not re-derivable from the code, and the parts still unbuilt (the deferred MCP tools,
+the remaining rule kinds) exist only there.
 
 The build order is at the end of [design/07-open-questions.md](design/07-open-questions.md).
 
@@ -293,7 +296,7 @@ crates/tropism-core/   model, discovery, LanguageProvider trait, analyzers, repo
 crates/tropism-lang/   provider implementations, one feature-gated module per language — go,
                     javascript, rust, csharp, python, ruby, java, swift, cpp
 crates/tropism/    binary `tropism`      — clap front-end, text and JSON renderers
-crates/tropism-mcp/    binary `tropism-mcp`  — placeholder until build-order step 6
+crates/tropism-mcp/    binary `tropism-mcp`  — MCP server over stdio (rmcp): check, rules, summary
 ```
 
 `tropism-core` depends on nothing above it. Analysis logic lives there and nowhere else; both binaries
@@ -409,7 +412,8 @@ resolution problem.
 
 Not built, in priority order: a baseline for whole-repository runs (D8, designed in
 design/17-baselines.md), the unimplemented rule kinds above, an `undeclared-sibling` check (D38 —
-measure against the ten-repo corpus before building), and the MCP server.
+measure against the ten-repo corpus before building), and the deferred MCP tools
+(`tropism_package_path`, `tropism_findings`, … — see design/05-interfaces.md).
 
 **Before extending the checks, read [design/10-js-evaluation.md](design/10-js-evaluation.md).**
 Manifest hygiene (`unused-dep` / `missing-dep`) measured a **63% false-positive rate** on real

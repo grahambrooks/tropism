@@ -255,7 +255,7 @@ follows from it:
    everything. That is where a baseline earns its place, and not before.
 4. **The unimplemented rule kinds** — `require`, `transitive`, and version constraints, all
    currently rejected at parse time rather than silently ignored. `layers` is built.
-5. **MCP, scoped down** — three tools rather than seven. Last, not first: see
+5. ~~**MCP, scoped down**~~ — **built** (#51): three tools rather than seven. Last, not first: see
    [05-interfaces.md](05-interfaces.md).
 
 What moved *out* of the plan: more languages (all ten are built), and MCP-first (the gate failed).

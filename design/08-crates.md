@@ -65,14 +65,16 @@ Queued for the stages that need them, verified but not yet declared:
 | ------------- | ------- | ------------ | --------------------------------------- |
 | `rayon`       | 1.12.0  | 2026-04-14   | Whenever parsing becomes the bottleneck |
 | `semver`      | 1.0.28  | 2026-04-04   | Cargo-flavoured `VersionOps`            |
-| `rmcp`        | 3.0.1   | 2026-07-29   | The MCP server                          |
 | `serde-sarif` | 0.8.0   | 2025-05-09   | `--format sarif` for CI annotations     |
 
 `cargo-lock` was on this list and is no longer needed: `Cargo.lock` is small, line-oriented TOML and
 the `toml` crate already in the tree parses it directly, so the extra dependency bought nothing.
 
 `rmcp` is the official Rust MCP SDK and is actively released, so the MCP surface in
-[05-interfaces.md](05-interfaces.md) rests on maintained ground.
+[05-interfaces.md](05-interfaces.md) rests on maintained ground. **Declared** at 3.8.0 (verified
+2026-11-02) with `default-features = false` and only `server`, `macros`, `transport-io`: stdio is the
+only transport a locally launched server needs, so nothing HTTP or TLS is compiled. `tokio` comes
+with it, `current_thread` with `rt`/`macros`/`io-std` only; analysis runs on `spawn_blocking`.
 
 ## Terminal UI
 
