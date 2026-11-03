@@ -11,10 +11,11 @@
 # on demand, so CI, a release build, and a developer's laptop all compile with the
 # same compiler.
 #
-# Keep `channel` in step with `rust-version` in Cargo.toml. The msrv job in ci.yml
-# pins the same number a third time, deliberately: it is what proves the declared
-# floor is real rather than aspirational.
+# Keep `channel` identical to `rust-version` in Cargo.toml; CI fails if they drift.
+# The msrv job in ci.yml checks the two agree and then builds with
+# `cargo +<rust-version>` explicitly: that is what proves the declared floor is
+# real rather than aspirational.
 
 [toolchain]
-channel = "1.99.0"
+channel = "1.99.1"
 components = ["rustfmt", "clippy"]

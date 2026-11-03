@@ -4,6 +4,8 @@ on:
   pull_request:
   push:
     branches: [main]
+  schedule:
+    - cron: "17 6 * * 1" # weekly, so new RustSec advisories surface without a push
 
 # A second push to the same branch cancels the first; main is never cancelled
 # because release keys off its result.
@@ -11,71 +13,104 @@ concurrency:
   group: ci-${{ github.ref }}
   cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
 
+permissions:
+  contents: read
+
 env:
   CARGO_TERM_COLOR: always
   RUSTFLAGS: -D warnings
 
 jobs:
+  check:
+    name: fmt, clippy, test
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v7
+      # Installs the toolchain (and rustfmt/clippy) pinned in rust-toolchain.toml.
+      - run: rustup toolchain install
+      - uses: Swatinem/rust-cache@v2
+      - run: cargo fmt --all --check
+      - run: cargo clippy --workspace --all-targets --all-features --locked -- -D warnings
+      - run: cargo test --workspace --all-targets --all-features --locked
+      # Doc-tests are excluded from --all-targets and would otherwise never run.
+      - run: cargo test --workspace --doc --all-features --locked
+
   test:
     name: test (${{ matrix.os }})
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-24.04, macos-15, windows-2022]
+        os: [macos-15, windows-2022]
     steps:
       - uses: actions/checkout@v7
-      - uses: dtolnay/rust-toolchain@stable
+      - run: rustup toolchain install
       - uses: Swatinem/rust-cache@v2
-      - run: cargo test --workspace --all-targets
-      # Doc-tests are excluded from --all-targets and would otherwise never run.
-      - run: cargo test --workspace --doc
-
-  lint:
-    runs-on: ubuntu-24.04
-    steps:
-      - uses: actions/checkout@v7
-      - uses: dtolnay/rust-toolchain@stable
-        with:
-          components: rustfmt, clippy
-      - uses: Swatinem/rust-cache@v2
-      - run: cargo fmt --all --check
-      - run: cargo clippy --workspace --all-targets -- -D warnings
+      - run: cargo test --workspace --all-targets --locked
+      - run: cargo test --workspace --doc --locked
 
   features:
     name: build without default features
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v7
-      - uses: dtolnay/rust-toolchain@stable
+      - run: rustup toolchain install
       - uses: Swatinem/rust-cache@v2
       # The TUI must stay optional. Nothing else proves it.
-      - run: cargo build -p tropism --no-default-features
+      - run: cargo build -p tropism --no-default-features --locked
 
   msrv:
-    name: minimum supported rust version
+    name: msrv — rust-version is the toolchain we build with
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v7
-      # Must match `rust-version` in Cargo.toml, which tracks latest stable.
+      # `rust-version` tracks latest stable, and this job is what keeps that claim
+      # honest: a dependency that raises the real floor fails here loudly, instead
+      # of silently making `rust-version` a fiction — which is exactly what had
+      # happened at 1.85.
       #
-      # Pinned rather than `@stable`, and that is the whole point of the job: when
-      # stable moves ahead, this keeps building at the version the manifest still
-      # claims. A dependency that raises the real floor then fails here loudly,
-      # instead of silently making `rust-version` a fiction — which is exactly what
-      # had happened at 1.85.
-      - uses: dtolnay/rust-toolchain@1.98.1
+      # It used to pin `dtolnay/rust-toolchain@<ver>` and run bare `cargo check`.
+      # That tested nothing: rust-toolchain.toml overrides whatever was installed,
+      # so the build ran on the pinned channel regardless. Now the job reads the
+      # floor from Cargo.toml, requires rust-toolchain.toml to agree, and builds
+      # with `cargo +<floor>` explicitly.
+      - name: rust-version and rust-toolchain.toml agree
+        id: floor
+        run: |
+          set -euo pipefail
+          declared=$(grep -m1 -E '^rust-version *=' Cargo.toml | cut -d'"' -f2)
+          pinned=$(grep -m1 -E '^channel *=' rust-toolchain.toml | cut -d'"' -f2)
+          echo "rust-version=$declared  channel=$pinned"
+          if [ "$declared" != "$pinned" ]; then
+            echo "::error::rust-version ($declared) and rust-toolchain.toml channel ($pinned) have drifted"
+            exit 1
+          fi
+          echo "version=$declared" >> "$GITHUB_OUTPUT"
+      - run: rustup toolchain install ${{ steps.floor.outputs.version }} --profile minimal
       - uses: Swatinem/rust-cache@v2
-      - run: cargo check --workspace --all-targets
+      # `cargo +<floor>` explicitly, not bare `cargo`: rust-toolchain.toml would
+      # otherwise override whatever was installed and the job would test nothing.
+      - run: cargo +${{ steps.floor.outputs.version }} check --workspace --all-targets --all-features --locked
+
+  audit:
+    name: cargo audit
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v7
+      - uses: taiki-e/install-action@v2
+        with:
+          tool: cargo-audit
+      # Honors .cargo/audit.toml (justified ignores only).
+      - run: cargo audit
 
   dogfood:
     name: tropism analyzes tropism
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v7
-      - uses: dtolnay/rust-toolchain@stable
+      - run: rustup toolchain install
       - uses: Swatinem/rust-cache@v2
-      - run: cargo build -p tropism
+      - run: cargo build -p tropism --locked
       # tropism.toml declares that the CLI and MCP server stay independent, that
       # core is a leaf, and that the tree-sitter grammars stay inside tropism-lang.
       # This is what makes those rules load-bearing rather than decorative.
