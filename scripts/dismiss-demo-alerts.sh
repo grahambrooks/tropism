@@ -4,7 +4,8 @@
 # in demo/.
 #
 # Why this script exists rather than a config file: **Dependabot alerts cannot be
-# filtered by path.** `.github/dependabot.yml` controls update *pull requests*;
+# filtered by path.** Update *pull requests* come from Renovate (auto-managed's
+# config/renovate.json, which disables demo/**);
 # alerts come from the dependency graph, which discovers every manifest by
 # filename. Auto-triage rules can match severity, package, and CWE — not
 # directory. The only directories the graph skips are `third-party/`, `vendor(s)/`
