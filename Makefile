@@ -14,7 +14,7 @@
 #   make version        print the next version
 #   make check          what CI runs, locally
 #
-# CalVer is YYYY.M.MICRO, where MICRO counts the releases already cut this month.
+# CalVer is YYYY.M.MICRO, where MICRO is one past the highest tagged this month.
 # The month has no leading zero: 2026.08.1 is not valid SemVer, and cargo
 # requires SemVer.
 
@@ -24,7 +24,13 @@ SHELL := /usr/bin/env bash
 
 YEAR    := $(shell date -u +%Y)
 MONTH   := $(shell date -u +%-m)
-MICRO    = $(shell git tag -l 'v$(YEAR).$(MONTH).*' | wc -l | tr -d ' ')
+# One past the highest MICRO already tagged this month, not the *number* of
+# tags. Counting assumes the month's tags run contiguously from .0; they do not
+# (v2026.11.1 was this month's first), and a count then names a version that is
+# already tagged. Same rule as brake's Makefile.
+MICRO    = $(shell last=$$(git tag -l 'v$(YEAR).$(MONTH).*' \
+             | sed -n 's/^v[0-9][0-9]*\.[0-9][0-9]*\.\([0-9][0-9]*\)$$/\1/p' \
+             | sort -n | tail -1); echo $$(( $${last:--1} + 1 )))
 VERSION  = $(YEAR).$(MONTH).$(MICRO)
 TAG      = v$(VERSION)
 
