@@ -84,6 +84,26 @@ Or take the archive for your platform from [releases](https://github.com/grahamb
 `tropism` (and `tropism-mcp`, the MCP server) on your PATH. The binaries sit at the root of each
 archive, and every release carries a `SHA256SUMS`.
 
+On Windows, without admin rights, that is a per-user directory and the user PATH. In PowerShell:
+
+```powershell
+# Windows — the latest release's zip into %LOCALAPPDATA%\Programs\tropism, then onto the user PATH
+$tag = (Invoke-RestMethod https://api.github.com/repos/grahambrooks/tropism/releases/latest).tag_name
+$zip = "$env:TEMP\tropism.zip"
+$dir = "$env:LOCALAPPDATA\Programs\tropism"
+Invoke-WebRequest "https://github.com/grahambrooks/tropism/releases/download/$tag/tropism-$tag-x86_64-pc-windows-msvc.zip" -OutFile $zip
+(Get-FileHash $zip -Algorithm SHA256).Hash   # compare with the zip's line in SHA256SUMS
+Expand-Archive $zip -DestinationPath $dir -Force
+$path = [Environment]::GetEnvironmentVariable('Path', 'User')
+if (($path -split ';') -notcontains $dir) {
+  [Environment]::SetEnvironmentVariable('Path', "$path;$dir", 'User')
+}
+```
+
+Open a new terminal for the PATH change to apply. Re-running the same lines upgrades in place. The
+binaries are unsigned, so SmartScreen or an application-control policy may still object; see
+[design/16-signing.md](design/16-signing.md).
+
 ```sh
 tropism check                        # the rules, over everything
 tropism check src/api/user.ts        # the rules, scoped to a change
