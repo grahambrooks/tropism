@@ -15,12 +15,11 @@ version = "2026.11.3"
 edition = "2024"
 license = "MIT"
 repository = "https://github.com/grahambrooks/tropism"
-homepage = "https://github.com/grahambrooks/tropism"
 # Tracks latest stable. It was 1.85 — the 2024 edition's minimum — but that was
 # never true in practice: `ignore`, `ratatui`, and `time` all require 1.88, so
 # `cargo check` refused before compiling a line and the msrv job had been red.
 # A declared floor nothing is tested at is worse than an honest one.
-rust-version = "1.99.1"
+rust-version = "1.100.0"
 
 # Versions verified against crates.io on 2026-07-30. See design/08-crates.md for the
 # rationale behind each choice and the ones deliberately deferred.
@@ -29,41 +28,41 @@ tropism-core = { path = "crates/tropism-core", version = ">=2026.11.2" }
 tropism-lang = { path = "crates/tropism-lang", version = ">=2026.11.2" }
 
 anyhow = "1.0.104"
-thiserror = "2.0.19"
+thiserror = "2.0.21"
 serde = { version = "1.0.229", features = ["derive"] }
-serde_json = "1.0.151"
-clap = { version = "4.6.4", features = ["derive"] }
-ignore = "0.4.31"
-globset = "0.4.19"
-camino = { version = "1.2.5", features = ["serde1"] }
-blake3 = "1.8.5"
+serde_json = "1.0.154"
+clap = { version = "4.6.9", features = ["derive"] }
+ignore = "0.4.34"
+globset = "0.4.21"
+camino = { version = "1.2.6", features = ["serde1"] }
+blake3 = "1.8.7"
 # The parse stage is pure per file, which is what makes it safe to parallelise.
 # Specified in design/01-architecture.md from the start; added for D4.
 rayon = "1.12.0"
-annotate-snippets = "0.12.16"
+annotate-snippets = "0.12.18"
 anstream = "1.0.0"
 anstyle = "1.0.14"
 ratatui = "0.30.2"
-tree-sitter = "0.27.0"
+tree-sitter = "0.27.2"
 tree-sitter-go = "0.25.0"
 tree-sitter-javascript = "0.25.0"
 tree-sitter-typescript = "0.23.2"
 tree-sitter-rust = "0.24.2"
-tree-sitter-c-sharp = "0.23.5"
+tree-sitter-c-sharp = "0.24.0"
 # Verified against crates.io on 2026-08-01; see design/08-crates.md.
 tree-sitter-python = "0.25.0"
 tree-sitter-java = "0.23.5"
 tree-sitter-ruby = "0.23.1"
 tree-sitter-cpp = "0.23.4"
-tree-sitter-swift = "0.7.3"
+tree-sitter-swift = "0.7.4"
 quick-xml = "0.42.0"
-toml = "1.1.4"
+toml = "1.2.2"
 petgraph = "0.8.3"
-insta = "1.48.0"
+insta = "1.49.0"
 # The MCP server (build-order step 6). rmcp is the official Rust MCP SDK; stdio is
 # the only transport an agent-launched local server needs, so nothing HTTP is built.
 # Verified against crates.io on 2026-11-02; see design/08-crates.md.
-rmcp = { version = "3.8.0", default-features = false, features = ["server", "macros", "transport-io"] }
+rmcp = { version = "3.11.0", default-features = false, features = ["server", "macros", "transport-io"] }
 tokio = { version = "1.54.1", default-features = false, features = ["rt", "macros", "io-std"] }
 
 [workspace.lints.rust]
