@@ -23,6 +23,7 @@
 use std::process::Command;
 
 use camino::{Utf8Path, Utf8PathBuf};
+use tropism_core::telemetry::{self, Kind, Span};
 
 /// Files staged for commit, relative to the repository root.
 ///
@@ -60,15 +61,38 @@ pub fn files_since(repo: &Utf8Path, base: &str) -> anyhow::Result<Vec<Utf8PathBu
     )
 }
 
+/// A span for one `git` subprocess. Named for the git subcommand only: the
+/// arguments carry refs and paths, which never go into telemetry.
+pub(crate) fn git_span(subcommand: &str) -> Span {
+    let mut span = telemetry::span(&format!("run git {subcommand}"));
+    span.set_type("exec")
+        .set_kind(Kind::Client)
+        .attr("process.executable.name", "git");
+    span
+}
+
+/// Records how a `git` subprocess ended on its span.
+pub(crate) fn finish_git_span(span: &mut Span, status: std::process::ExitStatus) {
+    let code = status.code().unwrap_or(-1);
+    span.attr("process.exit.code", code);
+    if !status.success() {
+        span.fail(&format!("exit_{code}"));
+    }
+}
+
 fn run(repo: &Utf8Path, args: &[&str]) -> anyhow::Result<Vec<Utf8PathBuf>> {
+    let mut span = git_span(args.first().copied().unwrap_or_default());
     let output = Command::new("git")
         .arg("-C")
         .arg(repo.as_std_path())
         .args(args)
         .output()
         .map_err(|error| {
+            span.fail("spawn");
             anyhow::anyhow!("running `git` failed: {error}. Pass file paths directly instead")
         })?;
+    finish_git_span(&mut span, output.status);
+    drop(span);
 
     if !output.status.success() {
         let stderr = String::from_utf8_lossy(&output.stderr);

@@ -20,6 +20,7 @@ use crate::report::{
     SkippedFile,
 };
 use crate::rules::{DependencyEdge, EdgeLevel, ExcludeSet, PackageUse, Ruleset};
+use crate::telemetry;
 use crate::workspace::{self, WorkspaceMap};
 
 pub struct Options {
@@ -547,6 +548,12 @@ pub fn explain(
     // modules exist, and answering from one file would call every internal import
     // external.
     let files = source_files(project, provider, &pass);
+    let language = project.language.as_str();
+    let mut identify_span = telemetry::span(&format!("identify {language} modules"));
+    identify_span
+        .set_type("parse")
+        .attr("ecosystem", language)
+        .attr("files", files.len());
     let mut module_files: BTreeMap<String, Utf8PathBuf> = BTreeMap::new();
     for candidate in &files {
         let Ok(text) = std::fs::read_to_string(scan_root.join(candidate)) else {
@@ -556,6 +563,7 @@ pub fn explain(
         let owner = provider.module_id_for_file(candidate, &text, &default_id);
         module_files.entry(owner.name).or_insert(candidate.clone());
     }
+    drop(identify_span);
     let known_modules: BTreeSet<String> = module_files.keys().cloned().collect();
 
     let text = std::fs::read_to_string(scan_root.join(file))
@@ -831,7 +839,9 @@ fn parse_manifests<'a>(
     projects: &'a [Project],
     providers: &[&dyn LanguageProvider],
 ) -> Vec<(&'a Project, crate::model::Manifest)> {
-    projects
+    let mut span = telemetry::span("parse manifests");
+    span.set_type("parse").attr("files", projects.len());
+    let parsed: Vec<_> = projects
         .iter()
         .filter_map(|project| {
             let provider = providers
@@ -841,7 +851,9 @@ fn parse_manifests<'a>(
             let text = std::fs::read_to_string(scan_root.join(manifest_path)).ok()?;
             Some((project, provider.parse_manifest(manifest_path, &text).ok()?))
         })
-        .collect()
+        .collect();
+    span.attr("count", parsed.len());
+    parsed
 }
 
 /// Package name -> the project that publishes it, so a dependency on a sibling
@@ -1139,6 +1151,8 @@ fn resolve_cross_project_edges(
     indexes: &[ProjectIndex],
     providers: &[&dyn LanguageProvider],
 ) {
+    let mut span = telemetry::span("resolve cross-project edges");
+    span.set_type("analyze").attr("count", input.edges.len());
     for edge in &mut input.edges {
         if edge.to_module.is_some() || edge.from_module.is_none() {
             continue;
@@ -1198,6 +1212,8 @@ fn add_project_cycles(report: &mut Report, input: &RuleInput) {
     if roots.len() < 2 {
         return;
     }
+    let mut span = telemetry::span("detect cross-project cycles");
+    span.set_type("analyze").attr("count", input.edges.len());
 
     let mut graph = ModuleGraph::new();
     // One representative edge per node pair, for evidence.
@@ -1316,8 +1332,13 @@ fn apply_rules(
     workspaces: &WorkspaceMap,
 ) {
     let rule_checks = [CheckId::ModuleRule, CheckId::PackageRule];
+    let mut span = telemetry::span("evaluate rules");
+    span.set_type("analyze")
+        .attr("edges", input.edges.len())
+        .attr("uses", input.uses.len());
 
     let Some(ruleset) = ruleset else {
+        span.attr("unavailable", true);
         let reason = if options.use_rules {
             format!(
                 "no {} found; see design/11-dependency-rules.md",
@@ -1342,6 +1363,7 @@ fn apply_rules(
         .map(|p| p.project.root.clone())
         .collect();
     let (findings, stale) = ruleset.evaluate(&input.edges, &input.uses, workspaces, &project_roots);
+    span.attr("count", findings.len());
 
     let mut counts: BTreeMap<(Utf8PathBuf, CheckId), usize> = BTreeMap::new();
     for finding in findings {
@@ -1416,6 +1438,23 @@ fn analyze_project(
     provider: &dyn LanguageProvider,
     pass: &Pass<'_>,
 ) -> anyhow::Result<(ProjectReport, Vec<SkippedFile>, RuleInput, ProjectIndex)> {
+    let language = project.language.as_str();
+    let mut project_span = telemetry::span(&format!("analyze {language} project"));
+    project_span.set_type("analyze").attr("ecosystem", language);
+    let result = analyze_project_steps(project, provider, pass);
+    match &result {
+        Ok((report, ..)) => project_span.attr("files", report.source_file_count),
+        Err(_) => project_span.fail("project"),
+    };
+    result
+}
+
+fn analyze_project_steps(
+    project: &Project,
+    provider: &dyn LanguageProvider,
+    pass: &Pass<'_>,
+) -> anyhow::Result<(ProjectReport, Vec<SkippedFile>, RuleInput, ProjectIndex)> {
+    let language = project.language.as_str();
     let Pass {
         scan_root,
         provided,
@@ -1435,8 +1474,19 @@ fn analyze_project(
     // expensive thing in the pass.
     let resolved_tree = match (&project.lockfile, pass.options.rules_only) {
         (Some(lockfile), false) => {
-            let text = std::fs::read_to_string(scan_root.join(lockfile))?;
-            provider.parse_lockfile(lockfile, &text)?
+            let mut span = telemetry::span(&format!("parse {language} lockfile"));
+            span.set_type("parse").attr("ecosystem", language);
+            let text = std::fs::read_to_string(scan_root.join(lockfile)).inspect_err(|_| {
+                span.fail("io");
+            })?;
+            span.attr("bytes", text.len());
+            let tree = provider.parse_lockfile(lockfile, &text).inspect_err(|_| {
+                span.fail("parse");
+            })?;
+            if let Some(tree) = &tree {
+                span.attr("count", tree.len());
+            }
+            tree
         }
         _ => None,
     };
@@ -1491,6 +1541,11 @@ fn analyze_project(
     // sees for a module, so a different order would change which file a finding
     // cites. Determinism is a published property of this tool — same input, same
     // bytes — and it must not become a function of how many cores the machine has.
+    let mut extract_span = telemetry::span(&format!("extract {language} imports"));
+    extract_span
+        .set_type("parse")
+        .attr("ecosystem", language)
+        .attr("files", file_count);
     let outcomes: Vec<FileOutcome> = files
         .par_iter()
         .map(|file| {
@@ -1537,6 +1592,7 @@ fn analyze_project(
             }
         })
         .collect();
+    drop(extract_span);
 
     let mut parsed_files = Vec::new();
     for outcome in outcomes {
@@ -1578,6 +1634,8 @@ fn analyze_project(
         path_aliases: &path_aliases,
     };
 
+    let mut resolve_span = telemetry::span(&format!("resolve {language} imports"));
+    resolve_span.set_type("analyze").attr("ecosystem", language);
     for (file, owner, extracted) in parsed_files {
         for import in extracted {
             let target = provider.resolve_import(&import, &file, &ctx_for_resolution);
@@ -1642,6 +1700,8 @@ fn analyze_project(
     // the name. Computed here rather than in the analyzer because it is a fact
     // about resolution, and it has to be disclosed even on a `rules_only` run
     // where no analyzer executes at all.
+    resolve_span.attr("count", imports.len());
+    drop(resolve_span);
     let exemptions = sibling_exemptions(&manifest.deps, &imports, provided);
 
     // Kept before `manifest.deps` is moved into the analysis context; the index
@@ -1778,6 +1838,9 @@ fn source_files(
         options,
         ..
     } = *pass;
+    let language = project.language.as_str();
+    let mut span = telemetry::span(&format!("list {language} source files"));
+    span.set_type("discover").attr("ecosystem", language);
     let extensions = provider.source_extensions();
     let project_dir = scan_root.join(&project.root);
 
@@ -1800,6 +1863,7 @@ fn source_files(
         .collect();
 
     files.sort();
+    span.attr("files", files.len());
     files
 }
 

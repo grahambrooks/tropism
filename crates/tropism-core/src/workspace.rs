@@ -235,6 +235,19 @@ pub fn resolve(
     providers: &[&dyn LanguageProvider],
     configured: &[WorkspaceSpec],
 ) -> WorkspaceMap {
+    let mut span = crate::telemetry::span("resolve workspaces");
+    span.set_type("analyze");
+    let map = resolve_map(scan_root, projects, providers, configured);
+    span.attr("count", map.workspaces().len());
+    map
+}
+
+fn resolve_map(
+    scan_root: &Utf8Path,
+    projects: &[Project],
+    providers: &[&dyn LanguageProvider],
+    configured: &[WorkspaceSpec],
+) -> WorkspaceMap {
     let mut workspaces: Vec<Workspace> = Vec::new();
     let mut by_project: BTreeMap<Utf8PathBuf, usize> = BTreeMap::new();
 

@@ -27,6 +27,7 @@ use serde::Deserialize;
 use serde_json::{Value, json};
 use tropism_core::pipeline::{self, CheckScope};
 use tropism_core::report::{CheckId, CheckStatus, Finding, Severity};
+use tropism_core::telemetry;
 
 /// Findings returned per `tropism_check` call unless the caller asks otherwise.
 const DEFAULT_LIMIT: usize = 50;
@@ -94,7 +95,7 @@ impl Tropism {
     )]
     async fn tropism_check(&self, Parameters(args): Parameters<CheckArgs>) -> CallToolResult {
         let root = self.default_root.clone();
-        blocking(move || check(&root, args)).await
+        traced("tropism_check", move || check(&root, args)).await
     }
 
     #[tool(
@@ -106,7 +107,7 @@ impl Tropism {
     )]
     async fn tropism_rules(&self, Parameters(args): Parameters<RulesArgs>) -> CallToolResult {
         let root = self.default_root.clone();
-        blocking(move || rules(&root, args)).await
+        traced("tropism_rules", move || rules(&root, args)).await
     }
 
     #[tool(
@@ -121,7 +122,7 @@ impl Tropism {
     )]
     async fn tropism_summary(&self, Parameters(args): Parameters<SummaryArgs>) -> CallToolResult {
         let root = self.default_root.clone();
-        blocking(move || summary(&root, args)).await
+        traced("tropism_summary", move || summary(&root, args)).await
     }
 }
 
@@ -141,6 +142,25 @@ impl ServerHandler for Tropism {
         ))
         .with_instructions(INSTRUCTIONS)
     }
+}
+
+/// One tool call, as its own trace: a root named for the tool, with the
+/// analysis steps beneath it. Exported in the background when the call ends, and
+/// a no-op when no habit endpoint is configured.
+async fn traced(
+    tool: &'static str,
+    work: impl FnOnce() -> Result<Value, String> + Send + 'static,
+) -> CallToolResult {
+    let mut span = telemetry::mcp("tropism-mcp", env!("CARGO_PKG_VERSION"), tool);
+    blocking(move || {
+        // Entered on the blocking thread, so the pipeline's spans nest under it.
+        let result = span.scope(work);
+        if result.is_err() {
+            span.fail("tool_error");
+        }
+        result
+    })
+    .await
 }
 
 /// Analysis is synchronous and CPU-bound, so it runs on the blocking pool rather

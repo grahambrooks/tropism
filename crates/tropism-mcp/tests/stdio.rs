@@ -21,6 +21,8 @@ impl Server {
         let root = concat!(env!("CARGO_MANIFEST_DIR"), "/../..");
         let mut child = Command::new(env!("CARGO_BIN_EXE_tropism-mcp"))
             .arg(root)
+            // Test runs are not real work: keep them out of habit.
+            .env("HABIT_TELEMETRY", "off")
             .stdin(Stdio::piped())
             .stdout(Stdio::piped())
             .stderr(Stdio::inherit())

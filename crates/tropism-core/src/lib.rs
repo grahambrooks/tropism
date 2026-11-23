@@ -12,6 +12,7 @@ pub mod pipeline;
 pub mod provider;
 pub mod report;
 pub mod rules;
+pub mod telemetry;
 pub mod workspace;
 
 pub use model::{DeclaredDep, DepKind, Language, Manifest, Project, Provenance, ResolvedDep};

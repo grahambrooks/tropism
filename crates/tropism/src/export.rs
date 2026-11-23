@@ -88,6 +88,10 @@ pub fn export(opts: &ExportOptions, out: &mut impl Write) -> Result<ExportSummar
     let mut summary = ExportSummary::default();
     for (repo, path) in discover(&opts.mirrors)? {
         summary.repositories += 1;
+        // One per repository, so each one's analysis nests under it. Never named
+        // for the repository: that is an identity.
+        let mut repo_span = tropism_core::telemetry::span("export repository");
+        repo_span.set_type("analyze");
         let commit = match git(&path, &["rev-parse", "HEAD"]) {
             Ok(c) => c,
             Err(e) => {
@@ -112,6 +116,7 @@ pub fn export(opts: &ExportOptions, out: &mut impl Write) -> Result<ExportSummar
         };
         match repository_records(&repo, &path, &commit, seq, &providers) {
             Ok(records) => {
+                repo_span.attr("count", records.len());
                 for r in &records {
                     serde_json::to_writer(&mut *out, r)?;
                     out.write_all(b"\n")?;
@@ -128,6 +133,7 @@ pub fn export(opts: &ExportOptions, out: &mut impl Write) -> Result<ExportSummar
                 );
             }
             Err(e) => {
+                repo_span.fail("analysis");
                 eprintln!("tropism export: {repo}: {e:#}");
                 summary.failed += 1;
             }
@@ -168,12 +174,18 @@ fn discover(mirrors: &Utf8Path) -> Result<Vec<(String, Utf8PathBuf)>> {
 }
 
 fn git(path: &Utf8Path, args: &[&str]) -> Result<String> {
+    let mut span = crate::git::git_span(args.first().copied().unwrap_or_default());
     let out = Command::new("git")
         .arg("-C")
         .arg(path)
         .args(args)
         .output()
+        .inspect_err(|_| {
+            span.fail("spawn");
+        })
         .context("running git")?;
+    crate::git::finish_git_span(&mut span, out.status);
+    drop(span);
     if !out.status.success() {
         bail!(
             "git {} failed: {}",

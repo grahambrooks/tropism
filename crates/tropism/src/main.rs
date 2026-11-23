@@ -14,6 +14,7 @@ use camino::Utf8PathBuf;
 use clap::{Args, Parser, Subcommand, ValueEnum};
 use tropism_core::pipeline::{self, CheckScope};
 use tropism_core::report::Severity;
+use tropism_core::telemetry;
 
 /// Exit codes are the CI contract: a broken invocation must never look like a
 /// passing build. See `design/05-interfaces.md`.
@@ -214,19 +215,66 @@ enum Format {
     Tui,
 }
 
+impl Format {
+    fn as_str(self) -> &'static str {
+        match self {
+            Self::Auto => "auto",
+            Self::Text => "text",
+            Self::Json => "json",
+            #[cfg(feature = "tui")]
+            Self::Tui => "tui",
+        }
+    }
+}
+
+/// The span around writing a report. The format is a closed set of names, so it
+/// is safe to record; nothing else about the invocation is.
+fn render_span(format: Format) -> telemetry::Span {
+    let mut span = telemetry::span("render report");
+    span.set_type("render").attr("format", format.as_str());
+    span
+}
+
 fn parse_severity(raw: &str) -> Result<Severity, String> {
     raw.parse()
 }
 
 fn main() -> ExitCode {
     let cli = Cli::parse();
-    match cli.command {
-        Command::Analyze(args) => run(analyze(args)),
-        Command::Check(args) => run(check(args)),
-        Command::Workspaces(args) => run(workspaces(args)),
-        Command::Explain(args) => run(explain(args)),
-        Command::Export(args) => run(export(args)),
-    }
+    let subcommand = match &cli.command {
+        Command::Analyze(_) => "analyze",
+        Command::Check(_) => "check",
+        Command::Workspaces(_) => "workspaces",
+        Command::Explain(_) => "explain",
+        Command::Export(_) => "export",
+    };
+    // One trace per invocation, reported to habit when one is configured and a
+    // no-op otherwise. Only flag *names* are kept; values and positional
+    // arguments (paths, refs) are dropped by the telemetry module.
+    let args: Vec<String> = std::env::args().skip(1).collect();
+    let flags: Vec<&str> = args
+        .iter()
+        .map(String::as_str)
+        .filter(|arg| arg.starts_with('-'))
+        .collect();
+    let mut trace = telemetry::run(
+        "tropism",
+        env!("CARGO_PKG_VERSION"),
+        Some(subcommand),
+        &flags,
+    );
+
+    let result = match cli.command {
+        Command::Analyze(args) => analyze(args),
+        Command::Check(args) => check(args),
+        Command::Workspaces(args) => workspaces(args),
+        Command::Explain(args) => explain(args),
+        Command::Export(args) => export(args),
+    };
+    let code = run(result);
+    trace.exit_code(code.into());
+    drop(trace);
+    ExitCode::from(code)
 }
 
 /// Records, not findings to gate on: exits 0 unless the run itself failed.
@@ -257,6 +305,7 @@ fn workspaces(args: WorkspacesArgs) -> anyhow::Result<u8> {
     };
     let report = pipeline::workspaces(&args.path, &providers, &options)?;
 
+    let render = render_span(args.format);
     match args.format {
         Format::Json => println!("{}", report.to_json_pretty()?),
         Format::Text => anstream::print!("{}", render::text::render_workspaces(&report)),
@@ -271,6 +320,7 @@ fn workspaces(args: WorkspacesArgs) -> anyhow::Result<u8> {
         #[cfg(feature = "tui")]
         Format::Tui => anyhow::bail!("`workspaces` has no interactive view; use --format text"),
     }
+    drop(render);
     Ok(EXIT_CLEAN)
 }
 
@@ -289,6 +339,7 @@ fn explain(args: ExplainArgs) -> anyhow::Result<u8> {
         report.imports.retain(|import| import.raw.contains(filter));
     }
 
+    let render = render_span(args.format);
     match args.format {
         Format::Json => println!("{}", report.to_json_pretty()?),
         Format::Text => anstream::print!("{}", render::text::render_explain(&report)),
@@ -302,15 +353,16 @@ fn explain(args: ExplainArgs) -> anyhow::Result<u8> {
         #[cfg(feature = "tui")]
         Format::Tui => anyhow::bail!("`explain` has no interactive view; use --format text"),
     }
+    drop(render);
     Ok(EXIT_CLEAN)
 }
 
-fn run(result: anyhow::Result<u8>) -> ExitCode {
+fn run(result: anyhow::Result<u8>) -> u8 {
     match result {
-        Ok(code) => ExitCode::from(code),
+        Ok(code) => code,
         Err(error) => {
             anstream::eprintln!("tropism: {error:#}");
-            ExitCode::from(EXIT_ERROR)
+            EXIT_ERROR
         }
     }
 }
@@ -352,6 +404,7 @@ fn check(args: CheckArgs) -> anyhow::Result<u8> {
 
     let outcome = pipeline::check(&args.path, &providers, &options, &scope)?;
 
+    let render = render_span(args.format);
     match args.format {
         Format::Json => println!("{}", outcome.report.to_json_pretty()?),
         Format::Text => anstream::print!("{}", render::text::render_check(&outcome)),
@@ -365,6 +418,7 @@ fn check(args: CheckArgs) -> anyhow::Result<u8> {
         #[cfg(feature = "tui")]
         Format::Tui => render::tui::run(&outcome.report)?,
     }
+    drop(render);
 
     let triggered = outcome
         .report
@@ -385,6 +439,7 @@ fn analyze(args: AnalyzeArgs) -> anyhow::Result<u8> {
 
     // `auto` never resolves to the TUI: it has to stay safe under a pipe, in CI, and
     // under a redirect. The interactive browser is always an explicit request.
+    let render = render_span(args.format);
     match args.format {
         Format::Json => println!("{}", report.to_json_pretty()?),
         Format::Text => anstream::print!("{}", render::text::render(&report)),
@@ -398,6 +453,7 @@ fn analyze(args: AnalyzeArgs) -> anyhow::Result<u8> {
         #[cfg(feature = "tui")]
         Format::Tui => render::tui::run(&report)?,
     }
+    drop(render);
 
     let triggered = report.max_severity().is_some_and(|max| max >= args.fail_on);
     Ok(if triggered { EXIT_FINDINGS } else { EXIT_CLEAN })

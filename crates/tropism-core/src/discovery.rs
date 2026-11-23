@@ -39,6 +39,22 @@ pub fn discover(
     respect_ignore: bool,
     exclude: &ExcludeSet,
 ) -> Result<Vec<Project>, DiscoveryError> {
+    let mut span = crate::telemetry::span("discover projects");
+    span.set_type("discover");
+    let found = discover_projects(scan_root, providers, respect_ignore, exclude);
+    match &found {
+        Ok(projects) => span.attr("count", projects.len()),
+        Err(_) => span.fail("discovery"),
+    };
+    found
+}
+
+fn discover_projects(
+    scan_root: &Utf8Path,
+    providers: &[&dyn LanguageProvider],
+    respect_ignore: bool,
+    exclude: &ExcludeSet,
+) -> Result<Vec<Project>, DiscoveryError> {
     if !scan_root.exists() {
         return Err(DiscoveryError::MissingRoot(scan_root.to_owned()));
     }
@@ -168,6 +184,11 @@ pub fn count_exclusions(
         return counts;
     }
 
+    // A second walk of the whole tree, so it is worth seeing on its own.
+    let mut span = crate::telemetry::span("count excluded files");
+    span.set_type("discover").attr("count", counts.len());
+    let mut walked = 0usize;
+
     let walker = WalkBuilder::new(scan_root)
         .standard_filters(respect_ignore)
         .require_git(false)
@@ -183,11 +204,13 @@ pub fn count_exclusions(
         let Some(path) = Utf8Path::from_path(entry.path()) else {
             continue;
         };
+        walked += 1;
         let relative = relativize(scan_root, path);
         if let Some(pattern) = exclude.excluded_by(&relative) {
             *counts.entry(pattern.to_owned()).or_default() += 1;
         }
     }
+    span.attr("files", walked);
     counts
 }
 

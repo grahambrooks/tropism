@@ -17,6 +17,8 @@ fn fixture(name: &str) -> String {
 fn tropism(args: &[&str]) -> Output {
     Command::new(env!("CARGO_BIN_EXE_tropism"))
         .args(args)
+        // Test runs are not real work: keep them out of habit.
+        .env("HABIT_TELEMETRY", "off")
         .output()
         .expect("tropism did not start")
 }

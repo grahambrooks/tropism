@@ -162,6 +162,11 @@ pub fn run_all(ctx: &AnalysisContext) -> (BTreeMap<CheckId, CheckStatus>, Vec<Fi
 
     let mut statuses = BTreeMap::new();
     let mut findings = Vec::new();
+    // One span for all six: each typically takes microseconds, below what is
+    // worth a span of its own.
+    let mut span = crate::telemetry::span("run checks");
+    span.set_type("analyze")
+        .attr("ecosystem", ctx.project.language.as_str());
     for analyzer in analyzers {
         match analyzer.run(ctx) {
             CheckResult::Ran(mut found) => {
@@ -178,6 +183,7 @@ pub fn run_all(ctx: &AnalysisContext) -> (BTreeMap<CheckId, CheckStatus>, Vec<Fi
             }
         }
     }
+    span.attr("count", findings.len());
     (statuses, findings)
 }
 

@@ -340,6 +340,8 @@ impl Ruleset {
     }
 
     pub fn parse(source: Utf8PathBuf, text: &str) -> anyhow::Result<Self> {
+        let mut span = crate::telemetry::span("parse ruleset");
+        span.set_type("parse").attr("bytes", text.len());
         let raw: RawRuleset =
             toml::from_str(text).map_err(|error| anyhow::anyhow!("{source}: {error}"))?;
 
