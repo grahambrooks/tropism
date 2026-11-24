@@ -44,8 +44,8 @@ jobs:
           echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
           echo "::notice::Cargo.toml declares ${VERSION}"
 
-      # The workspace publishes bottom-up: tropism depends on tropism-lang, which
-      # depends on tropism-core. crates.io rejects a package whose path dependencies
+      # The workspace publishes bottom-up: tropism depends on tropism-lang and
+      # tropism-portfolio, each of which depends on tropism-core. crates.io rejects a package whose path dependencies
       # are not already published, so the order is not cosmetic.
       - name: Publish
         run: |
@@ -55,7 +55,7 @@ jobs:
             FLAGS="--dry-run"
             echo "::notice::dry run — nothing will be published"
           fi
-          for crate in tropism-core tropism-lang tropism; do
+          for crate in tropism-core tropism-lang tropism-portfolio tropism; do
             if cargo info "${crate}@${{ steps.version.outputs.version }}" >/dev/null 2>&1; then
               echo "::notice::${crate} ${{ steps.version.outputs.version }} is already published; skipping"
               continue

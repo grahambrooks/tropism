@@ -32,6 +32,7 @@ core = "crates/tropism-core/**"
 lang = "crates/tropism-lang/**"
 cli = "crates/tropism/**"
 mcp = "crates/tropism-mcp/**"
+portfolio = "crates/tropism-portfolio/**"
 
 # --------------------------------------------------------------------------
 # Module rules: the architecture, written down.
@@ -58,6 +59,19 @@ reason = """
 tropism-core must not depend on rendering, CLI, or transport concerns. The crate
 split makes this structural rather than a matter of discipline: core cannot
 accidentally depend on clap because it does not have it (design/01-architecture.md).
+"""
+
+# `tropism portfolio` reads several repositories at once. It reuses core's
+# finding vocabulary and its exclusions, and nothing else.
+[[module_rules]]
+id = "portfolio-builds-on-core-only"
+allow_only = { from = "portfolio", to = ["core"] }
+severity = "error"
+reason = """
+The portfolio crate is an analysis beside core, not a language provider and not
+a surface: it parses its own manifests for the fields providers discard (git
+URLs and their pins), and must not render. The CLI is its only adapter
+(design/20-portfolio.md).
 """
 
 [[module_rules]]

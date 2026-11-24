@@ -5,6 +5,7 @@
 //! `tropism-core`, so the CLI and the MCP server serialize through one implementation
 //! rather than two that can drift.
 
+pub mod portfolio;
 pub mod text;
 
 #[cfg(feature = "tui")]

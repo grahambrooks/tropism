@@ -59,3 +59,46 @@ fn a_violation_under_an_implemented_rule_exits_1_from_both_commands() {
         }
     }
 }
+
+/// `portfolio` keeps the same contract. Not knowing whose repositories are
+/// libraries is a configuration error, not an empty portfolio: with no owner,
+/// every link would be third-party and the report would be silently empty.
+#[test]
+fn portfolio_without_an_owner_exits_2_and_with_one_exits_0() {
+    let tmp = tempfile::tempdir().unwrap();
+    let root = tmp.path().to_str().unwrap();
+
+    let output = tropism(&["portfolio", root, "--format", "json"]);
+    let stderr = String::from_utf8_lossy(&output.stderr);
+    assert_eq!(output.status.code(), Some(2), "{stderr}");
+    assert!(stderr.contains("--owner"), "{stderr}");
+
+    let output = tropism(&["portfolio", root, "--owner", "acme", "--json"]);
+    assert_eq!(
+        output.status.code(),
+        Some(0),
+        "{}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+    let report: serde_json::Value = serde_json::from_slice(&output.stdout).unwrap();
+    assert_eq!(report["schema"], "tropism-portfolio");
+    // An empty root is said to be empty, not reported as a clean portfolio.
+    assert!(
+        report["notes"][0]["message"]
+            .as_str()
+            .unwrap()
+            .contains("no git repositories")
+    );
+
+    std::fs::write(
+        tmp.path().join("tropism-portfolio.toml"),
+        "owner = \"acme\"\n[[rules]]\nid = \"x\"\nrequire = true\n",
+    )
+    .unwrap();
+    let output = tropism(&["portfolio", root, "--json"]);
+    assert_eq!(
+        output.status.code(),
+        Some(2),
+        "an unknown rule key must not load"
+    );
+}

@@ -114,6 +114,23 @@ ids. It exits 0 unless the run itself failed: a repository that fails is reporte
 `git` runs here only to read each mirror's commit and commit time, in the CLI, as `check --staged`
 does; tropism-core still sees a directory.
 
+### `tropism portfolio`: links between repositories
+
+```
+tropism portfolio [ROOTS...] [--owner O] [--fetch] [--rules FILE | --no-rules]
+                  [--format auto|text|json | --json] [--fail-on SEV]
+```
+
+Reads every checkout under the roots (a root that is a repository, or the repositories directly
+inside it) and reports which of the owner's repositories use which: Cargo, Go, npm, and installed
+binaries. Its JSON is a **separate versioned contract** (`schema: "tropism-portfolio"`,
+`schema_version: 1`) whose findings reuse the shape and the core types of the one above. Rules come
+from `tropism-portfolio.toml` in the first root. Exit codes are the same contract: `2` for a missing
+owner or a rules file that does not load. Specified in [20-portfolio.md](20-portfolio.md).
+
+`git` runs here, read-only, in the `tropism-portfolio` crate: remotes, tags, and commit ranges. It is
+history, not resolution; nothing is fetched unless `--fetch` lists remote tags with `ls-remote`.
+
 ### The interactive browser (`--format tui`)
 
 A `ratatui` two-pane browser: a navigable list of projects, findings, and unavailable checks on the

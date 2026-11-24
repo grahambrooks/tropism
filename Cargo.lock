@@ -2417,8 +2417,10 @@ dependencies = [
  "ratatui",
  "serde",
  "serde_json",
+ "tempfile",
  "tropism-core",
  "tropism-lang",
+ "tropism-portfolio",
 ]
 
 [[package]]
@@ -2473,6 +2475,24 @@ dependencies = [
  "tokio",
  "tropism-core",
  "tropism-lang",
+]
+
+[[package]]
+name = "tropism-portfolio"
+version = "2026.11.3"
+dependencies = [
+ "anyhow",
+ "blake3",
+ "camino",
+ "globset",
+ "ignore",
+ "rayon",
+ "regex",
+ "serde",
+ "serde_json",
+ "tempfile",
+ "toml",
+ "tropism-core",
 ]
 
 [[package]]

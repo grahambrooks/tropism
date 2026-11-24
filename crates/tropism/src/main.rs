@@ -68,6 +68,55 @@ enum Command {
     /// `conformance_finding` per finding. Repositories whose commit is
     /// unchanged and already confirmed by `--since` are skipped.
     Export(ExportArgs),
+
+    /// Map the links between your own repositories, across several roots.
+    ///
+    /// Reads every checkout under the roots — a root that is itself a repository,
+    /// or the repositories directly inside it — and reports which of the owner's
+    /// repositories use which: Cargo git and path dependencies and what Cargo.lock
+    /// resolved, Go module requirements, npm git and published-name dependencies,
+    /// and installed binaries found in Makefiles, hooks, workflows and tool
+    /// manifests. For each library: its newest stable tag, whether its default
+    /// branch has commits a release would give its users, and how far behind each
+    /// user is. Reads files and git refs only; nothing is fetched, built or
+    /// resolved unless `--fetch` lists the remotes' tags.
+    Portfolio(PortfolioArgs),
+}
+
+#[derive(Args)]
+struct PortfolioArgs {
+    /// Directories holding repositories, or repositories themselves.
+    #[arg(default_value = ".")]
+    roots: Vec<Utf8PathBuf>,
+
+    /// Whose repositories count as libraries (`github.com/<owner>/…`). Defaults to
+    /// `owner` in the rules file.
+    #[arg(long)]
+    owner: Option<String>,
+
+    /// Read each library's tags from origin with `git ls-remote` rather than from
+    /// the checkout's refs. Lists only; nothing is fetched into the checkout.
+    #[arg(long)]
+    fetch: bool,
+
+    #[arg(long, value_enum, default_value_t = Format::Auto)]
+    format: Format,
+
+    /// Shorthand for `--format json`.
+    #[arg(long, conflicts_with = "format")]
+    json: bool,
+
+    /// Lowest severity that sets the failure exit code.
+    #[arg(long, default_value = "error", value_parser = parse_severity)]
+    fail_on: Severity,
+
+    /// Portfolio rules. Defaults to tropism-portfolio.toml in the first root.
+    #[arg(long)]
+    rules: Option<Utf8PathBuf>,
+
+    /// Skip the rules file entirely.
+    #[arg(long, conflicts_with = "rules")]
+    no_rules: bool,
 }
 
 #[derive(Args)]
@@ -247,6 +296,7 @@ fn main() -> ExitCode {
         Command::Workspaces(_) => "workspaces",
         Command::Explain(_) => "explain",
         Command::Export(_) => "export",
+        Command::Portfolio(_) => "portfolio",
     };
     // One trace per invocation, reported to habit when one is configured and a
     // no-op otherwise. Only flag *names* are kept; values and positional
@@ -270,11 +320,67 @@ fn main() -> ExitCode {
         Command::Workspaces(args) => workspaces(args),
         Command::Explain(args) => explain(args),
         Command::Export(args) => export(args),
+        Command::Portfolio(args) => portfolio(args),
     };
     let code = run(result);
     trace.exit_code(code.into());
     drop(trace);
     ExitCode::from(code)
+}
+
+fn portfolio(args: PortfolioArgs) -> anyhow::Result<u8> {
+    let rules = if args.no_rules {
+        None
+    } else if let Some(path) = &args.rules {
+        Some(tropism_portfolio::PortfolioRules::load(path)?)
+    } else {
+        let default = args
+            .roots
+            .first()
+            .map(|root| root.join(tropism_portfolio::RULES_FILE));
+        match default {
+            Some(path) if path.is_file() => Some(tropism_portfolio::PortfolioRules::load(&path)?),
+            _ => None,
+        }
+    };
+    let owner = args
+        .owner
+        .clone()
+        .or_else(|| rules.as_ref().and_then(|r| r.owner.clone()))
+        .ok_or_else(|| {
+            anyhow::anyhow!(
+                "whose repositories are libraries? Pass --owner, or set `owner` in {}",
+                tropism_portfolio::RULES_FILE
+            )
+        })?;
+    let options = tropism_portfolio::Options {
+        roots: args.roots.clone(),
+        owner,
+        fetch: args.fetch,
+        rules,
+        tool_version: env!("CARGO_PKG_VERSION").to_owned(),
+    };
+    let report = tropism_portfolio::run(&options, &tropism_portfolio::Git)?;
+
+    let format = if args.json { Format::Json } else { args.format };
+    let render = render_span(format);
+    match format {
+        Format::Json => println!("{}", report.to_json_pretty()?),
+        Format::Text => anstream::print!("{}", render::portfolio::render(&report)),
+        Format::Auto => {
+            if std::io::stdout().is_terminal() {
+                anstream::print!("{}", render::portfolio::render(&report));
+            } else {
+                println!("{}", report.to_json_pretty()?);
+            }
+        }
+        #[cfg(feature = "tui")]
+        Format::Tui => anyhow::bail!("`portfolio` has no interactive view; use --format text"),
+    }
+    drop(render);
+
+    let triggered = report.max_severity().is_some_and(|max| max >= args.fail_on);
+    Ok(if triggered { EXIT_FINDINGS } else { EXIT_CLEAN })
 }
 
 /// Records, not findings to gate on: exits 0 unless the run itself failed.

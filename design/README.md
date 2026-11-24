@@ -88,6 +88,7 @@ built, and everything about them here is still intent rather than a description 
 | [17-baselines.md](17-baselines.md)                   | D8: making the whole-repository run adoptable            |
 | [18-rego-evaluation.md](18-rego-evaluation.md)       | Rego as a second rule language: prototyped, not adopted  |
 | [19-analysis-evaluation.md](19-analysis-evaluation.md) | Plan: measuring analysis capability on 24 real repositories |
+| [20-portfolio.md](20-portfolio.md)                   | `tropism portfolio`: links between your own repositories |
 
 ## Design principles
 

@@ -20,6 +20,11 @@ A third surface, an **MCP server** for coding agents (`tropism-mcp`), exposes th
 stdio as three tools — `tropism_check`, `tropism_rules`, `tropism_summary`. It was deliberately built
 last, and deliberately small — see "Dependency rules" below for why.
 
+Beside those, **`tropism portfolio <roots>`** works across *several* repositories: it maps the links
+between a team's own repositories (Cargo, Go, npm, installed binaries), with each library's newest
+tag, release-pending state, and how far behind each user is. It is a separate crate and a separate
+JSON contract, and the single-repository surfaces know nothing about it. See "Portfolio" below.
+
 ## What it detects
 
 **Source module graph** — relationships between modules within the codebase:
@@ -304,10 +309,38 @@ crates/tropism-lang/   provider implementations, one feature-gated module per la
                     javascript, rust, csharp, python, ruby, java, swift, cpp
 crates/tropism/    binary `tropism`      — clap front-end, text and JSON renderers
 crates/tropism-mcp/    binary `tropism-mcp`  — MCP server over stdio (rmcp): check, rules, summary
+crates/tropism-portfolio/  `tropism portfolio`: cross-repository links, git facts, portfolio rules,
+                    and the `tropism-portfolio` JSON contract; depends on core only
 ```
 
-`tropism-core` depends on nothing above it. Analysis logic lives there and nowhere else; both binaries
-are adapters.
+`tropism-core` depends on nothing above it. Single-repository analysis logic lives there and nowhere
+else; both binaries are adapters. The portfolio analysis lives in its own crate because core is
+language-agnostic and knows nothing of version control, and the portfolio is neither
+(`portfolio-builds-on-core-only` in `tropism.toml`).
+
+## Portfolio
+
+`tropism portfolio ~/dev/projects ~/dev/sustain --owner grahambrooks --json` — specified in
+[design/20-portfolio.md](design/20-portfolio.md), issue #74. Things not to undo:
+
+- **The single-repository analysis must not depend on it.** `analyze`, `check`, `tropism.toml`, the
+  core report contract and the MCP server are unchanged by it, and stay that way.
+- **git is read-only and local by default.** Remotes, tags, `log`, `tag --no-merged`. `--fetch`
+  adds `ls-remote`, never `git fetch`: the developer's refs are never moved. No package manager runs.
+- **Absent, never zero.** `behind_by` is omitted with a `behind_note` when it cannot be established
+  (a path dependency, an unavailable library, a commit missing from the library's history). An
+  unchecked-out library is `unavailable`, never "no users".
+- **Release pending matches sustain's test** — lock-only commits and release-kit's `Release v…` bot
+  commit do not count — and stable tags match sustain's `tag_version` (unprefixed `2026.9.9`
+  included). The two tools must agree on what "newest" and "pending" mean.
+- **A direct declaration claims only the lockfile copy its pin produces**, so a second copy reached
+  through another library is still reported. `cargo_links_direct_and_through_another_library` was
+  verified to fail when that is reverted.
+- **Binary links are text matching (S9)**: medium confidence, never gating unless a rule names
+  `kinds = ["binary"]`. `.release.env` `BINS=` beats inference; example/test/demo manifests ship
+  nothing; flags are never commands. Each of those came from a false positive on the real portfolio.
+- **`duplicate-copy` says "the lockfile resolves"** (S8), at medium confidence.
+- Without `tropism-portfolio.toml`, nothing exceeds `info`.
 
 ## Commands
 
@@ -329,6 +362,8 @@ cargo build -p tropism --no-default-features # must still build without ratatui
 ./target/debug/tropism check src/a.rs           # rules only, scoped to a change
 ./target/debug/tropism workspaces .             # boundaries, their provenance, and what crosses them
 ./target/debug/tropism explain src/a.rs         # why each import in one file classified as it did
+./target/debug/tropism portfolio ~/dev/projects --owner grahambrooks   # links between own repos
+cargo test -p tropism-portfolio                 # the portfolio, over real temporary git repos
 
 make hooks                                   # wire the hooks (prek.toml)
 prek run tropism -a                          # the commit-time hook, without committing

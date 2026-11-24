@@ -240,6 +240,37 @@ no inferred finding can ever supply.
 That example is [this repository's own ruleset](tropism.toml), enforced on every run and asserted by
 the test suite. Full specification: [design/11-dependency-rules.md](design/11-dependency-rules.md).
 
+## Across your own repositories
+
+`tropism portfolio` reads several checkouts at once and maps the links between the ones you own:
+Cargo git and path dependencies and what `Cargo.lock` resolved, Go module requirements, npm git
+specifiers and published names, and installed tools pinned in hooks, workflows, Makefiles and tool
+manifests.
+
+```sh
+tropism portfolio ~/dev/projects --owner grahambrooks           # summary on a terminal
+tropism portfolio ~/dev/projects --owner grahambrooks --json    # the versioned contract
+```
+
+```
+Libraries
+  diagram-scene  v2026.11.12  release pending: 1 commit(s) on origin/main  used by backstage-rs, emx, ferrisite, …
+  mmd  v2026.11.12  release pending: 2 commit(s) on origin/main  used by emx, ferrisite, gb-agent-skills-private, sightline
+
+Findings
+  info[tags-behind]: ferrisite is on mmd v2026.10.25, 4 tag(s) behind v2026.11.12
+    --> ferrisite/Cargo.toml:24
+```
+
+For each library it reports the newest stable tag, whether the default branch has commits a release
+would give its users (ignoring lock-only and release-bot commits), how many tags behind each user is,
+and whether a lockfile holds two copies of it. It reads files and git refs only — nothing is fetched
+unless `--fetch` lists remote tags — and third-party links are ignored. Rules in
+`tropism-portfolio.toml` (`max_tags_behind`, `single_copy`, `release_pending`) let CI gate on them;
+without one, nothing exceeds `info`. The
+[`portfolio-impact`](skills/portfolio-impact/) skill builds "what breaks if I change this library?"
+on top of it. Specification: [design/20-portfolio.md](design/20-portfolio.md).
+
 ## Output
 
 ```sh
@@ -254,6 +285,8 @@ tropism check --staged               # ...to what is staged
 tropism check --since origin/main    # ...to what a branch introduced
 
 tropism export --mirrors DIR --state DIR   # JSON Lines records for software-analytics
+
+tropism portfolio ROOTS... --owner O --json  # links between your own repositories
 ```
 
 Exit codes are the CI contract: `0` ran clean, `1` findings at or above `--fail-on`, `2` could not

@@ -26,6 +26,7 @@ rust-version = "1.100.0"
 [workspace.dependencies]
 tropism-core = { path = "crates/tropism-core", version = ">=2026.11.2" }
 tropism-lang = { path = "crates/tropism-lang", version = ">=2026.11.2" }
+tropism-portfolio = { path = "crates/tropism-portfolio", version = ">=2026.11.3" }
 
 anyhow = "1.0.104"
 thiserror = "2.0.21"
@@ -58,6 +59,11 @@ tree-sitter-swift = "0.7.4"
 quick-xml = "0.42.0"
 toml = "1.2.2"
 petgraph = "0.8.3"
+# `tropism portfolio`: the text patterns behind installed-binary links, and a
+# temporary git repository per test. Both already in the lockfile; verified
+# against crates.io on 2026-11-23.
+regex = "1.13.2"
+tempfile = "3.27.0"
 insta = "1.49.0"
 # The MCP server (build-order step 6). rmcp is the official Rust MCP SDK; stdio is
 # the only transport an agent-launched local server needs, so nothing HTTP is built.

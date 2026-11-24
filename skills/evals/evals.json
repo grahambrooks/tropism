@@ -106,6 +106,23 @@
         "If the two packages are genuinely in different workspaces, said so and treated the missing-dep as correct",
         "Mentioned `crosses_workspace` or a [[workspaces]] correction as the fix if the boundary is what is wrong"
       ]
+    },
+    {
+      "id": 7,
+      "skill": "portfolio-impact",
+      "name": "impact-of-a-library-api-change",
+      "prompt": "I want to change the signature of diagram_scene::svg::to_svg in ~/dev/projects/diagram-scene. What breaks across my other repos, and what order should I release things in?",
+      "expected_output": "Users from tropism portfolio, call sites per user found structurally and cross-checked, transitive users followed through their intermediates, and a libraries-first release order",
+      "assertions": [
+        "Ran tropism portfolio over the workspace roots rather than inferring users from one repository",
+        "Listed the direct users (emx, ferrisite, forge, mmd, puml, sightline) and backstage-rs as transitive through puml",
+        "Reported call sites in ferrisite (src/diagrams.rs:128, :132), mmd (src/lib.rs:276) and sightline (src/render/gui/diagram.rs:68, :81), and none in emx, puml, forge or backstage-rs",
+        "Did not conclude 'no users' from symgraph references returning not-found in a user repository",
+        "Noted that users pinned behind the newest tag compile against their pinned tag, not the library's HEAD",
+        "Gave a release order with diagram-scene before mmd, puml and forge, and those before their users",
+        "Did not build, update or modify any repository"
+      ],
+      "notes": "Exercised by hand on 2026-11-23 while building the skill; the call sites in the assertions are from that run."
     }
   ]
 }

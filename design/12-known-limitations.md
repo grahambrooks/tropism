@@ -142,6 +142,32 @@ present to resolve from.
 **Mitigation:** none yet. The honest fix is wording — these checks report what the lockfile resolved,
 not what the build compiles. Worth stating in the finding message itself.
 
+`tropism portfolio`'s `duplicate-copy` inherits this, and applies the mitigation: its message says
+"the lockfile resolves N copies", its confidence is medium, and the `single_copy` rule defaults to
+`warning` ([20-portfolio.md](20-portfolio.md)).
+
+### S9. An installed-binary link is text, not an import
+
+Found while building `tropism portfolio`. Nothing imports a CLI: a Makefile runs it, a hook pins it,
+a workflow installs it. So binary links are found by patterns over the files where tools are pinned
+and run, and there is no import to resolve. A command in a heredoc or an `echo` reads as a use; a
+tool invoked through a variable (`$(TROPISM) analyze`) does not.
+
+**Cost:** binary links are medium confidence and can be wrong in both directions.
+**Why it stays:** confirming a use means running the script.
+**Mitigation:** binary links never gate unless a rule names `kinds = ["binary"]`; release-kit's
+`.release.env` `BINS=` is preferred over inferring what a repository builds; flags and example
+binaries are excluded, each after a false positive on the real portfolio.
+
+### S10. A repository that is not checked out contributes nothing
+
+`tropism portfolio` reads checkouts. A library linked to but not cloned under any root has no tags
+to compare and no links of its own to report.
+
+**Cost:** an incomplete portfolio looks smaller than it is.
+**Mitigation:** such a library is listed as `unavailable`, with `behind_note` on every edge to it —
+never as a library with no users, or a user with no dependencies.
+
 ---
 
 ## Deferred — architecture
@@ -583,6 +609,17 @@ constraints, so both checks fire on the same packages and differ only in whether
 named. Two findings for one problem.
 
 **Fix:** merge into one check — "installed N times because these dependents disagreed".
+
+### D48. `tropism portfolio` reads only `package-lock.json` for npm resolution
+
+`yarn.lock` and `pnpm-lock.yaml` are parsed by `tropism-lang` for the resolved-tree checks, but the
+portfolio crate builds on core alone and does not reach them. An npm edge in a yarn or pnpm
+repository has a `pinned` and no `resolved`.
+
+**Fix:** move the two lockfile parsers below both crates, or give the portfolio a provider hook.
+Not done yet because it costs nothing today: on 2026-11-23 the portfolio had no npm edges at all,
+and the three yarn/pnpm checkouts (code-provenance, mmd's vendored `mermaid/`, personal-backstage)
+link to no own repository.
 
 ### D11. `dependency-bloat` has no definition
 

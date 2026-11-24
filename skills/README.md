@@ -1,6 +1,6 @@
 # Skills for people using tropism
 
-Three skills for coding agents working in a repository that uses tropism. They ship here for the
+Four skills for coding agents working in a repository that uses tropism. They ship here for the
 same reason `.pre-commit-hooks.yaml` does: the thing consuming tropism is often not a human typing
 commands, and it needs to be told how to use it well.
 
@@ -9,6 +9,7 @@ commands, and it needs to be told how to use it well.
 | [`authoring-architecture-rules`](authoring-architecture-rules/) | Writing or repairing a `tropism.toml` from what a repository actually contains |
 | [`tropism-in-the-loop`](tropism-in-the-loop/) | Using tropism while writing code, and knowing which findings to act on |
 | [`reporting-tropism-issues`](reporting-tropism-issues/) | Turning an experience into a report worth filing, after checking it is not a known structural limit |
+| [`portfolio-impact`](portfolio-impact/) | What a change to one of your libraries affects across your other repositories, and the release order |
 
 ## Installing
 
@@ -25,7 +26,7 @@ mkdir -p ~/.claude/skills && cp -R /path/to/tropism/skills/* ~/.claude/skills/
 They need nothing but `tropism` on PATH. Install that from
 [releases](https://github.com/grahambrooks/tropism/releases) — one line, no admin rights.
 
-## Why these three
+## Why these
 
 They map onto the three moments a user meets tropism, and each encodes something that is easy to get
 wrong and expensive to get wrong:
@@ -42,6 +43,14 @@ direction and breaks builds in the other.
 **Reporting.** The failure is re-filing a known structural limit, or filing a real bug as though it
 were one. The skill triages against the limitations register first, so what does get filed starts
 past the part maintainers already know.
+
+**Across repositories.** The failure is answering "what breaks?" from one repository, or trusting
+a tool that cannot see across the boundary: symgraph's `references` resolves from a definition
+inside the queried root, so it reports "not found" in every user of a library. The skill takes the
+users from `tropism portfolio`, finds call sites structurally in each, follows intermediates, and
+orders releases libraries-first. It was exercised on a real change — `diagram_scene::svg::to_svg`
+across the ferrisite family — where it found five call sites in ferrisite, mmd and sightline, none in
+emx, puml, forge or backstage-rs, and agreed with grep line for line.
 
 ## A note on what these replace
 

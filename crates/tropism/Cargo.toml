@@ -20,6 +20,7 @@ tui = ["dep:ratatui"]
 [dependencies]
 tropism-core.workspace = true
 tropism-lang.workspace = true
+tropism-portfolio.workspace = true
 anyhow.workspace = true
 camino.workspace = true
 clap.workspace = true
@@ -32,6 +33,7 @@ serde_json.workspace = true
 
 [dev-dependencies]
 insta.workspace = true
+tempfile.workspace = true
 
 [lints]
 workspace = true
